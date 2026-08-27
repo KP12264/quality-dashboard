@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Daily Production &amp; Quality Dashboard</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.0/chart.umd.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+<div class="wrap">
+
+  <div id="navRoot"></div>
+  <script>window.CURRENT_PAGE = 'dashboard';</script>
+
+  <header class="qd-header">
+    <div class="qd-title-block">
+      <span class="qd-eyebrow">Quality Dashboard · Page 1 of 6</span>
+      <h1>DAILY PRODUCTION &amp; QUALITY</h1>
+      <span class="qd-subtitle">Production: read-only from the existing system · Scrap: recorded via the Scrap Entry page</span>
+    </div>
+    <div class="qd-filters">
+      <div class="qd-filter-group">
+        <label for="dateFilter">Date</label>
+        <input type="date" id="dateFilter">
+      </div>
+      <div class="qd-filter-group">
+        <label>Shift</label>
+        <div class="qd-segmented" id="shiftFilter">
+          <button data-shift="all" class="active">All</button>
+          <button data-shift="เช้า">Day</button>
+          <button data-shift="ดึก">Night</button>
+        </div>
+      </div>
+      <div class="qd-filter-group">
+        <label>Line</label>
+        <div class="qd-segmented" id="lineFilter">
+          <button data-line="all" class="active">All</button>
+          <button data-line="A">Door A</button>
+          <button data-line="B">Door B</button>
+          <button data-line="C">Door C</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div id="connectionBanner" class="qd-banner" style="display:none;"></div>
+
+  <section class="qd-kpis" id="kpiSection">
+    <div class="qd-kpi" data-kpi="production">
+      <div class="qd-kpi-bar"></div>
+      <div class="qd-kpi-label">Production</div>
+      <div class="qd-kpi-value" id="kpiProduction">–</div>
+      <div class="qd-kpi-unit">pcs</div>
+    </div>
+    <div class="qd-kpi" data-kpi="scrap">
+      <div class="qd-kpi-bar"></div>
+      <div class="qd-kpi-label">Scrap</div>
+      <div class="qd-kpi-value na" id="kpiScrap">N/A</div>
+      <div class="qd-kpi-note">No scrap data source yet</div>
+    </div>
+    <div class="qd-kpi" data-kpi="scrapRate">
+      <div class="qd-kpi-bar"></div>
+      <div class="qd-kpi-label">Scrap Rate</div>
+      <div class="qd-kpi-value na" id="kpiScrapRate">N/A</div>
+      <div class="qd-kpi-note">No scrap data source yet</div>
+    </div>
+    <div class="qd-kpi" data-kpi="target">
+      <div class="qd-kpi-bar"></div>
+      <div class="qd-kpi-label">Target</div>
+      <div class="qd-kpi-value" id="kpiTarget">–</div>
+      <div class="qd-kpi-unit">pcs scrap / shift</div>
+    </div>
+    <div class="qd-kpi" data-kpi="status">
+      <div class="qd-kpi-bar"></div>
+      <div class="qd-kpi-label">Status</div>
+      <div class="qd-status-pill" id="kpiStatus">–</div>
+    </div>
+  </section>
+  <div class="qd-kpi-footnote">Production, Scrap and Scrap Rate follow the Line filter above. Target is always ≤30 pcs <strong>per Shift</strong> (Door A+B+C combined) — a 2nd shift never doubles it. <strong>Target Status is always calculated from the combined A+B+C scrap</strong>, even when a single Line is selected, and each shift is judged against its own target separately.</div>
+  <div class="qd-kpi-footnote qd-kpi-footnote-dynamic" id="kpiStatusNote"></div>
+  <div class="qd-kpi-footnote qd-kpi-footnote-dynamic" id="kpiShiftBreakdown"></div>
+
+  <section class="qd-panels-row">
+    <div class="qd-panel">
+      <h2>Shift Performance</h2>
+      <div class="qd-shift-cards" id="shiftPerformance"></div>
+    </div>
+    <div class="qd-panel">
+      <h2>Line Performance</h2>
+      <div class="qd-panel-note">Production &amp; Scrap by Line — respects the Line filter above</div>
+      <div class="qd-line-cards" id="linePerformance"></div>
+    </div>
+  </section>
+
+  <section class="qd-panel">
+    <h2>Production &amp; Scrap by Model</h2>
+    <div class="qd-panel-note">Matched by Date + Shift + Line + Model. A model with scrap but no matching production record is flagged.</div>
+    <div class="qd-table-scroll">
+      <table class="qd-model-table" id="modelTable">
+        <thead>
+          <tr><th>Model</th><th>Production</th><th>Scrap</th><th>Scrap Rate</th></tr>
+        </thead>
+        <tbody id="modelTableBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="qd-panels-row">
+    <section class="qd-panel qd-trend-panel">
+      <div class="qd-trend-header">
+        <h2>Production Trend</h2>
+        <div class="qd-segmented" id="trendRange">
+          <button data-range="7" class="active">7 Days</button>
+          <button data-range="30">30 Days</button>
+        </div>
+      </div>
+      <div class="qd-chart-holder">
+        <canvas id="trendChart"></canvas>
+      </div>
+    </section>
+
+    <section class="qd-panel qd-trend-panel">
+      <div class="qd-trend-header">
+        <h2>Scrap Trend</h2>
+        <span class="qd-panel-note" style="margin:0;">Bars = scrap qty · Line = scrap rate %</span>
+      </div>
+      <div class="qd-chart-holder">
+        <canvas id="scrapTrendChart"></canvas>
+      </div>
+    </section>
+  </section>
+
+  <section class="qd-panel">
+    <h2>Pareto Defect</h2>
+    <div class="qd-panel-note">All defect types in the current Date + Shift + Line scope, ranked by quantity.</div>
+    <div class="qd-chart-holder" style="height:260px;">
+      <canvas id="paretoChart"></canvas>
+    </div>
+  </section>
+
+  <section class="qd-panels-row">
+    <section class="qd-panel">
+      <h2>Improvement Status</h2>
+      <div class="qd-panel-note">Status breakdown of the most recent improvement records (all defects, not filtered by the Date/Shift/Line above).</div>
+      <div class="qd-status-breakdown" id="improvementStatusBreakdown"></div>
+    </section>
+
+    <section class="qd-panel">
+      <h2>Recurring Problems</h2>
+      <div class="qd-panel-note">Line + Model + Defect combinations seen on 3+ different days in the last 30 days.</div>
+      <div class="qd-table-scroll">
+        <table class="qd-datatable" id="recurringTable" style="min-width:420px;">
+          <thead><tr><th>Line</th><th>Model</th><th>Defect</th><th>Days</th><th>Total Qty</th></tr></thead>
+          <tbody id="recurringTableBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </section>
+
+  <footer class="qd-footer">
+    <span id="lastUpdated">Loading…</span>
+  </footer>
+
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/firebase-init.js"></script>
+<script src="js/data-adapter.js"></script>
+<script src="js/scrap-adapter.js"></script>
+<script src="js/target-adapter.js"></script>
+<script src="js/quality-adapter.js"></script>
+<script src="js/improvement-adapter.js"></script>
+<script src="js/dashboard.js"></script>
+<script src="js/nav.js"></script>
+</body>
+</html>

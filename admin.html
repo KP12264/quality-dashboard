@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin / Master Data · Quality System</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+<div class="wrap">
+
+  <div id="navRoot"></div>
+  <script>window.CURRENT_PAGE = 'admin';</script>
+
+  <div class="qd-page-header">
+    <h1>ADMIN / MASTER DATA</h1>
+    <p>System configuration. Editing here is currently open to any visitor — PIN/permission protection is a later phase (see Permission tab).</p>
+  </div>
+
+  <div id="connectionBanner" class="qd-banner" style="display:none;"></div>
+
+  <div class="qd-tabbar" id="adminTabs">
+    <button data-tab="target" class="active">Target Management</button>
+    <button data-tab="line">Line Master</button>
+    <button data-tab="model">Model Master</button>
+    <button data-tab="defect">Defect Master</button>
+    <button data-tab="mapping">Defect Mapping</button>
+    <button data-tab="fourm">4M Master</button>
+    <button data-tab="audit">Audit Log</button>
+    <button data-tab="permission">Permission / PIN</button>
+  </div>
+
+  <!-- Target Management: FUNCTIONAL -->
+  <section class="qd-panel qd-admin-section" id="tab-target">
+    <h2>Target Management</h2>
+    <div class="qd-panel-note">Add a new effective-dated scrap target per shift. Existing history is never rewritten — a new target only applies from its Effective Date forward; earlier records keep using whatever target was in effect at the time.</div>
+    <form id="targetForm" class="qd-form-grid" style="margin-bottom:16px;">
+      <div class="qd-form-field">
+        <label for="tShift">Shift</label>
+        <select id="tShift"><option value="เช้า">Day</option><option value="ดึก">Night</option></select>
+      </div>
+      <div class="qd-form-field">
+        <label for="tQty">Target Qty (pcs, combined Door A+B+C)</label>
+        <input type="number" id="tQty" min="1" required>
+      </div>
+      <div class="qd-form-field">
+        <label for="tEffectiveDate">Effective Date</label>
+        <input type="date" id="tEffectiveDate" required>
+      </div>
+      <div class="qd-form-field">
+        <label for="tNote">Note</label>
+        <input type="text" id="tNote" placeholder="Optional">
+      </div>
+      <button type="submit" class="mini-add-btn" style="align-self:end;">+ Add Target</button>
+    </form>
+    <div id="targetMessage" class="qd-form-message" style="display:none;"></div>
+    <table class="qd-datatable" id="targetTable">
+      <thead><tr><th>Shift</th><th>Target Qty</th><th>Effective Date</th><th>Note</th></tr></thead>
+      <tbody id="targetTableBody"></tbody>
+    </table>
+  </section>
+
+  <!-- Placeholder sections: shells for a later phase -->
+  <section class="qd-panel qd-admin-section" id="tab-line" style="display:none;">
+    <h2>Line Master</h2>
+    <div class="qd-placeholder"><strong>Coming in a later phase</strong>Currently the 3 lines (Door A/B/C) are fixed in js/config.js. Editable Line Master (add/rename/deactivate lines) isn't built yet.</div>
+  </section>
+
+  <section class="qd-panel qd-admin-section" id="tab-model" style="display:none;">
+    <h2>Model Master</h2>
+    <div class="qd-placeholder"><strong>Coming in a later phase</strong>Models currently come read-only from Production's own per-day model breakdown — there's no separate editable Model Master yet.</div>
+  </section>
+
+  <section class="qd-panel qd-admin-section" id="tab-defect" style="display:none;">
+    <h2>Defect Master</h2>
+    <div class="qd-panel-note">Current defect list (read-only view — editing this list isn't built yet; it's defined in js/config.js).</div>
+    <ul class="qd-defect-list" id="defectMasterList"></ul>
+  </section>
+
+  <section class="qd-panel qd-admin-section" id="tab-mapping" style="display:none;">
+    <h2>Defect Mapping</h2>
+    <div class="qd-placeholder"><strong>Coming in a later phase</strong>Mapping raw defect names to standardized defect groups isn't built yet.</div>
+  </section>
+
+  <section class="qd-panel qd-admin-section" id="tab-fourm" style="display:none;">
+    <h2>4M Master</h2>
+    <div class="qd-panel-note">Current 4M categories (read-only view — defined in js/config.js).</div>
+    <ul class="qd-defect-list" id="fourMMasterList"></ul>
+  </section>
+
+  <section class="qd-panel qd-admin-section" id="tab-audit" style="display:none;">
+    <h2>Audit Log</h2>
+    <div class="qd-placeholder"><strong>Coming in a later phase</strong>No change history is recorded yet beyond each Improvement's own status field. A full audit trail (who changed what, when) isn't built.</div>
+  </section>
+
+  <section class="qd-panel qd-admin-section" id="tab-permission" style="display:none;">
+    <h2>Permission / PIN Settings</h2>
+    <div class="qd-placeholder"><strong>Coming in a later phase</strong>All pages are currently open to view AND edit for any visitor, as agreed for this phase. PIN-protected editing is a later phase — nothing here restricts writes yet.</div>
+  </section>
+
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/firebase-init.js"></script>
+<script src="js/target-adapter.js"></script>
+<script src="js/admin-page.js"></script>
+<script src="js/nav.js"></script>
+</body>
+</html>

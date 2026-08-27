@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scrap Entry · Quality System</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+<div class="wrap">
+
+  <div id="navRoot"></div>
+  <script>window.CURRENT_PAGE = 'scrap-entry';</script>
+
+  <div class="qd-page-header">
+    <h1>SCRAP ENTRY</h1>
+    <p>For Leaders — record scrap by Model + Defect, split across Door A / B / C. No defect time needed. Production Qty is never entered here — it always comes from the read-only production system.</p>
+  </div>
+
+  <div id="connectionBanner" class="qd-banner" style="display:none;"></div>
+
+  <section class="qd-panel">
+    <div class="qd-entry-context">
+      <div class="qd-form-field">
+        <label for="ctxDate">Date</label>
+        <input type="date" id="ctxDate">
+      </div>
+      <div class="qd-form-field">
+        <label for="ctxShift">Shift</label>
+        <select id="ctxShift">
+          <option value="เช้า">Day</option>
+          <option value="ดึก">Night</option>
+        </select>
+      </div>
+      <div class="qd-entry-context-note">Date + Shift apply to every row below. Add one row per Model + Defect combination.</div>
+    </div>
+
+    <div class="qd-table-scroll">
+      <table class="qd-datatable qd-entry-table" id="entryTable">
+        <thead>
+          <tr>
+            <th style="min-width:200px;">Model</th>
+            <th style="min-width:170px;">Defect</th>
+            <th style="width:90px;">Door A</th>
+            <th style="width:90px;">Door B</th>
+            <th style="width:90px;">Door C</th>
+            <th style="width:90px;">Total</th>
+            <th style="width:36px;"></th>
+          </tr>
+        </thead>
+        <tbody id="entryTableBody"></tbody>
+      </table>
+    </div>
+
+    <div class="qd-entry-footer">
+      <button type="button" class="mini-add-btn" id="addRowBtn">+ Add Row</button>
+      <div class="qd-entry-grand-total">Grand Total: <b id="grandTotal">0</b> pcs</div>
+    </div>
+
+    <button type="button" class="qd-submit-btn" id="reviewBtn">Review &amp; Save</button>
+    <div id="entryMessage" class="qd-form-message" style="display:none;"></div>
+  </section>
+
+  <footer class="qd-footer">
+    <span>Scrap saved here writes only to <code>scrapLogs</code> — productionLogs is never touched.</span>
+  </footer>
+
+</div>
+
+<!-- Confirmation modal -->
+<div class="qd-modal-overlay" id="confirmOverlay">
+  <div class="qd-modal-box">
+    <h3>Confirm Scrap Entry</h3>
+    <div class="qd-modal-summary" id="confirmSummary"></div>
+    <div class="qd-modal-actions">
+      <button type="button" class="mini-add-btn" id="confirmCancel">Cancel</button>
+      <button type="button" class="qd-submit-btn" id="confirmSave" style="width:auto;">Save to Scrap Log</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/firebase-init.js"></script>
+<script src="js/data-adapter.js"></script>
+<script src="js/scrap-adapter.js"></script>
+<script src="js/scrap-entry-page.js"></script>
+<script src="js/nav.js"></script>
+</body>
+</html>
