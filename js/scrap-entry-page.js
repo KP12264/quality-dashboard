@@ -57,6 +57,20 @@
     const date = $('ctxDate').value;
     const modelOptions = await getModelOptions(date);
 
+    // ROOT-CAUSE FIX: a <select> with no <option selected> auto-displays
+    // its FIRST option in the browser, but row.model (our JS state) was
+    // never updated to match — it only changed via the 'change' event,
+    // which never fires unless the user manually touches the dropdown.
+    // That's why the model was visibly shown but validation still saw
+    // row.model === ''. Sync row.model to the currently visible option
+    // BEFORE building the HTML, so what's displayed and what's stored
+    // are always the same value — no click-away-and-back required.
+    rows.forEach(row => {
+      if (modelOptions.length > 0 && !modelOptions.includes(row.model)) {
+        row.model = modelOptions[0];
+      }
+    });
+
     tbody.innerHTML = rows.map(row => {
       const modelSelectHtml = modelOptions.length > 0
         ? modelOptions.map(m => `<option value="${escapeHtml(m)}" ${row.model === m ? 'selected' : ''}>${escapeHtml(m)}</option>`).join('')
