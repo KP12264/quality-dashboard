@@ -455,6 +455,56 @@ body{
   display:inline-block;
 }
 .qd-link-btn:hover{background:var(--blue-dim);}
+.qd-action-btn{
+  background:transparent;
+  border:1px solid var(--border);
+  color:var(--muted);
+  font-family:var(--font-body);
+  font-size:11px;
+  font-weight:700;
+  padding:4px 9px;
+  border-radius:6px;
+  cursor:pointer;
+  margin-right:4px;
+}
+.qd-action-btn.edit{border-color:var(--blue);color:var(--blue);}
+.qd-action-btn.edit:hover{background:var(--blue-dim);}
+.qd-action-btn.delete{border-color:var(--red);color:var(--red);}
+.qd-action-btn.delete:hover{background:var(--red-dim);}
+.qd-danger-btn{
+  background:var(--red);
+  color:#fff;
+  border:none;
+  border-radius:8px;
+  padding:9px 16px;
+  font-family:var(--font-body);
+  font-weight:700;
+  font-size:13px;
+  cursor:pointer;
+}
+.qd-danger-btn:hover{background:#B91C1C;}
+.qd-danger-btn:disabled{opacity:.55;cursor:not-allowed;}
+
+/* Generic form-field styling reused by the Scrap Detail edit modal */
+.qd-modal-box .qd-form-field{display:flex;flex-direction:column;gap:5px;}
+.qd-modal-box .qd-form-field label{
+  font-family:var(--font-mono);
+  font-size:10px;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+  color:var(--muted);
+}
+.qd-modal-box .qd-form-field input,.qd-modal-box .qd-form-field select{
+  background:#fff;border:1px solid var(--border);border-radius:8px;
+  padding:9px 10px;font-family:var(--font-body);font-size:13px;color:var(--text);
+  width:100%;
+}
+.qd-modal-box .qd-form-field input:focus,.qd-modal-box .qd-form-field select:focus{
+  outline:none;border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-dim);
+}
+.qd-modal-summary .kv-row{display:flex;justify-content:space-between;gap:12px;padding:5px 0;border-bottom:1px solid var(--border-soft);font-size:12.5px;}
+.qd-modal-summary .kv-row .k{color:var(--muted);font-family:var(--font-mono);font-size:10.5px;text-transform:uppercase;}
+.qd-modal-summary .kv-row .v{color:var(--text);font-weight:600;text-align:right;}
 
 /* ---------------- Improvement page (Page 4) ---------------- */
 .qd-improvement-form{display:flex;flex-direction:column;gap:12px;}

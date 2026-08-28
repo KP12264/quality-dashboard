@@ -23,7 +23,7 @@
   function todayStr() { return ProductionDataAdapter.toDateStr(new Date()); }
 
   function newRow() {
-    return { id: 'row' + (rowIdCounter++), model: '', defectType: DEFECT_TYPES[0], qtyA: '', qtyB: '', qtyC: '' };
+    return { id: 'row' + (rowIdCounter++), model: '', defectType: DEFECT_TYPES[0], qtyA: '', qtyB: '', qtyC: '', remark: '' };
   }
 
   function num(v) {
@@ -69,6 +69,7 @@
           <td data-label="Door B"><input type="number" class="row-qtyB" min="0" step="1" value="${row.qtyB}"></td>
           <td data-label="Door C"><input type="number" class="row-qtyC" min="0" step="1" value="${row.qtyC}"></td>
           <td data-label="Total" class="row-total">${rowTotal(row)}</td>
+          <td data-label="Remark"><input type="text" class="row-remark" maxlength="200" placeholder="Optional note" value="${escapeHtml(row.remark)}"></td>
           <td data-label=""><button type="button" class="row-del" title="Remove row" ${rows.length <= 1 ? 'disabled' : ''}>×</button></td>
         </tr>`;
     }).join('');
@@ -82,6 +83,7 @@
       tr.querySelector('.row-qtyA').addEventListener('input', e => { row.qtyA = e.target.value; updateTotals(tr, row); });
       tr.querySelector('.row-qtyB').addEventListener('input', e => { row.qtyB = e.target.value; updateTotals(tr, row); });
       tr.querySelector('.row-qtyC').addEventListener('input', e => { row.qtyC = e.target.value; updateTotals(tr, row); });
+      tr.querySelector('.row-remark').addEventListener('input', e => { row.remark = e.target.value; });
       const delBtn = tr.querySelector('.row-del');
       if (!delBtn.disabled) {
         delBtn.addEventListener('click', () => {
@@ -123,7 +125,7 @@
       LINES.forEach(l => {
         const qty = num(row['qty' + l.code]);
         if (qty > 0) {
-          entries.push({ date, shift, line: l.code, model: row.model, defectType: row.defectType, scrapQty: qty });
+          entries.push({ date, shift, line: l.code, model: row.model, defectType: row.defectType, scrapQty: qty, remark: row.remark || '' });
         }
       });
     });
@@ -140,12 +142,13 @@
         <td>${escapeHtml(e.defectType)}</td>
         <td>${escapeHtml(lineLabel(e.line))}</td>
         <td style="text-align:right;">${e.scrapQty}</td>
+        <td>${escapeHtml(e.remark) || '<span style="color:var(--muted-soft);">–</span>'}</td>
       </tr>`).join('');
     const grand = entries.reduce((s, e) => s + e.scrapQty, 0);
     $('confirmSummary').innerHTML = `
       <div>Date: <b>${escapeHtml(entries[0].date)}</b> · Shift: <b>${escapeHtml(shiftLabel(entries[0].shift))}</b></div>
       <table>
-        <thead><tr><th>Model</th><th>Defect</th><th>Line</th><th style="text-align:right;">Qty</th></tr></thead>
+        <thead><tr><th>Model</th><th>Defect</th><th>Line</th><th style="text-align:right;">Qty</th><th>Remark</th></tr></thead>
         <tbody>${rowsHtml}</tbody>
       </table>
       <div style="margin-top:10px;font-weight:700;">Grand Total: ${grand} pcs across ${entries.length} record${entries.length > 1 ? 's' : ''}</div>`;

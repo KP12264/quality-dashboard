@@ -64,13 +64,60 @@
     <div class="qd-table-scroll">
       <table class="qd-datatable" id="scrapDetailTable">
         <thead>
-          <tr><th>Date</th><th>Shift</th><th>Line</th><th>Model</th><th>Defect</th><th>Qty</th><th>4M</th><th>Improvement</th></tr>
+          <tr><th>Date</th><th>Shift</th><th>Line</th><th>Model</th><th>Defect</th><th>Qty</th><th>Remark</th><th>4M</th><th>Improvement</th><th>Action</th></tr>
         </thead>
         <tbody id="scrapDetailBody"></tbody>
       </table>
     </div>
   </section>
 
+</div>
+
+<!-- Edit modal (step 1: editable fields) -->
+<div class="qd-modal-overlay" id="editOverlay">
+  <div class="qd-modal-box">
+    <h3>Edit Scrap Record</h3>
+    <form id="editForm" class="qd-form-grid">
+      <div class="qd-form-field"><label for="eDate">Date</label><input type="date" id="eDate" required></div>
+      <div class="qd-form-field"><label for="eShift">Shift</label><select id="eShift"><option value="เช้า">Day</option><option value="ดึก">Night</option></select></div>
+      <div class="qd-form-field"><label for="eLine">Line</label><select id="eLine"><option value="A">Door A</option><option value="B">Door B</option><option value="C">Door C</option></select></div>
+      <div class="qd-form-field"><label for="eModel">Model</label><select id="eModel" required></select></div>
+      <div class="qd-form-field"><label for="eDefect">Defect</label><select id="eDefect"></select></div>
+      <div class="qd-form-field"><label for="eQty">Scrap Qty</label><input type="number" id="eQty" min="1" step="1" required></div>
+      <div class="qd-form-field" style="grid-column:1/-1;"><label for="eRemark">Remark</label><input type="text" id="eRemark" maxlength="200"></div>
+      <div class="qd-modal-actions" style="grid-column:1/-1;">
+        <button type="button" class="mini-add-btn" id="editCancel">Cancel</button>
+        <button type="submit" class="qd-submit-btn" style="width:auto;">Review Update</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Edit modal (step 2: confirm before actually writing) -->
+<div class="qd-modal-overlay" id="editConfirmOverlay">
+  <div class="qd-modal-box">
+    <h3>Confirm Update</h3>
+    <div class="qd-modal-summary" id="editConfirmSummary"></div>
+    <div class="qd-modal-actions">
+      <button type="button" class="mini-add-btn" id="editConfirmCancel">Cancel</button>
+      <button type="button" class="qd-submit-btn" id="editConfirmSave" style="width:auto;">Update</button>
+    </div>
+    <div id="editMessage" class="qd-form-message" style="display:none;"></div>
+  </div>
+</div>
+
+<!-- Delete modal -->
+<div class="qd-modal-overlay" id="deleteOverlay">
+  <div class="qd-modal-box">
+    <h3>Delete Scrap Record?</h3>
+    <div class="qd-modal-summary" id="deleteSummary"></div>
+    <div style="margin-top:10px;color:var(--red);font-weight:700;font-size:12.5px;">This action cannot be undone.</div>
+    <div class="qd-modal-actions">
+      <button type="button" class="mini-add-btn" id="deleteCancel">Cancel</button>
+      <button type="button" class="qd-danger-btn" id="deleteConfirm">Delete</button>
+    </div>
+    <div id="deleteMessage" class="qd-form-message" style="display:none;"></div>
+  </div>
 </div>
 
 <script src="js/config.js"></script>

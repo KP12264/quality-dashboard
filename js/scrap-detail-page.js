@@ -130,7 +130,7 @@
   function renderTable(records, recurringLookup) {
     const tbody = $('scrapDetailBody');
     if (records.length === 0) {
-      tbody.innerHTML = '<tr class="empty-row"><td colspan="8">No scrap records match the current filters.</td></tr>';
+      tbody.innerHTML = '<tr class="empty-row"><td colspan="10">No scrap records match the current filters.</td></tr>';
       return;
     }
     const sorted = records.slice().sort((a, b) => (b.date + (b.createdAt || 0)) < (a.date + (a.createdAt || 0)) ? -1 : 1);
@@ -151,17 +151,22 @@
           <td>${escapeHtml(r.model)}</td>
           <td>${escapeHtml(r.defectType)} ${group && group.recurring ? '<span class="qd-badge recurring">RECURRING</span>' : ''}</td>
           <td class="num">${fmt(r.scrapQty)}</td>
+          <td>${escapeHtml(r.remark) || '<span style="color:var(--muted-soft);">–</span>'}</td>
           <td>${fourM}</td>
           <td>${improvementCell}</td>
+          <td>
+            <button type="button" class="qd-action-btn edit" data-action="edit" data-id="${r.id}">Edit</button>
+            <button type="button" class="qd-action-btn delete" data-action="delete" data-id="${r.id}">Delete</button>
+          </td>
         </tr>
         <tr class="qd-detail-drilldown" data-drilldown-for="${r.id}" style="display:none;">
-          <td colspan="8">Record ID: ${escapeHtml(r.id)} · Recorded: ${r.createdAt ? new Date(r.createdAt).toLocaleString('en-US') : 'unknown'}${group ? ` · Seen on ${group.distinctDates} distinct day(s) in this range: ${group.dates.join(', ')}` : ''}</td>
+          <td colspan="10">Record ID: ${escapeHtml(r.id)} · Recorded: ${r.createdAt ? new Date(r.createdAt).toLocaleString('en-US') : 'unknown'}${group ? ` · Seen on ${group.distinctDates} distinct day(s) in this range: ${group.dates.join(', ')}` : ''}</td>
         </tr>`;
     }).join('');
 
     tbody.querySelectorAll('.qd-detail-row').forEach(tr => {
       tr.addEventListener('click', (e) => {
-        if (e.target.closest('a,button')) return; // don't toggle when clicking the link/button
+        if (e.target.closest('a,button')) return; // don't toggle when clicking a link/button
         const id = tr.dataset.id;
         const dd = tbody.querySelector(`.qd-detail-drilldown[data-drilldown-for="${CSS.escape(id)}"]`);
         if (!dd) return;
@@ -170,7 +175,156 @@
         dd.style.display = isOpen ? 'none' : 'table-row';
       });
     });
+
+    tbody.querySelectorAll('[data-action="edit"]').forEach(btn => {
+      btn.addEventListener('click', () => openEditModal(btn.dataset.id));
+    });
+    tbody.querySelectorAll('[data-action="delete"]').forEach(btn => {
+      btn.addEventListener('click', () => openDeleteModal(btn.dataset.id));
+    });
   }
+
+  // ---- Edit flow (Step 1: editable form -> Step 2: confirm -> write) ----
+
+  let editingRecord = null;
+
+  async function refreshEditModelOptions() {
+    const modelSelect = $('eModel');
+    const date = $('eDate').value;
+    const line = $('eLine').value;
+    modelSelect.innerHTML = '<option value="">Loading models…</option>';
+    if (window.qdFirebaseError) { modelSelect.innerHTML = '<option value="">Firebase unavailable</option>'; return; }
+    try {
+      const { names, error } = await ProductionDataAdapter.getModelListForDayLine(window.qdDb, date, line);
+      if (error) { modelSelect.innerHTML = '<option value="">Could not load models</option>'; return; }
+      const currentModel = editingRecord ? editingRecord.model : '';
+      const options = names.length > 0 ? names : (currentModel ? [currentModel] : []);
+      if (options.length === 0) {
+        modelSelect.innerHTML = '<option value="">No models recorded for this date/line</option>';
+        return;
+      }
+      modelSelect.innerHTML = options.map(m => `<option value="${escapeHtml(m)}" ${m === currentModel ? 'selected' : ''}>${escapeHtml(m)}</option>`).join('');
+    } catch (e) {
+      console.error('Quality Dashboard: failed to load model list for edit:', e);
+      modelSelect.innerHTML = '<option value="">Could not load models</option>';
+    }
+  }
+
+  function openEditModal(id) {
+    const rec = allRecords.find(r => r.id === id);
+    if (!rec) return;
+    editingRecord = rec;
+    $('eDate').value = rec.date;
+    $('eShift').value = rec.shift;
+    $('eLine').value = rec.line;
+    $('eDefect').innerHTML = DEFECT_TYPES.map(d => `<option value="${escapeHtml(d)}" ${d === rec.defectType ? 'selected' : ''}>${escapeHtml(d)}</option>`).join('');
+    $('eQty').value = rec.scrapQty;
+    $('eRemark').value = rec.remark || '';
+    refreshEditModelOptions();
+    $('editOverlay').classList.add('show');
+  }
+  function closeEditModal() { $('editOverlay').classList.remove('show'); editingRecord = null; }
+
+  $('eDate').addEventListener('change', refreshEditModelOptions);
+  $('eLine').addEventListener('change', refreshEditModelOptions);
+  $('editCancel').addEventListener('click', closeEditModal);
+
+  $('editForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    if (!editingRecord) return;
+    const patch = {
+      date: $('eDate').value,
+      shift: $('eShift').value,
+      line: $('eLine').value,
+      model: $('eModel').value,
+      defectType: $('eDefect').value,
+      scrapQty: $('eQty').value,
+      remark: $('eRemark').value
+    };
+    if (!patch.model) { alert('Select a Model before continuing.'); return; }
+    showEditConfirm(editingRecord.id, patch);
+  });
+
+  function showEditConfirm(id, patch) {
+    $('editOverlay').classList.remove('show');
+    const kv = (k, v) => `<div class="kv-row"><span class="k">${k}</span><span class="v">${escapeHtml(v)}</span></div>`;
+    $('editConfirmSummary').innerHTML =
+      kv('Date', patch.date) +
+      kv('Shift', shiftLabel(patch.shift)) +
+      kv('Line', lineLabel(patch.line)) +
+      kv('Model', patch.model) +
+      kv('Defect', patch.defectType) +
+      kv('Scrap Qty', patch.scrapQty) +
+      kv('Remark', patch.remark || '–');
+    $('editConfirmOverlay').dataset.pendingId = id;
+    $('editConfirmOverlay').dataset.pendingPatch = JSON.stringify(patch);
+    $('editConfirmOverlay').classList.add('show');
+  }
+  $('editConfirmCancel').addEventListener('click', () => { $('editConfirmOverlay').classList.remove('show'); });
+
+  $('editConfirmSave').addEventListener('click', async () => {
+    const overlay = $('editConfirmOverlay');
+    const id = overlay.dataset.pendingId;
+    const patch = JSON.parse(overlay.dataset.pendingPatch);
+    const btn = $('editConfirmSave');
+    btn.disabled = true;
+    btn.textContent = 'Updating…';
+    try {
+      await ScrapDataAdapter.updateScrapEntry(window.qdDb, id, patch);
+      overlay.classList.remove('show');
+      editingRecord = null;
+      await load(); // reload so the table reflects the update
+    } catch (e) {
+      console.error('Quality Dashboard: updateScrapEntry failed:', e);
+      const msgEl = $('editMessage');
+      msgEl.className = 'qd-form-message error';
+      msgEl.textContent = '⚠ Could not update: ' + (e && e.message ? e.message : String(e));
+      msgEl.style.display = 'block';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Update';
+    }
+  });
+
+  // ---- Delete flow (always confirm first) ----
+
+  function openDeleteModal(id) {
+    const rec = allRecords.find(r => r.id === id);
+    if (!rec) return;
+    const kv = (k, v) => `<div class="kv-row"><span class="k">${k}</span><span class="v">${escapeHtml(v)}</span></div>`;
+    $('deleteSummary').innerHTML =
+      kv('Date', rec.date) +
+      kv('Shift', shiftLabel(rec.shift)) +
+      kv('Line', lineLabel(rec.line)) +
+      kv('Model', rec.model) +
+      kv('Defect', rec.defectType) +
+      kv('Scrap Qty', rec.scrapQty);
+    $('deleteOverlay').dataset.pendingId = id;
+    $('deleteOverlay').classList.add('show');
+  }
+  $('deleteCancel').addEventListener('click', () => { $('deleteOverlay').classList.remove('show'); });
+
+  $('deleteConfirm').addEventListener('click', async () => {
+    const overlay = $('deleteOverlay');
+    const id = overlay.dataset.pendingId;
+    const btn = $('deleteConfirm');
+    btn.disabled = true;
+    btn.textContent = 'Deleting…';
+    try {
+      await ScrapDataAdapter.deleteScrapEntry(window.qdDb, id);
+      overlay.classList.remove('show');
+      await load(); // reload so the deleted row disappears
+    } catch (e) {
+      console.error('Quality Dashboard: deleteScrapEntry failed:', e);
+      const msgEl = $('deleteMessage');
+      msgEl.className = 'qd-form-message error';
+      msgEl.textContent = '⚠ Could not delete: ' + (e && e.message ? e.message : String(e));
+      msgEl.style.display = 'block';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Delete';
+    }
+  });
 
   // ---- Init ---------------------------------------------------------------
 
