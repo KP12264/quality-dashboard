@@ -1,235 +1,96 @@
-/**
- * scrap-entry-page.js
- * ------------------------------------------------------------------
- * Page 2 — Scrap Entry. Only talks to Firestore via ScrapDataAdapter
- * (scrapLogs) and ProductionDataAdapter.getModelListForDayLine()
- * (read-only, productionLogs). Never writes to productionLogs.
- *
- * UI shape: one row per Model + Defect, with a Door A / B / C qty
- * column each (Auto Total = sum of the three). On save, each row is
- * expanded into up to 3 separate scrapLogs documents (one per line
- * that has a qty > 0) via ScrapDataAdapter.addScrapEntries() — this
- * keeps the existing scrapLogs document shape (one line per doc)
- * unchanged, so Scrap Detail / Dashboard / Improvement all keep
- * working without any schema migration.
- * ------------------------------------------------------------------
- */
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scrap Entry · Quality System</title>
 
-(function () {
-  const $ = id => document.getElementById(id);
-  let rows = [];
-  let rowIdCounter = 0;
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
 
-  function todayStr() { return ProductionDataAdapter.toDateStr(new Date()); }
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+<div class="wrap">
 
-  function newRow() {
-    return { id: 'row' + (rowIdCounter++), model: '', defectType: DEFECT_TYPES[0], qtyA: '', qtyB: '', qtyC: '', remark: '' };
-  }
+  <div id="navRoot"></div>
+  <script>window.CURRENT_PAGE = 'scrap-entry';</script>
 
-  function num(v) {
-    const n = parseFloat(v);
-    return Number.isFinite(n) && n > 0 ? n : 0;
-  }
+  <div class="qd-page-header">
+    <h1>SCRAP ENTRY</h1>
+    <p>For Leaders — record scrap by Model + Defect, split across Door A / B / C. No defect time needed. Production Qty is never entered here — it always comes from the read-only production system.</p>
+  </div>
 
-  function rowTotal(row) { return num(row.qtyA) + num(row.qtyB) + num(row.qtyC); }
+  <div id="connectionBanner" class="qd-banner" style="display:none;"></div>
 
-  // ---- Model options (union of models recorded for A/B/C on the selected date) ----
+  <section class="qd-panel">
+    <div class="qd-entry-context">
+      <div class="qd-form-field">
+        <label for="ctxDate">Date</label>
+        <input type="date" id="ctxDate">
+      </div>
+      <div class="qd-form-field">
+        <label for="ctxShift">Shift</label>
+        <select id="ctxShift">
+          <option value="เช้า">Day</option>
+          <option value="ดึก">Night</option>
+        </select>
+      </div>
+      <div class="qd-entry-context-note">Date + Shift apply to every row below. Add one row per Model + Defect combination.</div>
+    </div>
 
-  let modelOptionsCache = { date: null, names: [] };
-
-  async function getModelOptions(date) {
-    if (modelOptionsCache.date === date) return modelOptionsCache.names;
-    if (window.qdFirebaseError) return [];
-    const results = await Promise.all(
-      LINES.map(l => ProductionDataAdapter.getModelListForDayLine(window.qdDb, date, l.code))
-    );
-    const merged = new Set();
-    results.forEach(r => (r.names || []).forEach(n => merged.add(n)));
-    const names = Array.from(merged);
-    modelOptionsCache = { date, names };
-    return names;
-  }
-
-  // ---- Rendering ------------------------------------------------------
-
-  async function renderTable() {
-    const tbody = $('entryTableBody');
-    const date = $('ctxDate').value;
-    const modelOptions = await getModelOptions(date);
-
-    // ROOT-CAUSE FIX: a <select> with no <option selected> auto-displays
-    // its FIRST option in the browser, but row.model (our JS state) was
-    // never updated to match — it only changed via the 'change' event,
-    // which never fires unless the user manually touches the dropdown.
-    // That's why the model was visibly shown but validation still saw
-    // row.model === ''. Sync row.model to the currently visible option
-    // BEFORE building the HTML, so what's displayed and what's stored
-    // are always the same value — no click-away-and-back required.
-    rows.forEach(row => {
-      if (modelOptions.length > 0 && !modelOptions.includes(row.model)) {
-        row.model = modelOptions[0];
-      }
-    });
-
-    tbody.innerHTML = rows.map(row => {
-      const modelSelectHtml = modelOptions.length > 0
-        ? modelOptions.map(m => `<option value="${escapeHtml(m)}" ${row.model === m ? 'selected' : ''}>${escapeHtml(m)}</option>`).join('')
-        : `<option value="">No models recorded for this date yet</option>`;
-      return `
-        <tr data-row-id="${row.id}">
-          <td data-label="Model"><select class="row-model">${modelSelectHtml}</select></td>
-          <td data-label="Defect"><select class="row-defect">${DEFECT_TYPES.map(d => `<option value="${escapeHtml(d)}" ${row.defectType === d ? 'selected' : ''}>${escapeHtml(d)}</option>`).join('')}</select></td>
-          <td data-label="Door A"><input type="number" class="row-qtyA" min="0" step="1" value="${row.qtyA}"></td>
-          <td data-label="Door B"><input type="number" class="row-qtyB" min="0" step="1" value="${row.qtyB}"></td>
-          <td data-label="Door C"><input type="number" class="row-qtyC" min="0" step="1" value="${row.qtyC}"></td>
-          <td data-label="Total" class="row-total">${rowTotal(row)}</td>
-          <td data-label="Remark"><input type="text" class="row-remark" maxlength="200" placeholder="Optional note" value="${escapeHtml(row.remark)}"></td>
-          <td data-label=""><button type="button" class="row-del" title="Remove row" ${rows.length <= 1 ? 'disabled' : ''}>×</button></td>
-        </tr>`;
-    }).join('');
-
-    // Wire per-row events
-    tbody.querySelectorAll('tr').forEach(tr => {
-      const rowId = tr.dataset.rowId;
-      const row = rows.find(r => r.id === rowId);
-      tr.querySelector('.row-model').addEventListener('change', e => { row.model = e.target.value; });
-      tr.querySelector('.row-defect').addEventListener('change', e => { row.defectType = e.target.value; });
-      tr.querySelector('.row-qtyA').addEventListener('input', e => { row.qtyA = e.target.value; updateTotals(tr, row); });
-      tr.querySelector('.row-qtyB').addEventListener('input', e => { row.qtyB = e.target.value; updateTotals(tr, row); });
-      tr.querySelector('.row-qtyC').addEventListener('input', e => { row.qtyC = e.target.value; updateTotals(tr, row); });
-      tr.querySelector('.row-remark').addEventListener('input', e => { row.remark = e.target.value; });
-      const delBtn = tr.querySelector('.row-del');
-      if (!delBtn.disabled) {
-        delBtn.addEventListener('click', () => {
-          rows = rows.filter(r => r.id !== rowId);
-          renderTable();
-        });
-      }
-    });
-
-    updateGrandTotal();
-  }
-
-  function updateTotals(tr, row) {
-    tr.querySelector('.row-total').textContent = rowTotal(row);
-    updateGrandTotal();
-  }
-
-  function updateGrandTotal() {
-    const grand = rows.reduce((s, r) => s + rowTotal(r), 0);
-    $('grandTotal').textContent = grand;
-  }
-
-  function escapeHtml(s) {
-    return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  }
-
-  // ---- Confirm + Save ---------------------------------------------------
-
-  function buildEntriesFromRows() {
-    const date = $('ctxDate').value;
-    const shift = $('ctxShift').value;
-    const entries = [];
-    const problems = [];
-
-    rows.forEach((row, i) => {
-      const total = rowTotal(row);
-      if (total === 0) return; // skip empty rows silently, they're just unused blank rows
-      if (!row.model) { problems.push(`Row ${i + 1}: select a Model before saving.`); return; }
-      LINES.forEach(l => {
-        const qty = num(row['qty' + l.code]);
-        if (qty > 0) {
-          entries.push({ date, shift, line: l.code, model: row.model, defectType: row.defectType, scrapQty: qty, remark: row.remark || '' });
-        }
-      });
-    });
-
-    return { entries, problems };
-  }
-
-  function showConfirmModal(entries) {
-    const lineLabel = code => (LINES.find(l => l.code === code) || {}).label || code;
-    const shiftLabel = code => (SHIFTS.find(s => s.code === code) || {}).label || code;
-    const rowsHtml = entries.map(e => `
-      <tr>
-        <td>${escapeHtml(e.model)}</td>
-        <td>${escapeHtml(e.defectType)}</td>
-        <td>${escapeHtml(lineLabel(e.line))}</td>
-        <td style="text-align:right;">${e.scrapQty}</td>
-        <td>${escapeHtml(e.remark) || '<span style="color:var(--muted-soft);">–</span>'}</td>
-      </tr>`).join('');
-    const grand = entries.reduce((s, e) => s + e.scrapQty, 0);
-    $('confirmSummary').innerHTML = `
-      <div>Date: <b>${escapeHtml(entries[0].date)}</b> · Shift: <b>${escapeHtml(shiftLabel(entries[0].shift))}</b></div>
-      <table>
-        <thead><tr><th>Model</th><th>Defect</th><th>Line</th><th style="text-align:right;">Qty</th><th>Remark</th></tr></thead>
-        <tbody>${rowsHtml}</tbody>
+    <div class="qd-table-scroll">
+      <table class="qd-datatable qd-entry-table" id="entryTable">
+        <thead>
+          <tr>
+            <th style="min-width:200px;">Model</th>
+            <th style="min-width:170px;">Defect</th>
+            <th style="width:90px;">Door A</th>
+            <th style="width:90px;">Door B</th>
+            <th style="width:90px;">Door C</th>
+            <th style="width:90px;">Total</th>
+            <th style="min-width:150px;">Remark</th>
+            <th style="width:36px;"></th>
+          </tr>
+        </thead>
+        <tbody id="entryTableBody"></tbody>
       </table>
-      <div style="margin-top:10px;font-weight:700;">Grand Total: ${grand} pcs across ${entries.length} record${entries.length > 1 ? 's' : ''}</div>`;
-    $('confirmOverlay').classList.add('show');
-  }
-  function hideConfirmModal() { $('confirmOverlay').classList.remove('show'); }
+    </div>
 
-  function showMessage(kind, text) {
-    const el = $('entryMessage');
-    el.className = 'qd-form-message ' + kind;
-    el.textContent = text;
-    el.style.display = 'block';
-  }
+    <div class="qd-entry-footer">
+      <button type="button" class="mini-add-btn" id="addRowBtn">+ Add Row</button>
+      <div class="qd-entry-grand-total">Grand Total: <b id="grandTotal">0</b> pcs</div>
+    </div>
 
-  async function doSave(entries) {
-    const saveBtn = $('confirmSave');
-    saveBtn.disabled = true;
-    saveBtn.textContent = 'Saving…';
-    try {
-      const { succeeded, failed } = await ScrapDataAdapter.addScrapEntries(window.qdDb, entries);
-      hideConfirmModal();
-      if (failed.length === 0) {
-        showMessage('success', `Saved ${succeeded.length} scrap record${succeeded.length > 1 ? 's' : ''} to scrapLogs.`);
-        rows = [newRow()];
-        renderTable();
-      } else {
-        showMessage('error', `⚠ Saved ${succeeded.length}, but ${failed.length} failed: ${failed[0].error && failed[0].error.message ? failed[0].error.message : 'unknown error'}`);
-      }
-    } catch (e) {
-      console.error('Quality Dashboard: scrap entry save failed:', e);
-      hideConfirmModal();
-      showMessage('error', '⚠ Could not save: ' + (e && e.message ? e.message : String(e)));
-    } finally {
-      saveBtn.disabled = false;
-      saveBtn.textContent = 'Save to Scrap Log';
-    }
-  }
+    <button type="button" class="qd-submit-btn" id="reviewBtn">Review &amp; Save</button>
+    <div id="entryMessage" class="qd-form-message" style="display:none;"></div>
+  </section>
 
-  // ---- Event wiring ---------------------------------------------------
+  <footer class="qd-footer">
+    <span>Scrap saved here writes only to <code>scrapLogs</code> — productionLogs is never touched.</span>
+  </footer>
 
-  function init() {
-    $('ctxDate').value = todayStr();
-    $('ctxShift').value = 'เช้า';
-    rows = [newRow()];
-    renderTable();
+</div>
 
-    $('ctxDate').addEventListener('change', renderTable);
-    $('ctxShift').addEventListener('change', () => {}); // shift doesn't affect model options
+<!-- Confirmation modal -->
+<div class="qd-modal-overlay" id="confirmOverlay">
+  <div class="qd-modal-box">
+    <h3>Confirm Scrap Entry</h3>
+    <div class="qd-modal-summary" id="confirmSummary"></div>
+    <div class="qd-modal-actions">
+      <button type="button" class="mini-add-btn" id="confirmCancel">Cancel</button>
+      <button type="button" class="qd-submit-btn" id="confirmSave" style="width:auto;">Save to Scrap Log</button>
+    </div>
+  </div>
+</div>
 
-    $('addRowBtn').addEventListener('click', () => { rows.push(newRow()); renderTable(); });
-
-    $('reviewBtn').addEventListener('click', () => {
-      $('entryMessage').style.display = 'none';
-      if (!$('ctxDate').value) { showMessage('error', 'Select a Date first.'); return; }
-      const { entries, problems } = buildEntriesFromRows();
-      if (problems.length > 0) { showMessage('error', '⚠ ' + problems[0]); return; }
-      if (entries.length === 0) { showMessage('error', 'Enter at least one quantity (Door A/B/C) before saving.'); return; }
-      showConfirmModal(entries);
-    });
-
-    $('confirmCancel').addEventListener('click', hideConfirmModal);
-    $('confirmSave').addEventListener('click', () => {
-      const { entries } = buildEntriesFromRows();
-      doSave(entries);
-    });
-  }
-
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
-  else init();
-})();
+<script src="js/config.js"></script>
+<script src="js/firebase-init.js"></script>
+<script src="js/data-adapter.js"></script>
+<script src="js/scrap-adapter.js"></script>
+<script src="js/scrap-entry-page.js"></script>
+<script src="js/nav.js"></script>
+</body>
+</html>
