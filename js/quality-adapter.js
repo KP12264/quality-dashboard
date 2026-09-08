@@ -134,15 +134,70 @@
     });
   }
 
+  // ---- Per-shift target evaluation (target is ALWAYS per-shift, never summed across shifts) ----
+
+  /**
+   * combineShiftStatuses(shiftEvals)
+   * shiftEvals: [{ shiftCode, status, ... }, ...] — one entry per shift in
+   * scope, each already evaluated against ITS OWN target via
+   * buildOverallSummary(shiftProduction, shiftScrap, shiftTarget). This
+   * function never adds shift totals or targets together — a 30 pcs/shift
+   * target must never become "60 for two shifts". It only decides what
+   * the single combined Status pill should say when more than one shift
+   * is in view: OVER TARGET if ANY shift is over its own target, else
+   * WITHIN TARGET if at least one shift has data, else NO DATA.
+   */
+  function combineShiftStatuses(shiftEvals) {
+    if (!shiftEvals || shiftEvals.length === 0) return "NO DATA";
+    if (shiftEvals.some(e => e.status === "OVER TARGET")) return "OVER TARGET";
+    if (shiftEvals.some(e => e.status === "WITHIN TARGET")) return "WITHIN TARGET";
+    return "NO DATA";
+  }
+
+  // ---- Recurring problems ------------------------------------------------
+
+  /**
+   * buildRecurringProblems(scrapRecords, thresholdDistinctDates)
+   * Groups scrap records by Line + Model + DefectType and flags a group
+   * as "recurring" once it has appeared on at least
+   * `thresholdDistinctDates` DIFFERENT dates within whatever date range
+   * the caller already fetched (Dashboard / Scrap Detail decide the
+   * lookback window by what they pass in). A single bad day is not
+   * "recurring" — only a repeating pattern is.
+   * -> [{ line, model, defectType, totalQty, distinctDates, dates, recurring }, ...]
+   *    sorted by distinctDates desc, then totalQty desc.
+   */
+  function buildRecurringProblems(scrapRecords, thresholdDistinctDates) {
+    const groups = new Map();
+    scrapRecords.forEach(r => {
+      const gk = `${r.line}|${r.model}|${r.defectType}`;
+      if (!groups.has(gk)) groups.set(gk, { line: r.line, model: r.model, defectType: r.defectType, totalQty: 0, dateSet: new Set() });
+      const g = groups.get(gk);
+      g.totalQty += r.scrapQty;
+      g.dateSet.add(r.date);
+    });
+    return Array.from(groups.values())
+      .map(g => ({
+        line: g.line, model: g.model, defectType: g.defectType,
+        totalQty: g.totalQty,
+        distinctDates: g.dateSet.size,
+        dates: Array.from(g.dateSet).sort(),
+        recurring: g.dateSet.size >= thresholdDistinctDates
+      }))
+      .sort((a, b) => b.distinctDates - a.distinctDates || b.totalQty - a.totalQty);
+  }
+
   window.QualityAdapter = {
     key,
     keyM,
     pct,
     buildOverallSummary,
+    combineShiftStatuses,
     buildByLine,
     buildByModel,
     buildParetoDefects,
-    buildDailyTrend
+    buildDailyTrend,
+    buildRecurringProblems
   };
 
 })();

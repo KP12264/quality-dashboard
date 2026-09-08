@@ -50,7 +50,7 @@
       const all = day.map(r => ({ ...r })).concat(night.map(r => ({ ...r })));
       all.sort((a, b) => (b.effectiveDate || '') < (a.effectiveDate || '') ? -1 : 1);
       if (all.length === 0) {
-        tbody.innerHTML = `<tr class="empty-row"><td colspan="4">No target history yet — using the default of ${DEFAULT_TARGET_PER_SHIFT_PCS['เช้า']} pcs/shift for both shifts until a target is added below.</td></tr>`;
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="4">No target history yet — using the default of ${DEFAULT_TARGET_PER_SHIFT_PCS['DAY']} pcs/shift for both shifts until a target is added below.</td></tr>`;
         return;
       }
       tbody.innerHTML = all.map(r => `

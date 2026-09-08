@@ -29,7 +29,7 @@
 
   /**
    * normalizeScrapRecord(id, raw)
-   * -> { id, date, shift, line, model, defectType, scrapQty, createdAt }
+   * -> { id, date, shift, line, model, defectType, scrapQty, remark, createdAt }
    */
   function normalizeScrapRecord(id, raw) {
     if (!raw) return null;
@@ -41,6 +41,7 @@
       model: raw.model || "",
       defectType: raw.defectType || "",
       scrapQty: num(raw.scrapQty),
+      remark: raw.remark || "",
       createdAt: raw.createdAt || null
     };
   }
@@ -78,13 +79,14 @@
   }
 
   /**
-   * addScrapEntry(db, { date, shift, line, model, defectType, scrapQty })
+   * addScrapEntry(db, { date, shift, line, model, defectType, scrapQty, remark })
    * Writes ONE new scrap entry to scrapLogs. Never writes to
    * productionLogs. Validates the required fields (all of them, since
    * matching against production depends on date+shift+line+model being
-   * correct and consistent).
+   * correct and consistent). `remark` is optional — always stored as a
+   * string, "" when not provided.
    */
-  async function addScrapEntry(db, { date, shift, line, model, defectType, scrapQty }) {
+  async function addScrapEntry(db, { date, shift, line, model, defectType, scrapQty, remark }) {
     if (!db) throw new Error("No Firestore connection available (db is null).");
     const missing = [];
     if (!date) missing.push("date");
@@ -99,14 +101,78 @@
     return db.collection(SCRAP_COLLECTION).add({
       date, shift, line, model, defectType,
       scrapQty: num(scrapQty),
+      remark: remark || "",
       createdAt: Date.now()
     });
+  }
+
+  /**
+   * updateScrapEntry(db, id, { date, shift, line, model, defectType, scrapQty, remark })
+   * Updates an EXISTING scrapLogs document in place (no duplicate is
+   * created). Only ever touches SCRAP_COLLECTION — never productionLogs.
+   * Same field validation as addScrapEntry, since Edit can change any
+   * of the matching keys (date/shift/line/model) or the defect/qty.
+   */
+  async function updateScrapEntry(db, id, { date, shift, line, model, defectType, scrapQty, remark }) {
+    if (!db) throw new Error("No Firestore connection available (db is null).");
+    if (!id) throw new Error("updateScrapEntry requires an id.");
+    const missing = [];
+    if (!date) missing.push("date");
+    if (!shift) missing.push("shift");
+    if (!line) missing.push("line");
+    if (!model) missing.push("model");
+    if (!defectType) missing.push("defectType");
+    if (!(num(scrapQty) > 0)) missing.push("scrapQty (must be > 0)");
+    if (missing.length) {
+      throw new Error("updateScrapEntry is missing/invalid: " + missing.join(", "));
+    }
+    return db.collection(SCRAP_COLLECTION).doc(id).update({
+      date, shift, line, model, defectType,
+      scrapQty: num(scrapQty),
+      remark: remark || "",
+      updatedAt: Date.now()
+    });
+  }
+
+  /**
+   * deleteScrapEntry(db, id)
+   * Deletes ONE scrapLogs document. Only ever touches SCRAP_COLLECTION —
+   * never productionLogs. Callers (Scrap Detail page) are responsible
+   * for showing a confirmation dialog before calling this — this
+   * function itself performs the delete unconditionally once called.
+   */
+  async function deleteScrapEntry(db, id) {
+    if (!db) throw new Error("No Firestore connection available (db is null).");
+    if (!id) throw new Error("deleteScrapEntry requires an id.");
+    return db.collection(SCRAP_COLLECTION).doc(id).delete();
+  }
+
+  /**
+   * addScrapEntries(db, entries)
+   * Batch version of addScrapEntry for the multi-row Scrap Entry page —
+   * saves each row independently (Promise.allSettled) so one bad row
+   * never silently drops the others, and the caller can report exactly
+   * which rows succeeded/failed rather than an all-or-nothing result.
+   * Returns { succeeded: [{entry, id}], failed: [{entry, error}] }.
+   */
+  async function addScrapEntries(db, entries) {
+    const results = await Promise.allSettled(entries.map(e => addScrapEntry(db, e)));
+    const succeeded = [];
+    const failed = [];
+    results.forEach((r, i) => {
+      if (r.status === "fulfilled") succeeded.push({ entry: entries[i], id: r.value.id });
+      else failed.push({ entry: entries[i], error: r.reason });
+    });
+    return { succeeded, failed };
   }
 
   window.ScrapDataAdapter = {
     normalizeScrapRecord,
     getScrapData,
-    addScrapEntry
+    addScrapEntry,
+    addScrapEntries,
+    updateScrapEntry,
+    deleteScrapEntry
   };
 
 })();
