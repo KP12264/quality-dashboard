@@ -1,19 +1,43 @@
 /**
  * data-adapter.js
  * ------------------------------------------------------------------
- * READ-ONLY adapter for the existing `productionLogs` Firestore
- * collection (project daily-production-report-46b60).
+ * READ-ONLY adapter for Production V2's Firestore collections
+ * (project daily-production-report-46b60):
+ *   - prodV2_actualLogs : actual production quantity
+ *   - prodV2_dailyPlans : the shift's planned Model/Door roster
  *
- * This is the ONLY file in the dashboard that talks to Firestore.
- * Every call here is `.get()` — there is no .set()/.update()/.add()/
- * .delete() anywhere in this file or this project. Do not add any.
+ * This is the ONLY file in the dashboard that reads production data
+ * from Firestore. Every call here is `.get()` — there is no
+ * .set()/.update()/.add()/.delete() anywhere in this file or this
+ * project touching either of these collections. Do not add any.
  *
- * Why an adapter at all: the existing documents have no native
- * `date` / `line` / `shift` fields — those are encoded only in the
- * Firestore Document ID (e.g. "prod_2026-08-15_A_เช้า"), and the
- * actual payload is a JSON *string* inside a field called `json`.
- * Every other part of this dashboard works with clean, normalized
- * JS objects and never needs to know any of that.
+ * This file replaced an earlier version that read the legacy
+ * `productionLogs` collection (prod_{date}_{line}_{shift} documents
+ * with a JSON-string payload). That collection is no longer read here
+ * at all — Production V2 is now the sole production data source, per
+ * an explicit decision to fully replace it rather than run both in
+ * parallel. See PRODUCTION_COLLECTION in config.js for the (now
+ * unused) legacy reference.
+ *
+ * Document shapes (confirmed against the real Production V2 source,
+ * not guessed):
+ *
+ *   prodV2_actualLogs / actual_{date}_{LINE}_{SHIFT}
+ *     { actualByCell: { "{blockIndex}|||{model}|||{door}": qty, ... } }
+ *   There is no single "total for the shift" field — it's the sum of
+ *   every value in actualByCell.
+ *
+ *   prodV2_dailyPlans / plan_{date}_{LINE}_{SHIFT}
+ *     { blocks: [ { start, end, cells: [ {model, door, plan, originalPlan}, ... ],
+ *                   total, originalTotal }, ... ],
+ *       masterSnapshot: { palletChangeLosses: [...] } }
+ *   This is what the Scrap Entry Model dropdown reads (see
+ *   getModelListForDayLine below) — it's set before the shift starts,
+ *   so it's available even before any actual data has been logged.
+ *
+ * Every other part of this dashboard still works with the same clean,
+ * normalized JS objects as before ({date, line, shift, model,
+ * productionQty, ...}) and never needs to know any of the above.
  *
  * Exposed as window.ProductionDataAdapter = { ... }
  * ------------------------------------------------------------------
@@ -23,22 +47,26 @@
 
   // ---- Document ID helpers -------------------------------------------------
 
-  // Matches: prod_2026-08-15_A_เช้า  |  prod_2026-08-15_C_ดึก
-  const DOC_ID_PATTERN = /^prod_(\d{4}-\d{2}-\d{2})_([ABC])_(เช้า|ดึก)$/;
-  // Matches: prod_2026-08-15_A_models  (per-model qty, shared across BOTH shifts of that day/line)
-  const MODEL_DOC_ID_PATTERN = /^prod_(\d{4}-\d{2}-\d{2})_([ABC])_models$/;
+  // Matches: actual_2026-08-28_A_DAY  |  actual_2026-08-28_C_NIGHT
+  const ACTUAL_DOC_ID_PATTERN = /^actual_(\d{4}-\d{2}-\d{2})_([ABC])_(DAY|NIGHT)$/;
+  // Matches: plan_2026-08-28_A_DAY  |  plan_2026-08-28_C_NIGHT
+  const PLAN_DOC_ID_PATTERN = /^plan_(\d{4}-\d{2}-\d{2})_([ABC])_(DAY|NIGHT)$/;
 
-  function buildDocId(dateStr, lineCode, shiftCode) {
-    return `prod_${dateStr}_${lineCode}_${shiftCode}`;
+  function buildActualDocId(dateStr, lineCode, shiftCode) {
+    return `actual_${dateStr}_${lineCode}_${shiftCode}`;
   }
-
-  function buildModelDocId(dateStr, lineCode) {
-    return `prod_${dateStr}_${lineCode}_models`;
+  function buildPlanDocId(dateStr, lineCode, shiftCode) {
+    return `plan_${dateStr}_${lineCode}_${shiftCode}`;
+  }
+  // Kept for API-compatibility with any external caller that still
+  // asks for "the doc id" generically — maps to the actual-log doc.
+  function buildDocId(dateStr, lineCode, shiftCode) {
+    return buildActualDocId(dateStr, lineCode, shiftCode);
   }
 
   function toDateStr(d) {
     // Local-date (not UTC) YYYY-MM-DD, matching the format used by the
-    // existing site's <input type="date"> values.
+    // <input type="date"> values across this dashboard.
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, "0");
     const day = String(d.getDate()).padStart(2, "0");
@@ -66,180 +94,137 @@
     return Number.isFinite(n) ? n : 0;
   }
 
+  // Combine Model + Door into one display/matching string. Production V2
+  // tracks these as two separate dimensions, but Scrap (and the rest of
+  // this dashboard) only has a single "model" field to match against —
+  // this is the one place that combination happens, so it's applied
+  // identically everywhere a model name is produced from V2 data.
+  function combineModelDoor(model, door) {
+    const m = (model || "").trim();
+    const d = (door || "").trim();
+    if (!m) return "";
+    return d ? `${m} (${d})` : m;
+  }
+
   // ---- Parsing ---------------------------------------------------------
 
   /**
-   * parseProductionDocument(docId, rawFirestoreData)
-   * Turns one raw Firestore document (id + { json, updatedAt }) into a
-   * plain structured object, or null if the document doesn't match the
-   * expected production-log shape at all (defensive — should not
-   * normally happen for docs matched by our own ID builder).
+   * parseActualDocument(docId, rawFirestoreData)
+   * -> { docId, date, line, shift, actualByCell: {cellKey: qty} } | null
    */
-  function parseProductionDocument(docId, rawFirestoreData) {
-    const idMatch = DOC_ID_PATTERN.exec(docId);
+  function parseActualDocument(docId, rawFirestoreData) {
+    const idMatch = ACTUAL_DOC_ID_PATTERN.exec(docId);
     if (!idMatch) return null;
-    if (!rawFirestoreData || typeof rawFirestoreData.json !== "string") return null;
-
-    let payload;
-    try {
-      payload = JSON.parse(rawFirestoreData.json);
-    } catch (e) {
-      console.error("Quality Dashboard: failed to JSON.parse doc", docId, e);
-      return null;
-    }
-
+    if (!rawFirestoreData) return null;
     const [, date, line, shift] = idMatch;
-    const rows = Array.isArray(payload.rows) ? payload.rows : [];
+    const actualByCell = (rawFirestoreData.actualByCell && typeof rawFirestoreData.actualByCell === "object")
+      ? rawFirestoreData.actualByCell
+      : {};
+    return { docId, date, line, shift, actualByCell };
+  }
 
+  /**
+   * parsePlanDocument(docId, rawFirestoreData)
+   * -> { docId, date, line, shift, blocks: [{start,end,cells:[{model,door,plan}]}] } | null
+   */
+  function parsePlanDocument(docId, rawFirestoreData) {
+    const idMatch = PLAN_DOC_ID_PATTERN.exec(docId);
+    if (!idMatch) return null;
+    if (!rawFirestoreData) return null;
+    const [, date, line, shift] = idMatch;
+    const blocks = Array.isArray(rawFirestoreData.blocks) ? rawFirestoreData.blocks : [];
     return {
-      docId,
-      date,
-      line,
-      shift,
-      title: payload.title || "",
-      // `id` is carried through because the model-breakdown document
-      // (see parseModelDocument below) keys its per-hour quantities by
-      // this same row id — it's required to attribute model quantity
-      // to the correct shift (model qty is stored once per day/line,
-      // shared across both shifts).
-      rows: rows.map(r => ({
-        id: r.id || "",
-        slot: r.slot || "",
-        plan: num(r.plan),
-        actual: num(r.actual),
-        downtime: num(r.downtime),
-        note: r.note || ""
+      docId, date, line, shift,
+      blocks: blocks.map(b => ({
+        start: b.start || b.startTime || "",
+        end: b.end || b.endTime || "",
+        cells: Array.isArray(b.cells) ? b.cells.map(c => ({
+          model: c.model || "",
+          door: c.door || "",
+          plan: num(c.plan),
+          originalPlan: num(c.originalPlan)
+        })) : []
       }))
     };
   }
 
   /**
-   * parseModelDocument(docId, rawFirestoreData)
-   * Parses a prod_{date}_{line}_models document into
-   *   { date, line, models: [{id, name, door}], qty: { [modelId]: { [rowId]: number } } }
-   * or null if it doesn't match the expected shape.
+   * normalizeProductionRecord(parsedActualDoc)
+   * Collapses one parsed actual-log document into the same normalized
+   * shape the rest of the dashboard has always consumed:
+   *   { date, shift, line, model, productionQty, planQty, downtimeMin, hasData }
    *
-   * NOTE: this document is shared by BOTH shifts of that day/line (the
-   * original system keeps one model list + qty grid per day, not per
-   * shift). Attributing a model's quantity to a specific shift requires
-   * intersecting `qty[modelId]` against the row ids that belong to that
-   * shift's document — see getProductionDataByModel().
+   * `model` is null at this level (day/line/shift TOTAL, not per-model —
+   * see normalizeProductionByModel for that). `planQty`/`downtimeMin`
+   * are not populated from Production V2 (Plan lives in a separate
+   * collection, and V2 doesn't expose a per-shift downtime total the
+   * way legacy productionLogs did) — nothing in this dashboard's UI
+   * currently reads either field, so they're kept as 0 for shape
+   * compatibility rather than fetched with extra reads that would go
+   * unused.
    */
-  function parseModelDocument(docId, rawFirestoreData) {
-    const idMatch = MODEL_DOC_ID_PATTERN.exec(docId);
-    if (!idMatch) return null;
-    if (!rawFirestoreData || typeof rawFirestoreData.json !== "string") return null;
-
-    let payload;
-    try {
-      payload = JSON.parse(rawFirestoreData.json);
-    } catch (e) {
-      console.error("Quality Dashboard: failed to JSON.parse model doc", docId, e);
-      return null;
-    }
-
-    const [, date, line] = idMatch;
-    const models = Array.isArray(payload.models) ? payload.models : [];
-    const qty = (payload.qty && typeof payload.qty === "object") ? payload.qty : {};
-
+  function normalizeProductionRecord(parsedActualDoc) {
+    if (!parsedActualDoc) return null;
+    const cellValues = Object.values(parsedActualDoc.actualByCell);
+    const productionQty = cellValues.reduce((s, v) => s + num(v), 0);
     return {
-      docId,
-      date,
-      line,
-      models: models.map(m => ({ id: m.id || "", name: m.name || "", door: m.door || "" })),
-      qty
-    };
-  }
-
-  /**
-   * normalizeProductionRecord(parsedDoc)
-   * Collapses one parsed document (one date + line + shift, many hourly
-   * rows) into the single normalized shape the dashboard UI consumes:
-   *   { date, shift, line, model, productionQty, planQty, downtimeMin }
-   *
-   * `model` is null at this level: the existing system tracks per-model
-   * quantity in a *separate* document (prod_{date}_{line}_models) rather
-   * than per hourly row, and Phase 1's UI only needs line/shift/day
-   * totals. A future phase can add a normalizeModelRecords() alongside
-   * this one without changing this function's contract.
-   */
-  function normalizeProductionRecord(parsedDoc) {
-    if (!parsedDoc) return null;
-    const productionQty = parsedDoc.rows.reduce((s, r) => s + r.actual, 0);
-    const planQty = parsedDoc.rows.reduce((s, r) => s + r.plan, 0);
-    const downtimeMin = parsedDoc.rows.reduce((s, r) => s + r.downtime, 0);
-    return {
-      date: parsedDoc.date,
-      line: parsedDoc.line,
-      shift: parsedDoc.shift,
+      date: parsedActualDoc.date,
+      line: parsedActualDoc.line,
+      shift: parsedActualDoc.shift,
       model: null,
       productionQty,
-      planQty,
-      downtimeMin,
-      hasData: parsedDoc.rows.length > 0
+      planQty: 0,
+      downtimeMin: 0,
+      hasData: cellValues.length > 0
     };
   }
 
   /**
-   * normalizeProductionByModel(shiftParsedDoc, modelParsedDoc)
-   * Produces one normalized record PER MODEL for a given date+line+shift:
-   *   { date, shift, line, model, productionQty }
+   * normalizeProductionByModel(parsedActualDoc)
+   * Produces one normalized record PER MODEL(+DOOR) for a given
+   * date+line+shift: { date, shift, line, model, productionQty }
    *
-   * `shiftParsedDoc` is the parsed prod_{date}_{line}_{shift} document
-   * (gives us which row ids belong to THIS shift).
-   * `modelParsedDoc` is the parsed prod_{date}_{line}_models document
-   * (gives us the model list and qty-per-row-id, shared across shifts).
-   *
-   * Returns [] if there's no model breakdown recorded for that day/line
-   * (common for older dates, or days where the Leader only filled in
-   * the hourly total without a per-model split) — callers should NOT
-   * treat an empty array here as "zero production"; the day/shift/line
-   * total from normalizeProductionRecord() is still the source of truth
-   * for totals. This function is only for the "by Model" breakdown.
+   * Sums every actualByCell entry for a given Model+Door combination
+   * across all time blocks (the cell key's blockIndex segment is not
+   * distinguished here — only Model+Door matters for this breakdown).
    */
-  function normalizeProductionByModel(shiftParsedDoc, modelParsedDoc) {
-    if (!shiftParsedDoc || !modelParsedDoc) return [];
-    const shiftRowIds = new Set(shiftParsedDoc.rows.map(r => r.id).filter(Boolean));
-    if (shiftRowIds.size === 0) return [];
-
-    const out = [];
-    for (const model of modelParsedDoc.models) {
-      if (!model.name) continue;
-      const rowQty = modelParsedDoc.qty[model.id] || {};
-      let total = 0;
-      for (const rowId of Object.keys(rowQty)) {
-        if (!shiftRowIds.has(rowId)) continue; // belongs to the other shift
-        total += num(rowQty[rowId]);
-      }
-      out.push({
-        date: shiftParsedDoc.date,
-        line: shiftParsedDoc.line,
-        shift: shiftParsedDoc.shift,
-        model: model.name,
-        productionQty: total
-      });
+  function normalizeProductionByModel(parsedActualDoc) {
+    if (!parsedActualDoc) return [];
+    const totals = new Map(); // combinedModelName -> qty
+    for (const [cellKey, qty] of Object.entries(parsedActualDoc.actualByCell)) {
+      const parts = cellKey.split("|||");
+      if (parts.length < 3) continue; // malformed key, skip defensively
+      const model = combineModelDoor(parts[1], parts[2]);
+      if (!model) continue;
+      totals.set(model, (totals.get(model) || 0) + num(qty));
     }
-    return out;
+    return Array.from(totals.entries()).map(([model, productionQty]) => ({
+      date: parsedActualDoc.date,
+      line: parsedActualDoc.line,
+      shift: parsedActualDoc.shift,
+      model,
+      productionQty
+    }));
   }
 
   // ---- Fetching (READ ONLY) ---------------------------------------------
 
   /**
    * fetchOne(db, dateStr, lineCode, shiftCode)
-   * Fetches exactly one production-log document by its known ID.
+   * Fetches exactly one actual-log document by its known ID.
    * Returns one of:
-   *   { status: 'found',     record: <normalized> }
-   *   { status: 'not-found', record: null }   // valid empty day — NOT an error
-   *   { status: 'error',     record: null, error }
+   *   { status: 'found',     record: <normalized>, parsed }
+   *   { status: 'not-found', record: null, parsed: null }   // valid empty shift — NOT an error
+   *   { status: 'error',     record: null, parsed: null, error }
    */
   async function fetchOne(db, dateStr, lineCode, shiftCode) {
-    const docId = buildDocId(dateStr, lineCode, shiftCode);
+    const docId = buildActualDocId(dateStr, lineCode, shiftCode);
     try {
-      const snap = await db.collection(PRODUCTION_COLLECTION).doc(docId).get();
+      const snap = await db.collection(PROD_V2_ACTUAL_COLLECTION).doc(docId).get();
       if (!snap.exists) {
         return { status: "not-found", record: null, parsed: null };
       }
-      const parsed = parseProductionDocument(docId, snap.data());
+      const parsed = parseActualDocument(docId, snap.data());
       const normalized = normalizeProductionRecord(parsed);
       return { status: "found", record: normalized, parsed };
     } catch (e) {
@@ -249,18 +234,18 @@
   }
 
   /**
-   * fetchModelDoc(db, dateStr, lineCode)
-   * Fetches exactly one prod_{date}_{line}_models document. Same
-   * found/not-found/error contract as fetchOne, but for the model doc.
+   * fetchPlanDoc(db, dateStr, lineCode, shiftCode)
+   * Fetches exactly one prodV2_dailyPlans document. Same
+   * found/not-found/error contract as fetchOne, but for the Plan doc.
    */
-  async function fetchModelDoc(db, dateStr, lineCode) {
-    const docId = buildModelDocId(dateStr, lineCode);
+  async function fetchPlanDoc(db, dateStr, lineCode, shiftCode) {
+    const docId = buildPlanDocId(dateStr, lineCode, shiftCode);
     try {
-      const snap = await db.collection(PRODUCTION_COLLECTION).doc(docId).get();
+      const snap = await db.collection(PROD_V2_PLAN_COLLECTION).doc(docId).get();
       if (!snap.exists) {
         return { status: "not-found", parsed: null };
       }
-      const parsed = parseModelDocument(docId, snap.data());
+      const parsed = parsePlanDocument(docId, snap.data());
       return { status: "found", parsed };
     } catch (e) {
       console.error("Quality Dashboard: Firestore read failed for", docId, e);
@@ -271,7 +256,8 @@
   /**
    * getProductionData(db, { dates, lines, shifts })
    * Fetches every (date x line x shift) combination requested, in
-   * parallel, entirely via read-only .get() calls.
+   * parallel, entirely via read-only .get() calls against
+   * prodV2_actualLogs.
    *
    * Returns:
    *   {
@@ -312,59 +298,39 @@
    * getProductionDataByModel(db, { dates, lines, shifts })
    * Same idea as getProductionData(), but returns per-model records:
    *   { date, shift, line, model, productionQty }
-   *
-   * For each (date, line) it fetches the models document ONCE (it's
-   * shared across shifts) plus each requested shift's document, then
-   * attributes model quantity to the correct shift via row ids.
+   * sourced from each (date, line, shift)'s actual-log document.
    *
    * Returns:
    *   {
    *     records: [{date,shift,line,model,productionQty}, ...],
-   *     errors:  [{date,line,error}]   // failed reads (connection problem)
+   *     errors:  [{date,line,shift,error}]   // failed reads (connection problem)
    *   }
-   * A (date,line) with no models document yet simply contributes no
-   * records — that is a valid "no per-model breakdown recorded" state,
-   * not an error, and must not be treated as zero production.
+   * A (date,line,shift) with no actual-log document yet simply
+   * contributes no records — that is valid ("nothing logged yet"), not
+   * an error, and must not be treated as zero production.
    */
   async function getProductionDataByModel(db, { dates, lines, shifts }) {
     if (!db) {
       throw new Error("No Firestore connection available (db is null).");
     }
-    const dateLinePairs = [];
+    const combos = [];
     for (const date of dates) {
       for (const line of lines) {
-        dateLinePairs.push({ date, line });
+        for (const shift of shifts) {
+          combos.push({ date, line, shift });
+        }
       }
     }
 
-    const results = await Promise.all(dateLinePairs.map(async ({ date, line }) => {
-      const [modelResult, ...shiftResults] = await Promise.all([
-        fetchModelDoc(db, date, line),
-        ...shifts.map(shift => fetchOne(db, date, line, shift))
-      ]);
-
-      if (modelResult.status === "error") {
-        return { date, line, errors: [{ date, line, error: modelResult.error }], records: [] };
+    const results = await Promise.all(combos.map(async (c) => {
+      const r = await fetchOne(db, c.date, c.line, c.shift);
+      if (r.status === "error") {
+        return { records: [], errors: [{ date: c.date, line: c.line, shift: c.shift, error: r.error }] };
       }
-      const errors = shiftResults
-        .map((r, i) => ({ r, shift: shifts[i] }))
-        .filter(x => x.r.status === "error")
-        .map(x => ({ date, line, shift: x.shift, error: x.r.error }));
-
-      if (!modelResult.parsed) {
-        // No model-breakdown document for this day/line — nothing to report
-        // at the model level (not an error; totals still come from
-        // getProductionData()).
-        return { date, line, errors, records: [] };
+      if (r.status === "not-found" || !r.parsed) {
+        return { records: [], errors: [] };
       }
-
-      const records = [];
-      shiftResults.forEach((r) => {
-        if (r.status === "found" && r.parsed) {
-          records.push(...normalizeProductionByModel(r.parsed, modelResult.parsed));
-        }
-      });
-      return { date, line, errors, records };
+      return { records: normalizeProductionByModel(r.parsed), errors: [] };
     }));
 
     const records = [];
@@ -377,35 +343,53 @@
   }
 
   /**
-   * getModelListForDayLine(db, dateStr, lineCode)
-   * Convenience read used by the Scrap Entry form so a Leader picks a
-   * Model from the SAME list already recorded for that day/line in
-   * Production, instead of free-typing a name that might not match
-   * (which would silently break the Date+Shift+Line+Model join in
-   * js/quality-adapter.js). Returns [] if there's no models doc yet for
-   * that day/line (valid — not an error); the form should let the
-   * Leader know no production model breakdown exists yet rather than
-   * blocking scrap entry.
+   * getModelListForDayLine(db, dateStr, lineCode, shiftCode)
+   * Convenience read used by the Scrap Entry form (and the Scrap
+   * Detail Edit modal) so a Leader picks a Model from the SAME roster
+   * already planned for that date+line+shift in Production V2, instead
+   * of free-typing a name that might not match (which would silently
+   * break the Date+Shift+Line+Model join in js/quality-adapter.js).
+   *
+   * Reads from prodV2_dailyPlans rather than prodV2_actualLogs — the
+   * Plan is set before the shift starts, so the Model dropdown is
+   * populated even if no Actual data exists yet (e.g. a Leader
+   * recording scrap early in the shift). Returns [] if no plan exists
+   * yet for that date/line/shift (valid — not an error).
+   *
+   * NOTE: this function's signature gained a required `shiftCode`
+   * parameter when the data source moved from legacy productionLogs
+   * (whose model roster was shared across both shifts of a day) to
+   * Production V2 (whose Plan — and therefore Model roster — is
+   * per-shift). Both call sites (Scrap Entry, Scrap Detail Edit) were
+   * updated to pass it.
+   *
    * Returns { names: string[], error? }.
    */
-  async function getModelListForDayLine(db, dateStr, lineCode) {
-    const r = await fetchModelDoc(db, dateStr, lineCode);
+  async function getModelListForDayLine(db, dateStr, lineCode, shiftCode) {
+    const r = await fetchPlanDoc(db, dateStr, lineCode, shiftCode);
     if (r.status === "error") return { names: [], error: r.error };
     if (!r.parsed) return { names: [] };
-    const names = r.parsed.models.map(m => m.name).filter(Boolean);
-    return { names: Array.from(new Set(names)) };
+    const names = new Set();
+    for (const block of r.parsed.blocks) {
+      for (const cell of block.cells) {
+        const combined = combineModelDoor(cell.model, cell.door);
+        if (combined) names.add(combined);
+      }
+    }
+    return { names: Array.from(names) };
   }
 
   // ---- Public surface -----------------------------------------------------
 
   window.ProductionDataAdapter = {
     buildDocId,
-    buildModelDocId,
+    buildActualDocId,
+    buildPlanDocId,
     toDateStr,
     addDays,
     dateRange,
-    parseProductionDocument,
-    parseModelDocument,
+    parseActualDocument,
+    parsePlanDocument,
     normalizeProductionRecord,
     normalizeProductionByModel,
     getProductionData,

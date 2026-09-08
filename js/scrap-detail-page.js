@@ -192,15 +192,16 @@
     const modelSelect = $('eModel');
     const date = $('eDate').value;
     const line = $('eLine').value;
+    const shift = $('eShift').value;
     modelSelect.innerHTML = '<option value="">Loading models…</option>';
     if (window.qdFirebaseError) { modelSelect.innerHTML = '<option value="">Firebase unavailable</option>'; return; }
     try {
-      const { names, error } = await ProductionDataAdapter.getModelListForDayLine(window.qdDb, date, line);
+      const { names, error } = await ProductionDataAdapter.getModelListForDayLine(window.qdDb, date, line, shift);
       if (error) { modelSelect.innerHTML = '<option value="">Could not load models</option>'; return; }
       const currentModel = editingRecord ? editingRecord.model : '';
       const options = names.length > 0 ? names : (currentModel ? [currentModel] : []);
       if (options.length === 0) {
-        modelSelect.innerHTML = '<option value="">No models recorded for this date/line</option>';
+        modelSelect.innerHTML = '<option value="">No models planned for this date/line/shift</option>';
         return;
       }
       modelSelect.innerHTML = options.map(m => `<option value="${escapeHtml(m)}" ${m === currentModel ? 'selected' : ''}>${escapeHtml(m)}</option>`).join('');
@@ -226,6 +227,7 @@
   function closeEditModal() { $('editOverlay').classList.remove('show'); editingRecord = null; }
 
   $('eDate').addEventListener('change', refreshEditModelOptions);
+  $('eShift').addEventListener('change', refreshEditModelOptions);
   $('eLine').addEventListener('change', refreshEditModelOptions);
   $('editCancel').addEventListener('click', closeEditModal);
 

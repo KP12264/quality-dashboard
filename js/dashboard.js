@@ -11,15 +11,12 @@
  * Design decision (documented, not hidden in code comments only):
  * Production / Scrap / Scrap Rate in the top KPI row follow the Line
  * filter (All = Door A+B+C combined, or a single line's own numbers).
- * Target is ALWAYS ≤30 pcs PER SHIFT (combined across Door A+B+C) —
- * never per line, and never summed across shifts (Day + Night is never
- * "60"). Each shift is evaluated independently against its own target;
- * when more than one shift is in view, the combined Status pill shows
- * OVER TARGET if ANY shift went over its own target, and a per-shift
- * breakdown line spells out which one. Target Status also always uses
- * the combined A+B+C scrap for each shift, even when a single Line is
- * selected — the UI shows notes explaining both of these so neither is
- * a silent mismatch with the numbers shown elsewhere on the page.
+ * Target and Target Status are the one exception: the business rule
+ * defines the 30 pcs/shift target as a COMBINED total for Door A+B+C,
+ * never per line — so Target Status is always computed from the
+ * combined A+B+C scrap for the selected shift(s), even when a single
+ * Line is selected. The UI shows a note explaining this whenever a
+ * single Line is selected, so it isn't a silent mismatch.
  * ------------------------------------------------------------------
  */
 
@@ -58,29 +55,13 @@
   }
   function hideBanner() { $('connectionBanner').style.display = 'none'; }
 
-  // ---- Target lookup: ALWAYS per-shift (30 pcs/shift), NEVER summed across shifts ----
+  // ---- Target lookup (sums across the shifts currently in scope, ALWAYS all-lines) ----
 
-  /**
-   * getShiftEvaluations(dateStr, shiftCodes, allLinesProduction, allLinesScrap)
-   * Evaluates EACH shift independently against its OWN target (default
-   * 30 pcs, or whatever TargetAdapter/targetMaster says for that date).
-   * A 30 pcs/shift target must never become "60 pcs" just because two
-   * shifts are in view — each shift is judged only against its own 30.
-   */
-  async function getShiftEvaluations(dateStr, shiftCodes, allLinesProduction, allLinesScrap) {
-    const evals = await Promise.all(shiftCodes.map(async (shiftCode) => {
-      const shiftProduction = allLinesProduction.filter(r => r.shift === shiftCode);
-      const shiftScrap = allLinesScrap.filter(r => r.shift === shiftCode);
-      const targetResult = await TargetAdapter.getTargetForShift(window.qdDb, shiftCode, dateStr);
-      const summary = QualityAdapter.buildOverallSummary(shiftProduction, shiftScrap, targetResult.targetQty);
-      return { shiftCode, label: shiftLabel(shiftCode), hasData: shiftProduction.length > 0, ...summary };
-    }));
-    return evals;
-  }
-
-  function shiftLabel(code) {
-    const s = SHIFTS.find(x => x.code === code);
-    return s ? s.label : code;
+  async function getActiveTargetTotal(dateStr, shiftCodes) {
+    const results = await Promise.all(
+      shiftCodes.map(s => TargetAdapter.getTargetForShift(window.qdDb, s, dateStr))
+    );
+    return results.reduce((sum, r) => sum + (Number.isFinite(r.targetQty) ? r.targetQty : 0), 0);
   }
 
   // ---- Main render ----------------------------------------------------
@@ -94,17 +75,18 @@
       return;
     }
 
-    // Always fetch Production + Scrap for ALL lines (Target Status needs
-    // the combined A+B+C total PER SHIFT, and Shift Performance needs
-    // all lines too); the Line filter is applied client-side afterwards
-    // for the displayed KPI numbers and the by-Line/by-Model/trend panels.
-    let productionResult, scrapResult;
+    // Always fetch Production + Scrap for ALL lines (needed for the
+    // combined-A+B+C Target Status, and for Shift Performance); the Line
+    // filter is applied client-side afterwards for the displayed KPI
+    // numbers and the by-Line/by-Model/trend panels.
+    let productionResult, scrapResult, target;
     try {
-      [productionResult, scrapResult] = await Promise.all([
+      [productionResult, scrapResult, target] = await Promise.all([
         ProductionDataAdapter.getProductionData(window.qdDb, {
           dates: [state.date], lines: ALL_LINE_CODES, shifts: activeShifts()
         }),
-        ScrapDataAdapter.getScrapData(window.qdDb, { startDate: state.date, endDate: state.date })
+        ScrapDataAdapter.getScrapData(window.qdDb, { startDate: state.date, endDate: state.date }),
+        getActiveTargetTotal(state.date, activeShifts())
       ]);
     } catch (e) {
       console.error('Quality Dashboard: failed to load dashboard data:', e);
@@ -123,19 +105,16 @@
 
     const scrapInScope = scrapResult.records.filter(r => activeShifts().includes(r.shift));
 
-    // Evaluate each active shift against its OWN target (never summed).
-    const shiftEvals = await getShiftEvaluations(state.date, activeShifts(), productionResult.records, scrapInScope);
-
     // ---- Top KPI row: Production/Scrap/Rate follow the Line filter,
-    // Target Status is the worst-case across the per-shift evaluations
-    // (each shift judged against its own 30 pcs, never a summed 60).
+    // but Target Status is ALWAYS derived from the combined A+B+C total
+    // for the selected shift(s) — see business rule in the header comment.
     const linesInScope = activeLines();
     const lineFilteredProduction = productionResult.records.filter(r => linesInScope.includes(r.line));
     const lineFilteredScrap = scrapInScope.filter(r => linesInScope.includes(r.line));
-    renderKpis(lineFilteredProduction, lineFilteredScrap, shiftEvals);
+    renderKpis(lineFilteredProduction, lineFilteredScrap, productionResult.records, scrapInScope, target);
 
     // ---- Shift Performance: all lines, split by shift ----
-    renderShiftPerformance(shiftEvals);
+    await renderShiftPerformance(productionResult.records, scrapInScope);
 
     // ---- Line Performance: respects the Line filter ----
     renderLinePerformance(lineFilteredProduction, lineFilteredScrap);
@@ -154,7 +133,7 @@
   }
 
   function renderEmpty() {
-    renderKpis(null, [], []);
+    renderKpis(null, [], [], [], 0);
     $('shiftPerformance').innerHTML = '';
     $('linePerformance').innerHTML = '';
     $('modelTableBody').innerHTML = '';
@@ -170,25 +149,13 @@
     kpiEl.style.setProperty('--kpi-status', color);
   }
 
-  // Target display text: "≤30 pcs / Shift" when every active shift shares
-  // the same target; otherwise spells out each shift's own target rather
-  // than ever adding them together.
-  function formatTargetLabel(shiftEvals) {
-    const targets = shiftEvals.map(e => e.target).filter(t => Number.isFinite(t) && t > 0);
-    if (targets.length === 0) return '–';
-    const unique = Array.from(new Set(targets));
-    if (unique.length === 1) return `≤${fmt(unique[0])}`;
-    return shiftEvals.map(e => `${e.label} ≤${fmt(e.target)}`).join(' · ');
-  }
-
-  function renderKpis(displayProductionRecords, displayScrapRecords, shiftEvals) {
+  function renderKpis(displayProductionRecords, displayScrapRecords, allLinesProductionRecords, allLinesScrapRecords, target) {
     const productionEl = $('kpiProduction');
     const targetEl = $('kpiTarget');
     const scrapEl = $('kpiScrap');
     const scrapRateEl = $('kpiScrapRate');
     const statusEl = $('kpiStatus');
     const noteEl = $('kpiStatusNote');
-    const breakdownEl = $('kpiShiftBreakdown');
 
     if (!displayProductionRecords) {
       productionEl.textContent = '–';
@@ -198,85 +165,74 @@
       statusEl.textContent = '–';
       statusEl.className = 'qd-status-pill neutral';
       noteEl.textContent = '';
-      breakdownEl.textContent = '';
       ['production', 'scrap', 'scrapRate', 'target', 'status'].forEach(k =>
         setKpiStatus($(`kpiSection`).querySelector(`[data-kpi="${k}"]`), 'neutral'));
       return;
     }
 
-    // Displayed Production/Scrap/Rate respect the Line filter (target arg
-    // is irrelevant here — we don't use this summary's .status).
-    const displaySummary = QualityAdapter.buildOverallSummary(displayProductionRecords, displayScrapRecords, NaN);
-    // Target Status: worst-case across each shift judged against ITS OWN
-    // target (never a summed target across shifts) — see business rule.
-    const combinedStatus = QualityAdapter.combineShiftStatuses(shiftEvals);
+    // Displayed numbers respect the Line filter.
+    const displaySummary = QualityAdapter.buildOverallSummary(displayProductionRecords, displayScrapRecords, target);
+    // Target Status ALWAYS comes from the combined Door A+B+C total,
+    // regardless of the Line filter — per business rule.
+    const combinedSummary = QualityAdapter.buildOverallSummary(allLinesProductionRecords, allLinesScrapRecords, target);
 
     productionEl.textContent = fmt(displaySummary.totalProduction);
     scrapEl.textContent = fmt(displaySummary.totalScrap);
     scrapEl.classList.remove('na');
     scrapRateEl.textContent = fmtPct(displaySummary.scrapRatePct);
     scrapRateEl.classList.remove('na');
-    targetEl.textContent = formatTargetLabel(shiftEvals);
+    targetEl.textContent = fmt(combinedSummary.target);
 
-    statusEl.textContent = combinedStatus;
-    statusEl.className = 'qd-status-pill ' + (combinedStatus === 'WITHIN TARGET' ? 'good' : combinedStatus === 'OVER TARGET' ? 'bad' : 'neutral');
+    statusEl.textContent = combinedSummary.status;
+    statusEl.className = 'qd-status-pill ' + (combinedSummary.status === 'WITHIN TARGET' ? 'good' : combinedSummary.status === 'OVER TARGET' ? 'bad' : 'neutral');
 
     if (state.line === 'all') {
       noteEl.textContent = '';
     } else {
-      const combinedScrap = shiftEvals.reduce((s, e) => s + e.totalScrap, 0);
       const lineLabel = (LINES.find(l => l.code === state.line) || {}).label || state.line;
-      noteEl.textContent = `Target Status uses combined Scrap (Door A+B+C) = ${fmt(combinedScrap)} pcs — not just ${lineLabel}'s ${fmt(displaySummary.totalScrap)} pcs shown above.`;
-    }
-
-    // Per-shift breakdown, so "one shift went over" is never hidden inside
-    // a combined number when Shift = All (or in general, whenever more
-    // than one shift is being evaluated at once).
-    if (shiftEvals.length > 1) {
-      breakdownEl.textContent = shiftEvals.map(e => {
-        if (!e.hasData) return `${e.label} Shift: no data`;
-        const diff = e.totalScrap - e.target;
-        const tag = e.status === 'OVER TARGET' ? `+${fmt(diff)} OVER` : e.status === 'WITHIN TARGET' ? 'WITHIN' : 'NO DATA';
-        return `${e.label} Shift: ${fmt(e.totalScrap)}/${fmt(e.target)} pcs (${tag})`;
-      }).join('  ·  ');
-    } else {
-      breakdownEl.textContent = '';
+      noteEl.textContent = `Target Status uses combined Scrap (Door A+B+C) = ${fmt(combinedSummary.totalScrap)} pcs vs Target ${fmt(combinedSummary.target)} pcs — not just ${lineLabel}'s ${fmt(displaySummary.totalScrap)} pcs shown above.`;
     }
 
     setKpiStatus($('kpiSection').querySelector('[data-kpi="production"]'), 'neutral');
-    setKpiStatus($('kpiSection').querySelector('[data-kpi="scrap"]'), combinedStatus === 'OVER TARGET' ? 'bad' : 'good');
+    setKpiStatus($('kpiSection').querySelector('[data-kpi="scrap"]'), combinedSummary.status === 'OVER TARGET' ? 'bad' : 'good');
     setKpiStatus($('kpiSection').querySelector('[data-kpi="scrapRate"]'), 'neutral');
     setKpiStatus($('kpiSection').querySelector('[data-kpi="target"]'), 'neutral');
-    setKpiStatus($('kpiSection').querySelector('[data-kpi="status"]'), combinedStatus === 'WITHIN TARGET' ? 'good' : combinedStatus === 'OVER TARGET' ? 'bad' : 'neutral');
+    setKpiStatus($('kpiSection').querySelector('[data-kpi="status"]'), combinedSummary.status === 'WITHIN TARGET' ? 'good' : combinedSummary.status === 'OVER TARGET' ? 'bad' : 'neutral');
   }
 
   // ---- Shift performance --------------------------------------------------
 
-  function renderShiftPerformance(shiftEvals) {
+  async function renderShiftPerformance(productionRecords, scrapRecords) {
     const container = $('shiftPerformance');
     container.innerHTML = '';
 
-    shiftEvals.forEach(e => {
+    for (const shift of SHIFTS) {
+      const shiftProduction = productionRecords.filter(r => r.shift === shift.code);
+      const shiftScrap = scrapRecords.filter(r => r.shift === shift.code);
+      const target = await TargetAdapter.getTargetForShift(window.qdDb, shift.code, state.date);
+      const summary = QualityAdapter.buildOverallSummary(shiftProduction, shiftScrap, target.targetQty);
+      const hasAnyDoc = shiftProduction.length > 0;
+
       const card = document.createElement('div');
       card.className = 'qd-shift-card';
       card.innerHTML = `
-        <div class="qd-shift-name">${e.label} Shift</div>
+        <div class="qd-shift-name">${shift.label} Shift</div>
         <div class="qd-shift-stats">
           <div class="qd-stat">
             <div class="qd-stat-label">Production</div>
-            <div class="qd-stat-value">${e.hasData ? fmt(e.totalProduction) : '–'}</div>
+            <div class="qd-stat-value">${hasAnyDoc ? fmt(summary.totalProduction) : '–'}</div>
           </div>
           <div class="qd-stat">
             <div class="qd-stat-label">Scrap</div>
-            <div class="qd-stat-value">${fmt(e.totalScrap)}</div>
+            <div class="qd-stat-value">${fmt(summary.totalScrap)}</div>
           </div>
           <div class="qd-stat">
             <div class="qd-stat-label">Target</div>
-            <div class="qd-stat-value">${fmt(e.target)}</div>
+            <div class="qd-stat-value">${fmt(summary.target)}</div>
           </div>
         </div>`;
       container.appendChild(card);
-    });
+    }
   }
 
   // ---- Line performance --------------------------------------------------
@@ -355,14 +311,12 @@
     const labels = data.map(d => d.defectType);
     const qty = data.map(d => d.qty);
     const cumulative = data.map(d => d.cumulativePct);
-    const eightyLine = labels.map(() => 80); // flat 80% Pareto reference line, right axis, independent of Qty scale
 
     const chartData = {
       labels,
       datasets: [
-        { type: 'bar', label: 'Qty', data: qty, backgroundColor: '#2563EB', borderRadius: 4, order: 3, yAxisID: 'y' },
-        { type: 'line', label: 'Cumulative %', data: cumulative, borderColor: '#F59E0B', borderWidth: 2, pointRadius: 3, pointBackgroundColor: '#F59E0B', fill: false, order: 2, yAxisID: 'y1' },
-        { type: 'line', label: '80%', data: eightyLine, borderColor: '#94A3B8', borderWidth: 1.5, borderDash: [6, 4], pointRadius: 0, pointHoverRadius: 0, fill: false, order: 1, yAxisID: 'y1' }
+        { type: 'bar', label: 'Qty', data: qty, backgroundColor: '#2563EB', borderRadius: 4, order: 2, yAxisID: 'y' },
+        { type: 'line', label: 'Cumulative %', data: cumulative, borderColor: '#F59E0B', borderWidth: 2, pointRadius: 3, pointBackgroundColor: '#F59E0B', fill: false, order: 1, yAxisID: 'y1' }
       ]
     };
     const options = {
@@ -373,7 +327,7 @@
       scales: {
         x: { grid: { display: false }, ticks: { font: { family: "'Inter', sans-serif", size: 10 }, maxRotation: 20 } },
         y: { beginAtZero: true, position: 'left', grid: { color: 'rgba(15,39,71,0.08)' }, ticks: { font: { family: "'JetBrains Mono', monospace", size: 10 } } },
-        y1: { beginAtZero: true, min: 0, max: 100, position: 'right', grid: { display: false }, ticks: { font: { family: "'JetBrains Mono', monospace", size: 10 }, callback: v => v + '%' } }
+        y1: { beginAtZero: true, max: 100, position: 'right', grid: { display: false }, ticks: { font: { family: "'JetBrains Mono', monospace", size: 10 }, callback: v => v + '%' } }
       }
     };
 
@@ -478,65 +432,79 @@
   }
 
   // ---- Scrap entry form -------------------------------------------------
-  // (Removed — the entry form now lives on its own page, scrap-entry.html.
-  // See js/scrap-entry-page.js.)
 
-  // ---- Improvement Status + Recurring Problems (Dashboard widgets) --------
-
-  async function renderImprovementStatus() {
-    const container = $('improvementStatusBreakdown');
-    if (typeof ImprovementAdapter === 'undefined' || window.qdFirebaseError) {
-      container.innerHTML = '<div class="qd-placeholder">Improvement data unavailable.</div>';
-      return;
-    }
+  async function refreshFormModelOptions() {
+    const modelSelect = $('formModel');
+    const date = $('formDate').value;
+    const line = $('formLine').value;
+    modelSelect.innerHTML = '<option value="">Loading models…</option>';
+    if (window.qdFirebaseError) { modelSelect.innerHTML = '<option value="">Firebase unavailable</option>'; return; }
     try {
-      const { records, error } = await ImprovementAdapter.getImprovements(window.qdDb, { limit: 200 });
-      if (error) { container.innerHTML = '<div class="qd-placeholder">Could not load improvement records.</div>'; return; }
-      if (records.length === 0) {
-        container.innerHTML = '<div class="qd-placeholder"><strong>No improvement records yet</strong>Create one from the Improvement page once a recurring or high-impact defect needs root-cause action.</div>';
+      const { names, error } = await ProductionDataAdapter.getModelListForDayLine(window.qdDb, date, line);
+      if (error) { modelSelect.innerHTML = '<option value="">Could not load models</option>'; return; }
+      if (names.length === 0) {
+        modelSelect.innerHTML = '<option value="">No models recorded for this day/line yet</option>';
         return;
       }
-      const counts = {};
-      IMPROVEMENT_STATUSES.forEach(s => { counts[s] = 0; });
-      records.forEach(r => { counts[r.status] = (counts[r.status] || 0) + 1; });
-      container.innerHTML = IMPROVEMENT_STATUSES.map(s => `
-        <div class="qd-status-chip">
-          <div class="count">${counts[s] || 0}</div>
-          <div class="label">${escapeHtml(s)}</div>
-        </div>`).join('');
+      modelSelect.innerHTML = names.map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
     } catch (e) {
-      console.error('Quality Dashboard: failed to load improvement status:', e);
-      container.innerHTML = '<div class="qd-placeholder">Could not load improvement records.</div>';
+      console.error('Quality Dashboard: failed to load model list for form:', e);
+      modelSelect.innerHTML = '<option value="">Could not load models</option>';
     }
   }
 
-  async function renderRecurringProblems() {
-    const tbody = $('recurringTableBody');
-    tbody.innerHTML = '<tr class="empty-row"><td colspan="5">Loading…</td></tr>';
-    if (window.qdFirebaseError) { tbody.innerHTML = '<tr class="empty-row"><td colspan="5">Data unavailable.</td></tr>'; return; }
-    try {
-      const lookbackDates = ProductionDataAdapter.dateRange(state.date, 30);
-      const scrapResult = await ScrapDataAdapter.getScrapData(window.qdDb, { startDate: lookbackDates[0], endDate: lookbackDates[lookbackDates.length - 1] });
-      if (scrapResult.error) { tbody.innerHTML = '<tr class="empty-row"><td colspan="5">Could not load scrap data.</td></tr>'; return; }
-      const groups = QualityAdapter.buildRecurringProblems(scrapResult.records, RECURRING_THRESHOLD_DISTINCT_DATES)
-        .filter(g => g.recurring)
-        .slice(0, 8);
-      if (groups.length === 0) {
-        tbody.innerHTML = '<tr class="empty-row"><td colspan="5">No recurring problems in the last 30 days.</td></tr>';
+  function initForm() {
+    $('formDate').value = state.date;
+    $('formLine').value = state.line !== 'all' ? state.line : 'A';
+    $('formShift').value = state.shift !== 'all' ? state.shift : 'เช้า';
+    $('formDefect').innerHTML = DEFECT_TYPES.map(d => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join('');
+    refreshFormModelOptions();
+
+    $('formDate').addEventListener('change', refreshFormModelOptions);
+    $('formLine').addEventListener('change', refreshFormModelOptions);
+
+    $('scrapForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const submitBtn = $('formSubmit');
+      const msgEl = $('formMessage');
+      msgEl.style.display = 'none';
+
+      const payload = {
+        date: $('formDate').value,
+        shift: $('formShift').value,
+        line: $('formLine').value,
+        model: $('formModel').value,
+        defectType: $('formDefect').value,
+        scrapQty: $('formQty').value
+      };
+
+      if (!payload.model) {
+        msgEl.className = 'qd-form-message error';
+        msgEl.textContent = 'Select a Model before submitting (none available for this Date/Line means Production hasn\'t recorded a model breakdown yet).';
+        msgEl.style.display = 'block';
         return;
       }
-      tbody.innerHTML = groups.map(g => `
-        <tr>
-          <td>${escapeHtml(g.line)}</td>
-          <td>${escapeHtml(g.model)}</td>
-          <td>${escapeHtml(g.defectType)} <span class="qd-badge recurring">RECURRING</span></td>
-          <td class="num">${g.distinctDates}</td>
-          <td class="num">${fmt(g.totalQty)}</td>
-        </tr>`).join('');
-    } catch (e) {
-      console.error('Quality Dashboard: failed to load recurring problems:', e);
-      tbody.innerHTML = '<tr class="empty-row"><td colspan="5">Could not load recurring problems.</td></tr>';
-    }
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Saving…';
+      try {
+        await ScrapDataAdapter.addScrapEntry(window.qdDb, payload);
+        msgEl.className = 'qd-form-message success';
+        msgEl.textContent = `Saved: ${payload.scrapQty} pcs · ${payload.defectType} · ${payload.model} · Line ${payload.line} · ${payload.date}`;
+        msgEl.style.display = 'block';
+        $('formQty').value = '';
+        // Refresh the dashboard so the new entry is reflected immediately.
+        if (payload.date === state.date) render();
+      } catch (err) {
+        console.error('Quality Dashboard: addScrapEntry failed:', err);
+        msgEl.className = 'qd-form-message error';
+        msgEl.textContent = '⚠ Could not save this entry: ' + (err && err.message ? err.message : String(err));
+        msgEl.style.display = 'block';
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = '+ Add Scrap Entry';
+      }
+    });
   }
 
   // ---- Event wiring (top filters) ---------------------------------------------------
@@ -569,7 +537,6 @@
 
   // ---- Boot ---------------------------------------------------------------
 
+  initForm();
   render();
-  renderImprovementStatus();
-  renderRecurringProblems();
 })();

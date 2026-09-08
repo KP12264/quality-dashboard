@@ -4,15 +4,16 @@
  * Central, isolated configuration for the Quality Dashboard.
  *
  * IMPORTANT — READ ONLY BOUNDARY
- * This dashboard is a NEW, SEPARATE website. It connects to the
- * EXISTING Firebase project / Firestore collection used by the
- * original "daily-production-report" site, but it must never write
- * to it. Every value below that touches that collection is consumed
- * only by read (`.get()` / `.onSnapshot()`) calls in js/data-adapter.js.
+ * This dashboard reads production data from Production V2's Firestore
+ * collections (prodV2_actualLogs, prodV2_dailyPlans) — same Firebase
+ * project as the original "daily-production-report" site, but a
+ * completely separate set of collections. Every value below that
+ * touches a prodV2_* collection is consumed only by read (`.get()`)
+ * calls in js/data-adapter.js — this dashboard never writes there.
  *
  * Nothing in this file, or anywhere else in this project, should be
- * changed to point at a *different* collection name than the one
- * documented in the audit — doing so would silently break the
+ * changed to point at a *different* collection name than the ones
+ * documented here — doing so would silently break the
  * "read the real production data" requirement.
  * ------------------------------------------------------------------
  */
@@ -35,11 +36,24 @@ const FIREBASE_CONFIG = {
 // another tab, or a future admin tool in a later phase).
 const FIREBASE_APP_NAME = "qualityDashboardReadOnly";
 
-// The one Firestore collection this dashboard is allowed to READ from
-// the EXISTING production system, and only ever with .get() /
-// .onSnapshot() — never .set()/.update()/.add()/.delete(). See
-// js/data-adapter.js. This collection belongs to the original site;
-// this dashboard must never write to it.
+// Firestore collections belonging to Production V2 (the system this
+// dashboard now reads production data from — READ ONLY, same rules as
+// the legacy collection below: only .get() calls anywhere in this
+// project, never .set()/.update()/.add()/.delete()).
+//   prodV2_actualLogs : actual production qty, doc id actual_{date}_{LINE}_{SHIFT}
+//   prodV2_dailyPlans : the shift's planned Model/Door roster + qty,
+//                        doc id plan_{date}_{LINE}_{SHIFT} — this is what
+//                        the Scrap Entry Model dropdown reads from, since
+//                        it's set before the shift starts (unlike actual
+//                        data, which may not exist yet while a Leader is
+//                        recording scrap mid-shift).
+const PROD_V2_ACTUAL_COLLECTION = "prodV2_actualLogs";
+const PROD_V2_PLAN_COLLECTION = "prodV2_dailyPlans";
+
+// The legacy collection this dashboard READ from before switching to
+// Production V2 above. No longer read anywhere in this project — kept
+// only as a documented historical reference. If it's ever reintroduced,
+// the same read-only rule applies: .get() only, never a write.
 const PRODUCTION_COLLECTION = "productionLogs";
 
 // Collections that belong to THIS new website (Scrap / Quality). These
@@ -59,11 +73,15 @@ const LINES = [
   { code: "C", label: "Door C" }
 ];
 
-// Shifts as they exist in the original system's document IDs (Thai),
-// mapped to the English labels this dashboard's UI uses.
+// Shifts, using the codes Production V2 uses in its own document IDs
+// and dropdowns (e.g. actual_2026-08-28_A_DAY). Scrap records now save
+// this same DAY/NIGHT code. Note: any scrapLogs/targetMaster documents
+// saved before this switch used the old Thai codes ("เช้า"/"ดึก") and
+// will no longer match — per instruction, that old test data is not
+// being migrated and can be discarded via the normal Edit/Delete UI.
 const SHIFTS = [
-  { code: "เช้า", label: "Day" },
-  { code: "ดึก", label: "Night" }
+  { code: "DAY", label: "Day" },
+  { code: "NIGHT", label: "Night" }
 ];
 
 /**
@@ -81,8 +99,8 @@ const SHIFTS = [
  * it's a documented fallback default in one isolated place.
  */
 const DEFAULT_TARGET_PER_SHIFT_PCS = {
-  "เช้า": 30, // Day
-  "ดึก": 30   // Night
+  DAY: 30,
+  NIGHT: 30
 };
 
 // Defect types available when recording a scrap entry. Kept as a plain

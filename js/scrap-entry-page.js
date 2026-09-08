@@ -33,20 +33,23 @@
 
   function rowTotal(row) { return num(row.qtyA) + num(row.qtyB) + num(row.qtyC); }
 
-  // ---- Model options (union of models recorded for A/B/C on the selected date) ----
+  // ---- Model options (union of models planned for A/B/C on the selected date+shift) ----
+  // Sourced from Production V2's Plan (prodV2_dailyPlans), which is
+  // per-shift — so the cache key and the adapter call both need shift,
+  // not just date, unlike the legacy productionLogs-based version.
 
-  let modelOptionsCache = { date: null, names: [] };
+  let modelOptionsCache = { date: null, shift: null, names: [] };
 
-  async function getModelOptions(date) {
-    if (modelOptionsCache.date === date) return modelOptionsCache.names;
+  async function getModelOptions(date, shift) {
+    if (modelOptionsCache.date === date && modelOptionsCache.shift === shift) return modelOptionsCache.names;
     if (window.qdFirebaseError) return [];
     const results = await Promise.all(
-      LINES.map(l => ProductionDataAdapter.getModelListForDayLine(window.qdDb, date, l.code))
+      LINES.map(l => ProductionDataAdapter.getModelListForDayLine(window.qdDb, date, l.code, shift))
     );
     const merged = new Set();
     results.forEach(r => (r.names || []).forEach(n => merged.add(n)));
     const names = Array.from(merged);
-    modelOptionsCache = { date, names };
+    modelOptionsCache = { date, shift, names };
     return names;
   }
 
@@ -55,7 +58,8 @@
   async function renderTable() {
     const tbody = $('entryTableBody');
     const date = $('ctxDate').value;
-    const modelOptions = await getModelOptions(date);
+    const shift = $('ctxShift').value;
+    const modelOptions = await getModelOptions(date, shift);
 
     // ROOT-CAUSE FIX: a <select> with no <option selected> auto-displays
     // its FIRST option in the browser, but row.model (our JS state) was
@@ -205,12 +209,12 @@
 
   function init() {
     $('ctxDate').value = todayStr();
-    $('ctxShift').value = 'เช้า';
+    $('ctxShift').value = 'DAY';
     rows = [newRow()];
     renderTable();
 
     $('ctxDate').addEventListener('change', renderTable);
-    $('ctxShift').addEventListener('change', () => {}); // shift doesn't affect model options
+    $('ctxShift').addEventListener('change', renderTable); // Plan (and its Model roster) is per-shift, so shift changes must reload options
 
     $('addRowBtn').addEventListener('click', () => { rows.push(newRow()); renderTable(); });
 
