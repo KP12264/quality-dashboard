@@ -11,6 +11,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body>
 <div class="wrap">
@@ -68,6 +69,34 @@
     <div id="entryMessage" class="qd-form-message" style="display:none;"></div>
   </section>
 
+  <section class="qd-panel qd-import-panel">
+    <h2>Import Scrap Records from File</h2>
+    <div class="qd-panel-note">
+      For backlog data you already tracked elsewhere (e.g. previous months). Accepts <code>.csv</code> or <code>.xlsx</code>.
+      Columns required: <b>Date, Shift, Line, Model, Defect, Qty</b> — <b>Remark</b> is optional.
+      Date as <code>YYYY-MM-DD</code>. Shift accepts <code>DAY</code>/<code>NIGHT</code> (or Day/Night, or เช้า/ดึก). Line accepts <code>A/B/C</code> (or "Door A", "Line A").
+    </div>
+    <div class="qd-import-controls">
+      <button type="button" class="mini-add-btn" id="downloadTemplateBtn">⬇ Download Template (.csv)</button>
+      <label class="qd-file-label" for="importFileInput">📂 Choose File
+        <input type="file" id="importFileInput" accept=".csv,.xlsx,.xls" style="display:none;">
+      </label>
+      <span id="importFileName" class="qd-import-filename"></span>
+    </div>
+
+    <div id="importPreviewWrap" style="display:none;">
+      <div class="qd-import-summary" id="importSummary"></div>
+      <div class="qd-table-scroll">
+        <table class="qd-datatable" id="importPreviewTable">
+          <thead><tr><th>#</th><th>Date</th><th>Shift</th><th>Line</th><th>Model</th><th>Defect</th><th>Qty</th><th>Remark</th><th>Status</th></tr></thead>
+          <tbody id="importPreviewBody"></tbody>
+        </table>
+      </div>
+      <button type="button" class="qd-submit-btn" id="importConfirmBtn">Import Valid Rows</button>
+      <div id="importMessage" class="qd-form-message" style="display:none;"></div>
+    </div>
+  </section>
+
   <footer class="qd-footer">
     <span>Scrap saved here writes only to <code>scrapLogs</code> — Production V2's data (<code>prodV2_actualLogs</code>, <code>prodV2_dailyPlans</code>) is read-only and never touched.</span>
   </footer>
@@ -91,6 +120,7 @@
 <script src="js/data-adapter.js"></script>
 <script src="js/scrap-adapter.js"></script>
 <script src="js/scrap-entry-page.js"></script>
+<script src="js/scrap-import.js"></script>
 <script src="js/nav.js"></script>
 </body>
 </html>
