@@ -153,6 +153,9 @@
    * saves each row independently (Promise.allSettled) so one bad row
    * never silently drops the others, and the caller can report exactly
    * which rows succeeded/failed rather than an all-or-nothing result.
+   * Appropriate for a SMALL number of rows (a Leader's manual entry —
+   * a handful of rows). For large bulk imports (hundreds/thousands of
+   * rows), use addScrapEntryBatch instead — see its comment for why.
    * Returns { succeeded: [{entry, id}], failed: [{entry, error}] }.
    */
   async function addScrapEntries(db, entries) {
@@ -166,11 +169,86 @@
     return { succeeded, failed };
   }
 
+  function validateEntryFields(e) {
+    const missing = [];
+    if (!e.date) missing.push("date");
+    if (!e.shift) missing.push("shift");
+    if (!e.line) missing.push("line");
+    if (!e.model) missing.push("model");
+    if (!e.defectType) missing.push("defectType");
+    if (!(num(e.scrapQty) > 0)) missing.push("scrapQty (must be > 0)");
+    return missing;
+  }
+
+  /**
+   * addScrapEntryBatch(db, entries)
+   * Commits ONE Firestore batched write for up to ~500 entries (a
+   * Firestore WriteBatch's hard limit) in a SINGLE network round trip,
+   * instead of one round trip per document. This is the function the
+   * bulk file-import feature (Scrap Entry → "Import from File") uses —
+   * importing thousands of rows via individual .add() calls (even 25
+   * at a time in parallel) means hundreds of sequential round trips,
+   * which is exactly what caused a large import to appear to hang
+   * indefinitely with the progress counter stuck at 0. Batched writes
+   * cut that from ~250+ round trips down to a dozen or so.
+   *
+   * Trade-off: a Firestore batch is atomic — if the commit fails, NONE
+   * of the entries in this call were written (not a partial success).
+   * Callers doing a large import should keep each call modestly sized
+   * (a few hundred entries, not the full multi-thousand-row file) so a
+   * single failure doesn't discard a large chunk of work — see
+   * js/scrap-import.js, which calls this in batches of 200.
+   *
+   * Every field is still validated exactly like addScrapEntry — an
+   * invalid entry is never included in the batch at all (reported back
+   * as `failed` immediately, without even attempting a write).
+   *
+   * Returns { succeeded: [{entry, id}], failed: [{entry, error}] }.
+   */
+  async function addScrapEntryBatch(db, entries) {
+    if (!db) throw new Error("No Firestore connection available (db is null).");
+    if (!entries || entries.length === 0) return { succeeded: [], failed: [] };
+    if (entries.length > 500) {
+      throw new Error(`addScrapEntryBatch received ${entries.length} entries — Firestore's WriteBatch limit is 500. Split into smaller calls.`);
+    }
+
+    const failed = [];
+    const valid = [];
+    entries.forEach(e => {
+      const missing = validateEntryFields(e);
+      if (missing.length) failed.push({ entry: e, error: new Error("Invalid: " + missing.join(", ")) });
+      else valid.push(e);
+    });
+    if (valid.length === 0) return { succeeded: [], failed };
+
+    const batch = db.batch();
+    const refs = valid.map(e => {
+      const ref = db.collection(SCRAP_COLLECTION).doc();
+      batch.set(ref, {
+        date: e.date, shift: e.shift, line: e.line, model: e.model, defectType: e.defectType,
+        scrapQty: num(e.scrapQty), remark: e.remark || "", createdAt: Date.now()
+      });
+      return ref;
+    });
+
+    try {
+      await batch.commit();
+      const succeeded = refs.map((ref, i) => ({ entry: valid[i], id: ref.id }));
+      return { succeeded, failed };
+    } catch (err) {
+      // Atomic: the whole batch failed together, so every valid entry
+      // in it counts as failed (none were actually written).
+      valid.forEach(e => failed.push({ entry: e, error: err }));
+      return { succeeded: [], failed };
+    }
+  }
+
   window.ScrapDataAdapter = {
     normalizeScrapRecord,
     getScrapData,
     addScrapEntry,
     addScrapEntries,
+    addScrapEntryBatch,
     updateScrapEntry,
     deleteScrapEntry
   };

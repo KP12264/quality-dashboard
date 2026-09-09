@@ -3,10 +3,11 @@
  * ------------------------------------------------------------------
  * Page 2 (Scrap Entry) — bulk import of scrap records from a .csv or
  * .xlsx file, for backlog data recorded elsewhere before this system
- * existed. Only talks to Firestore via ScrapDataAdapter.addScrapEntries()
- * (scrapLogs) — the same, already-tested batch-write function the
- * manual multi-row entry form uses. Never touches productionLogs or
- * any prodV2_* collection; this page only READS a local file the user
+ * existed. Only talks to Firestore via ScrapDataAdapter.addScrapEntryBatch()
+ * (scrapLogs) — native Firestore batched writes, one atomic commit per
+ * 200 rows, so a multi-thousand-row import takes a dozen or so network
+ * round trips instead of hundreds. Never touches productionLogs or any
+ * prodV2_* collection; this page only READS a local file the user
  * picks (via SheetJS, entirely client-side — nothing is uploaded
  * anywhere) and WRITES to scrapLogs.
  *
@@ -40,13 +41,21 @@
 
   const HEADER_ALIASES = {
     date: ['date'],
-    shift: ['shift'],
+    shift: ['shift2', 'shift'], // 'shift2' checked FIRST — some real-world exports have a column literally named "Shift" that holds something else entirely (e.g. a date+code string); "shift2" (or similar) holding the real Day/Night label wins if both exist.
     line: ['line', 'door'],
     model: ['model'],
-    defect: ['defect', 'defecttype'],
+    defect: ['defect', 'defecttype', 'problem'],
     qty: ['qty', 'quantity', 'scrapqty'],
-    remark: ['remark', 'remarks', 'note', 'notes']
+    remark: ['remark', 'remarks', 'note', 'notes'],
+    cause: ['cause'] // not written on its own — only used as a Remark fallback when Remark itself is blank (see parseRow)
   };
+
+  // Some exports use "#N/A" as a broken-lookup placeholder rather than
+  // truly leaving the cell blank — treat it the same as empty everywhere.
+  function cleanCell(v) {
+    const s = String(v ?? '').trim();
+    return (s.toUpperCase() === '#N/A') ? '' : s;
+  }
 
   function normalizeHeaderKey(h) {
     return String(h || '').trim().toLowerCase().replace(/[\s_-]+/g, '');
@@ -70,17 +79,26 @@
 
   function normalizeShiftValue(v) {
     const s = String(v ?? '').trim().toLowerCase();
-    if (['day', 'd', 'เช้า', 'morning'].includes(s)) return 'DAY';
-    if (['night', 'n', 'ดึก'].includes(s)) return 'NIGHT';
-    const upper = String(v ?? '').trim().toUpperCase();
-    if (upper === 'DAY' || upper === 'NIGHT') return upper;
+    if (!s) return null;
+    if (s.includes('night') || s.includes('ดึก')) return 'NIGHT';
+    if (s.includes('day') || s.includes('เช้า') || s.includes('morning')) return 'DAY';
+    if (s === 'n') return 'NIGHT';
+    if (s === 'd') return 'DAY';
     return null;
   }
 
   function normalizeLineValue(v) {
-    let s = String(v ?? '').trim().toUpperCase();
-    s = s.replace(/^(DOOR|LINE)\s*/, '').trim();
-    return ['A', 'B', 'C'].includes(s) ? s : null;
+    const s = String(v ?? '').trim().toUpperCase();
+    if (!s) return null;
+    // Real-world Line text varies a lot ("Door C", "Door ตู้ B", "Door C ฝา
+    // Project", " Door In Door") — rather than requiring an exact "Door A"
+    // shape, look for a standalone A/B/C token anywhere in the string.
+    // Thai characters aren't \w, so \b correctly finds a boundary around
+    // an English letter even with no space ("ตู้B"). A value with no such
+    // standalone letter (e.g. "Door In Door") is genuinely ambiguous and
+    // correctly returns null rather than guessing.
+    const m = s.match(/\b([ABC])\b/);
+    return m ? m[1] : null;
   }
 
   function normalizeDateValue(v) {
@@ -118,16 +136,20 @@
     const line = normalizeLineValue(get('line'));
     if (!line) errors.push('Line must be A/B/C (or "Door A", "Line A")');
 
-    const model = String(get('model') ?? '').trim();
+    const model = cleanCell(get('model'));
     if (!model) errors.push('Model is required');
 
-    const defectType = String(get('defect') ?? '').trim();
+    const defectType = cleanCell(get('defect'));
     if (!defectType) errors.push('Defect is required');
 
     const scrapQty = normalizeQtyValue(get('qty'));
     if (scrapQty === null) errors.push('Qty must be a positive number');
 
-    const remark = String(get('remark') ?? '').trim();
+    let remark = cleanCell(get('remark'));
+    if (!remark) {
+      const cause = cleanCell(get('cause'));
+      if (cause) remark = `Cause: ${cause}`;
+    }
 
     const entry = { date, shift, line, model, defectType, scrapQty, remark };
     return { rowNum, raw: rawRow, entry, valid: errors.length === 0, errors };
@@ -158,6 +180,8 @@
 
   // ---- Preview rendering ---------------------------------------------
 
+  const PREVIEW_ROW_LIMIT = 200; // rendering thousands of <tr> elements makes the page heavy/laggy — validation still runs on ALL rows, only the on-screen table is capped
+
   function renderPreview() {
     const validCount = parsedRows.filter(r => r.valid).length;
     const errorCount = parsedRows.length - validCount;
@@ -167,7 +191,8 @@
       <span class="valid-count">Valid: <b>${validCount}</b></span>
       <span class="error-count">Errors: <b>${errorCount}</b></span>`;
 
-    $('importPreviewBody').innerHTML = parsedRows.map(r => `
+    const rowsToShow = parsedRows.slice(0, PREVIEW_ROW_LIMIT);
+    let html = rowsToShow.map(r => `
       <tr class="${r.valid ? '' : 'row-invalid'}">
         <td>${r.rowNum}</td>
         <td>${escapeHtml(r.entry.date || '–')}</td>
@@ -179,6 +204,10 @@
         <td>${escapeHtml(r.entry.remark) || '–'}</td>
         <td>${r.valid ? '<span class="status-ok">OK</span>' : `<span class="status-error" title="${escapeHtml(r.errors.join('; '))}">⚠ ${escapeHtml(r.errors[0])}</span>`}</td>
       </tr>`).join('');
+    if (parsedRows.length > PREVIEW_ROW_LIMIT) {
+      html += `<tr class="empty-row"><td colspan="9">+ ${parsedRows.length - PREVIEW_ROW_LIMIT} more row(s) not shown here — all of them are still validated and will be imported if valid.</td></tr>`;
+    }
+    $('importPreviewBody').innerHTML = html;
 
     $('importPreviewWrap').style.display = parsedRows.length > 0 ? '' : 'none';
     $('importConfirmBtn').disabled = validCount === 0;
@@ -193,6 +222,15 @@
     return out;
   }
 
+  const BATCH_TIMEOUT_MS = 30000; // a stuck Firestore call must not be able to freeze the whole import forever
+
+  function withTimeout(promise, ms, label) {
+    return Promise.race([
+      promise,
+      new Promise((_, reject) => setTimeout(() => reject(new Error(`${label} timed out after ${ms / 1000}s`)), ms))
+    ]);
+  }
+
   async function doImport() {
     const validEntries = parsedRows.filter(r => r.valid).map(r => r.entry);
     if (validEntries.length === 0) return;
@@ -201,29 +239,56 @@
     btn.disabled = true;
     const msgEl = $('importMessage');
     msgEl.style.display = 'none';
+    msgEl.className = 'qd-form-message';
+    msgEl.textContent = '';
 
-    const chunks = chunk(validEntries, 25); // modest concurrency per batch, not a correctness requirement
+    const chunks = chunk(validEntries, 200); // one Firestore batch.commit() per chunk — see addScrapEntryBatch
     let succeeded = 0;
     const failures = [];
+    const importStartedAt = Date.now();
 
-    for (const c of chunks) {
-      btn.textContent = `Importing… (${succeeded}/${validEntries.length})`;
+    for (let i = 0; i < chunks.length; i++) {
+      const c = chunks[i];
+      const chunkStartedAt = Date.now();
+      // Progress reflects what's ACTUALLY completed so far, updated after
+      // each chunk finishes — not before it starts (which previously made
+      // the counter look stuck at the very first chunk's count).
+      btn.textContent = `Importing… (${succeeded}/${validEntries.length}) — batch ${i + 1}/${chunks.length}`;
+      msgEl.style.display = 'block';
+      msgEl.className = 'qd-form-message';
+      msgEl.textContent = `In progress: ${succeeded} of ${validEntries.length} saved so far. Keep this tab open.`;
       try {
-        const result = await ScrapDataAdapter.addScrapEntries(window.qdDb, c);
+        const result = await withTimeout(
+          ScrapDataAdapter.addScrapEntryBatch(window.qdDb, c),
+          BATCH_TIMEOUT_MS,
+          `Batch ${i + 1}/${chunks.length}`
+        );
         succeeded += result.succeeded.length;
         failures.push(...result.failed);
+        const chunkMs = Date.now() - chunkStartedAt;
+        console.log(`Quality Dashboard: import batch ${i + 1}/${chunks.length} done in ${chunkMs}ms (${result.succeeded.length} ok, ${result.failed.length} failed)`);
+        if (chunkMs > 15000) {
+          console.warn(`Quality Dashboard: batch ${i + 1} took unusually long (${(chunkMs / 1000).toFixed(1)}s) — check the Network tab for slow/stalled Firestore requests.`);
+        }
       } catch (e) {
-        console.error('Quality Dashboard: import chunk failed:', e);
+        // Includes a genuine timeout — the batch's actual Firestore commit
+        // may or may not still land after this point (a timed-out promise
+        // can't be cancelled), so a timed-out batch's true status should
+        // be confirmed in Firestore directly rather than assumed failed.
+        console.error(`Quality Dashboard: import batch ${i + 1}/${chunks.length} failed or timed out:`, e);
         c.forEach(entry => failures.push({ entry, error: e }));
       }
     }
+
+    const totalSec = ((Date.now() - importStartedAt) / 1000).toFixed(1);
+    console.log(`Quality Dashboard: import finished in ${totalSec}s — ${succeeded} succeeded, ${failures.length} failed.`);
 
     btn.textContent = 'Import Valid Rows';
     btn.disabled = false;
 
     if (failures.length === 0) {
       msgEl.className = 'qd-form-message success';
-      msgEl.textContent = `Imported ${succeeded} record${succeeded > 1 ? 's' : ''} into scrapLogs. Check Scrap Detail to review them.`;
+      msgEl.textContent = `Imported ${succeeded} record${succeeded > 1 ? 's' : ''} into scrapLogs in ${totalSec}s. Check Scrap Detail to review them.`;
     } else {
       msgEl.className = 'qd-form-message error';
       msgEl.textContent = `Imported ${succeeded} record${succeeded > 1 ? 's' : ''}, but ${failures.length} failed: ${failures[0].error && failures[0].error.message ? failures[0].error.message : 'unknown error'}`;
