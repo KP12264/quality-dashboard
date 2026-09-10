@@ -121,6 +121,21 @@
     return (Number.isFinite(n) && n > 0) ? n : null;
   }
 
+  // Looks up the raw Defect text against the consolidation map (see
+  // config.js) built from the historical data — a recognized variant
+  // ("ฝาบุบจากรถ") becomes its canonical name ("ฝาบุบ"); anything NOT in
+  // the map (rare variants that occurred <3 times, or a genuinely new
+  // defect name) is kept exactly as written in the file, never forced
+  // into a bucket or discarded.
+  function normalizeDefectType(v) {
+    const cleaned = cleanCell(v);
+    if (!cleaned) return '';
+    if (typeof DEFECT_CONSOLIDATION_MAP !== 'undefined' && DEFECT_CONSOLIDATION_MAP[cleaned]) {
+      return DEFECT_CONSOLIDATION_MAP[cleaned];
+    }
+    return cleaned;
+  }
+
   // ---- Parse + validate one raw row -----------------------------------
 
   function parseRow(rawRow, headerMap, rowNum) {
@@ -139,7 +154,7 @@
     const model = cleanCell(get('model'));
     if (!model) errors.push('Model is required');
 
-    const defectType = cleanCell(get('defect'));
+    const defectType = normalizeDefectType(get('defect'));
     if (!defectType) errors.push('Defect is required');
 
     const scrapQty = normalizeQtyValue(get('qty'));
