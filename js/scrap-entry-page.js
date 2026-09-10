@@ -33,52 +33,85 @@
 
   function rowTotal(row) { return num(row.qtyA) + num(row.qtyB) + num(row.qtyC); }
 
-  // ---- Model options (union of models planned for A/B/C on the selected date+shift) ----
+  // ---- Model options (fetched PER LINE, then filtered PER ROW by which Door has qty) ----
   // Sourced from Production V2's Plan (prodV2_dailyPlans), which is
   // per-shift — so the cache key and the adapter call both need shift,
   // not just date, unlike the legacy productionLogs-based version.
+  //
+  // Each row's Model dropdown shows only the models actually planned
+  // for whichever Door(s) currently have a quantity entered in that
+  // row — e.g. a row with only Door A filled in shows Line A's models
+  // only, not a merged Door A+B+C list. Before any quantity is typed
+  // (a fresh row), it falls back to the union of all 3 lines so the
+  // dropdown isn't empty while the Leader is still deciding.
 
-  let modelOptionsCache = { date: null, shift: null, names: [] };
+  let modelsByLineCache = { date: null, shift: null, byLine: { A: [], B: [], C: [] } };
 
-  async function getModelOptions(date, shift) {
-    if (modelOptionsCache.date === date && modelOptionsCache.shift === shift) return modelOptionsCache.names;
-    if (window.qdFirebaseError) return [];
+  async function getModelOptionsByLine(date, shift) {
+    if (modelsByLineCache.date === date && modelsByLineCache.shift === shift) return modelsByLineCache.byLine;
+    if (window.qdFirebaseError) return { A: [], B: [], C: [] };
     const results = await Promise.all(
       LINES.map(l => ProductionDataAdapter.getModelListForDayLine(window.qdDb, date, l.code, shift))
     );
-    const merged = new Set();
-    results.forEach(r => (r.names || []).forEach(n => merged.add(n)));
-    const names = Array.from(merged);
-    modelOptionsCache = { date, shift, names };
-    return names;
+    const byLine = {};
+    LINES.forEach((l, i) => { byLine[l.code] = results[i].names || []; });
+    modelsByLineCache = { date, shift, byLine };
+    return byLine;
   }
 
+  // Which Door(s) currently have a quantity > 0 in this row.
+  function activeLinesForRow(row) {
+    return LINES.filter(l => num(row['qty' + l.code]) > 0).map(l => l.code);
+  }
+
+  // The model list for a single row: union of the model rosters of
+  // whichever line(s) currently have qty entered, or all 3 lines if
+  // none do yet.
+  function computeRowModelOptions(row, byLine) {
+    const active = activeLinesForRow(row);
+    const linesToUse = active.length > 0 ? active : LINES.map(l => l.code);
+    const merged = new Set();
+    linesToUse.forEach(code => (byLine[code] || []).forEach(n => merged.add(n)));
+    return { options: Array.from(merged), scopedToLines: active };
+  }
+
+  let currentModelsByLine = { A: [], B: [], C: [] };
+
   // ---- Rendering ------------------------------------------------------
+
+  function buildModelSelectHtml(row) {
+    const { options, scopedToLines } = computeRowModelOptions(row, currentModelsByLine);
+    // Keep row.model in sync with what's actually shown — same fix as
+    // before, just now applied to this row's FILTERED option set rather
+    // than one global list, so it still can't drift out of sync when
+    // the filter narrows because of a qty change.
+    if (options.length > 0 && !options.includes(row.model)) {
+      row.model = options[0];
+    }
+    if (options.length === 0) {
+      const scopeLabel = scopedToLines.length > 0
+        ? scopedToLines.map(c => 'Door ' + c).join('/')
+        : 'this date/shift';
+      return { html: `<option value="">No models planned for ${escapeHtml(scopeLabel)}</option>`, options };
+    }
+    const html = options.map(m => `<option value="${escapeHtml(m)}" ${row.model === m ? 'selected' : ''}>${escapeHtml(m)}</option>`).join('');
+    return { html, options };
+  }
+
+  function refreshRowModelSelect(tr, row) {
+    const select = tr.querySelector('.row-model');
+    const { html } = buildModelSelectHtml(row);
+    select.innerHTML = html;
+  }
 
   async function renderTable() {
     const tbody = $('entryTableBody');
     const date = $('ctxDate').value;
     const shift = $('ctxShift').value;
-    const modelOptions = await getModelOptions(date, shift);
-
-    // ROOT-CAUSE FIX: a <select> with no <option selected> auto-displays
-    // its FIRST option in the browser, but row.model (our JS state) was
-    // never updated to match — it only changed via the 'change' event,
-    // which never fires unless the user manually touches the dropdown.
-    // That's why the model was visibly shown but validation still saw
-    // row.model === ''. Sync row.model to the currently visible option
-    // BEFORE building the HTML, so what's displayed and what's stored
-    // are always the same value — no click-away-and-back required.
-    rows.forEach(row => {
-      if (modelOptions.length > 0 && !modelOptions.includes(row.model)) {
-        row.model = modelOptions[0];
-      }
-    });
+    currentModelsByLine = await getModelOptionsByLine(date, shift);
 
     tbody.innerHTML = rows.map(row => {
-      const modelSelectHtml = modelOptions.length > 0
-        ? modelOptions.map(m => `<option value="${escapeHtml(m)}" ${row.model === m ? 'selected' : ''}>${escapeHtml(m)}</option>`).join('')
-        : `<option value="">No models recorded for this date yet</option>`;
+      const { html: modelSelectHtml } = buildModelSelectHtml(row);
       return `
         <tr data-row-id="${row.id}">
           <td data-label="Model"><select class="row-model">${modelSelectHtml}</select></td>
@@ -98,9 +131,9 @@
       const row = rows.find(r => r.id === rowId);
       tr.querySelector('.row-model').addEventListener('change', e => { row.model = e.target.value; });
       tr.querySelector('.row-defect').addEventListener('change', e => { row.defectType = e.target.value; });
-      tr.querySelector('.row-qtyA').addEventListener('input', e => { row.qtyA = e.target.value; updateTotals(tr, row); });
-      tr.querySelector('.row-qtyB').addEventListener('input', e => { row.qtyB = e.target.value; updateTotals(tr, row); });
-      tr.querySelector('.row-qtyC').addEventListener('input', e => { row.qtyC = e.target.value; updateTotals(tr, row); });
+      tr.querySelector('.row-qtyA').addEventListener('input', e => { row.qtyA = e.target.value; updateTotals(tr, row); refreshRowModelSelect(tr, row); });
+      tr.querySelector('.row-qtyB').addEventListener('input', e => { row.qtyB = e.target.value; updateTotals(tr, row); refreshRowModelSelect(tr, row); });
+      tr.querySelector('.row-qtyC').addEventListener('input', e => { row.qtyC = e.target.value; updateTotals(tr, row); refreshRowModelSelect(tr, row); });
       tr.querySelector('.row-remark').addEventListener('input', e => { row.remark = e.target.value; });
       const delBtn = tr.querySelector('.row-del');
       if (!delBtn.disabled) {

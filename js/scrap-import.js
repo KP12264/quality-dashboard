@@ -103,10 +103,20 @@
 
   function normalizeDateValue(v) {
     // A real Excel date cell arrives here as a JS Date (SheetJS with
-    // cellDates:true) — trust it directly rather than re-parsing text,
-    // since re-parsing a Date's toString() risks locale/format bugs.
+    // cellDates:true). Excel date-only cells are anchored to UTC
+    // midnight by SheetJS — reading them back with LOCAL getters (e.g.
+    // ProductionDataAdapter.toDateStr, which is meant for "today" dates,
+    // not parsed Excel cells) is only correct when the browser's
+    // timezone is at/east of UTC. In any timezone WEST of UTC, local
+    // getters read back one day EARLIER than the date actually shown in
+    // Excel (confirmed: UTC+7 was fine, UTC-8 lost a day, in testing).
+    // UTC getters give the exact calendar day Excel displays, in every
+    // timezone — always use those for a date that came from a file.
     if (v instanceof Date && !isNaN(v.getTime())) {
-      return ProductionDataAdapter.toDateStr(v);
+      const y = v.getUTCFullYear();
+      const mo = String(v.getUTCMonth() + 1).padStart(2, '0');
+      const d = String(v.getUTCDate()).padStart(2, '0');
+      return `${y}-${mo}-${d}`;
     }
     const s = String(v ?? '').trim();
     if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
