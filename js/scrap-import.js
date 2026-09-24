@@ -173,11 +173,57 @@
     const hasDefect = cleanCell(get('defect')) !== '';
     const qtyVal = get('qty');
     const hasQty = String(qtyVal ?? '').trim() !== '' && Number.isFinite(parseFloat(qtyVal));
-    const dateVal = get('date');
-    const hasCleanDate = (dateVal instanceof Date && !isNaN(dateVal.getTime())) || /^\d{4}-\d{2}-\d{2}$/.test(String(dateVal ?? '').trim());
-    const shiftFallbackText = columnMap._rawShiftColIndex !== undefined ? rowArray[columnMap._rawShiftColIndex] : get('shift');
-    const hasDateShiftFallback = !!parseDateShiftText(shiftFallbackText);
-    return hasDefect || hasQty || hasCleanDate || hasDateShiftFallback;
+    // Date/Shift signal: the authoritative #D/#N column when one was
+    // detected for this sheet, otherwise the clean Date column.
+    let hasDateSignal;
+    if (columnMap._dateShiftColIndex !== undefined) {
+      hasDateSignal = looksLikeDateShiftPattern(rowArray[columnMap._dateShiftColIndex]);
+    } else {
+      const dateVal = get('date');
+      hasDateSignal = (dateVal instanceof Date && !isNaN(dateVal.getTime())) || /^\d{4}-\d{2}-\d{2}$/.test(String(dateVal ?? '').trim());
+    }
+    return hasDefect || hasQty || hasDateSignal;
+  }
+
+  // ---- Date+Shift combined-text column detection (content-based) --------
+  // Both supported workbook layouts carry a row-level field like
+  // "23 Sep 2026 #N" / "24 Sep 2026 #D" — but it can sit in a different
+  // column (and under a different header) in each layout, so it's found
+  // by CONTENT, not by a fixed column letter or even header name alone:
+  // sample real data-row values in every column and pick whichever one
+  // has the highest hit-rate against the DD-MMM-YYYY-#D/#N pattern. When
+  // found, this column is the AUTHORITATIVE Date+Shift source for every
+  // row in the table — never overridden by a separate Date/shift2 column,
+  // per the explicit requirement. A layout without such a field at all
+  // (the plain simple format) simply won't have any column clear this
+  // threshold, and falls back to whatever clean Date/Shift columns it has.
+  const DATE_SHIFT_COL_SAMPLE_SIZE = 50;
+  const DATE_SHIFT_COL_MIN_MATCH_RATIO = 0.5;
+
+  function looksLikeDateShiftPattern(v) {
+    const parsed = parseDateShiftText(v);
+    return !!(parsed && parsed.date && parsed.shift);
+  }
+
+  function detectDateShiftColumn(aoa, headerRowIndex) {
+    const colCount = (aoa[headerRowIndex] || []).length;
+    if (colCount === 0) return -1;
+    const sampleRows = aoa.slice(headerRowIndex + 1, headerRowIndex + 1 + DATE_SHIFT_COL_SAMPLE_SIZE * 3); // scan a bit further in case of leading blank rows
+    let bestCol = -1, bestRatio = 0;
+    for (let c = 0; c < colCount; c++) {
+      let nonBlank = 0, matches = 0, sampled = 0;
+      for (let i = 0; i < sampleRows.length && sampled < DATE_SHIFT_COL_SAMPLE_SIZE; i++) {
+        const v = sampleRows[i][c];
+        const s = String(v ?? '').trim();
+        if (!s) continue;
+        sampled++;
+        nonBlank++;
+        if (looksLikeDateShiftPattern(v)) matches++;
+      }
+      const ratio = nonBlank > 0 ? matches / nonBlank : 0;
+      if (ratio > bestRatio) { bestRatio = ratio; bestCol = c; }
+    }
+    return bestRatio >= DATE_SHIFT_COL_MIN_MATCH_RATIO ? bestCol : -1;
   }
 
   // ---- Field normalizers (unchanged logic — only the `get` accessor that
@@ -226,7 +272,7 @@
     const shiftMatch = s.match(/#\s*([DN])\b/i);
     const shift = shiftMatch ? (shiftMatch[1].toUpperCase() === 'D' ? 'DAY' : 'NIGHT') : null;
 
-    let m = s.match(/(\d{1,2})\s+([A-Za-z]{3,})\s+(\d{4})/);
+    let m = s.match(/(\d{1,2})\s*([A-Za-z]{3,})\s+(\d{4})/);
     if (m) {
       const mon = MONTHS[m[2].slice(0, 3).toLowerCase()];
       if (mon !== undefined) {
@@ -293,18 +339,30 @@
     const errors = [];
     const warnings = [];
 
-    let date = normalizeDateValue(get('date'));
-    let shift = normalizeShiftValue(get('shift'));
-    const rawShiftText = columnMap._rawShiftColIndex !== undefined ? cleanCell(rowArray[columnMap._rawShiftColIndex]) : '';
-    if (!date || !shift) {
-      const fallback = parseDateShiftText(rawShiftText) || parseDateShiftText(get('shift'));
-      if (fallback) {
-        if (!date && fallback.date) date = fallback.date;
-        if (!shift && fallback.shift) shift = fallback.shift;
-      }
+    // Date + Shift: when a #D/#N combined-text column was detected for
+    // this sheet (by content, see detectDateShiftColumn), it is the
+    // AUTHORITATIVE source — never overridden by a separate Date/shift2
+    // column, per the explicit requirement. No timezone/Date-object
+    // handling is applied to it at all: it's parsed as plain text into a
+    // calendar date, and the date portion is used exactly as printed
+    // (Night Shift rows are NOT shifted to the next/previous day).
+    // Only when NO such column exists for this sheet (the plain simple
+    // format) do the clean Date/shift columns become the source.
+    let date, shift, sourceDateText;
+    if (columnMap._dateShiftColIndex !== undefined) {
+      const rawText = cleanCell(rowArray[columnMap._dateShiftColIndex]);
+      const parsed = parseDateShiftText(rawText);
+      date = parsed ? parsed.date : null;
+      shift = parsed ? parsed.shift : null;
+      sourceDateText = rawText;
+      if (!date || !shift) errors.push('Missing/Invalid Date-Shift');
+    } else {
+      date = normalizeDateValue(get('date'));
+      shift = normalizeShiftValue(get('shift'));
+      sourceDateText = columnMap._rawShiftColIndex !== undefined ? cleanCell(rowArray[columnMap._rawShiftColIndex]) : '';
+      if (!date) errors.push('Date must be YYYY-MM-DD or a real Excel date cell');
+      if (!shift) errors.push('Shift must be DAY/NIGHT (or Day/Night, เช้า/ดึก)');
     }
-    if (!date) errors.push('Date must be YYYY-MM-DD, a real Excel date cell, or a parseable "25 Jul 2026 #D"-style value');
-    if (!shift) errors.push('Shift must be DAY/NIGHT (or Day/Night, เช้า/ดึก, or a "#D"/"#N" code)');
 
     let line = normalizeLineValue(get('line'));
     if (!line) line = lineFromLocation(get('location'));
@@ -337,8 +395,6 @@
       warnings.push('No Scrap Cost for this row (left blank, not treated as ฿0)');
     }
     const unitPrice = normalizeCostValue(get('price'));
-
-    const sourceDateText = rawShiftText;
 
     const importFingerprint = buildImportFingerprint({
       date, shift, line, sourceMaterial, rawDefectText,
@@ -491,6 +547,12 @@
     const headerRowArray = currentAOA[currentHeaderRowIndex] || [];
     currentColumnMap = buildColumnMap(headerRowArray);
 
+    // Content-based detection of the authoritative "23 Sep 2026 #N"-style
+    // Date+Shift column — independent of header text, works whichever of
+    // the two workbook layouts this is.
+    const dateShiftCol = detectDateShiftColumn(currentAOA, currentHeaderRowIndex);
+    if (dateShiftCol !== -1) currentColumnMap._dateShiftColIndex = dateShiftCol;
+
     candidateRows = [];
     for (let i = currentHeaderRowIndex + 1; i < currentAOA.length; i++) {
       const rowArray = currentAOA[i];
@@ -501,15 +563,15 @@
     const ignoredCount = (currentAOA.length - currentHeaderRowIndex - 1) - candidateRows.length;
 
     const mappingRows = Object.keys(currentColumnMap)
-      .filter(f => f !== '_rawShiftColIndex')
+      .filter(f => f !== '_rawShiftColIndex' && f !== '_dateShiftColIndex')
       .map(field => {
         const colIdx = currentColumnMap[field];
         const excelColName = headerRowArray[colIdx];
         return `<tr><td>${escapeHtml(excelColName)}</td><td>→</td><td>${escapeHtml(FIELD_LABELS[field] || field)}</td></tr>`;
       }).join('');
-    const rawShiftMappingRow = (currentColumnMap._rawShiftColIndex !== undefined)
-      ? `<tr><td>${escapeHtml(headerRowArray[currentColumnMap._rawShiftColIndex])}</td><td>→</td><td>sourceDateText (fallback, audit only)</td></tr>`
-      : '';
+    const dateShiftMappingRow = (currentColumnMap._dateShiftColIndex !== undefined)
+      ? `<tr><td>${escapeHtml(headerRowArray[currentColumnMap._dateShiftColIndex] || '(unlabeled column)')}</td><td>→</td><td><b>Date + Shift (authoritative — e.g. "23 Sep 2026 #N")</b></td></tr>`
+      : '<tr><td colspan="3"><i>No "DD MMM YYYY #D/#N"-style column detected — using separate Date/Shift columns instead.</i></td></tr>';
 
     $('detectionSummary').innerHTML = `
       <div class="qd-import-card"><div class="qd-import-card-label">Selected Sheet</div><div class="qd-import-card-value">${escapeHtml(currentSheetName)}</div></div>
@@ -518,22 +580,33 @@
       <div class="qd-import-card neutral"><div class="qd-import-card-label">Ignored Rows</div><div class="qd-import-card-value">${ignoredCount.toLocaleString('en-US')}</div></div>
     `;
 
-    $('columnMappingBody').innerHTML = (mappingRows + rawShiftMappingRow) || '<tr><td colspan="3">No recognizable Scrap columns found on this row.</td></tr>';
+    $('columnMappingBody').innerHTML = dateShiftMappingRow + mappingRows || '<tr><td colspan="3">No recognizable Scrap columns found on this row.</td></tr>';
 
     const first10 = candidateRows.slice(0, 10);
     $('rawPreviewBody').innerHTML = first10.length ? first10.map(r => {
       const get = field => currentColumnMap[field] !== undefined ? r.cells[currentColumnMap[field]] : '';
-      const dateCell = get('date');
-      const dateDisplay = dateCell instanceof Date ? dateCell.toISOString().slice(0, 10) : String(dateCell ?? '');
+      let dateDisplay, shiftDisplay, sourceDisplay;
+      if (currentColumnMap._dateShiftColIndex !== undefined) {
+        const rawText = String(r.cells[currentColumnMap._dateShiftColIndex] ?? '').trim();
+        const parsed = parseDateShiftText(rawText);
+        dateDisplay = parsed ? parsed.date : '(unparsed)';
+        shiftDisplay = parsed && parsed.shift ? shiftLabel(parsed.shift) : '(unparsed)';
+        sourceDisplay = `${rawText} → ${dateDisplay} | ${shiftDisplay}`;
+      } else {
+        const dateCell = get('date');
+        dateDisplay = dateCell instanceof Date ? dateCell.toISOString().slice(0, 10) : String(dateCell ?? '');
+        shiftDisplay = String(get('shift') ?? '');
+        sourceDisplay = '(no combined field — using separate Date/Shift columns)';
+      }
       return `<tr>
-        <td>${r.rowNum}</td>
         <td>${escapeHtml(dateDisplay)}</td>
-        <td>${escapeHtml(String(get('shift') ?? ''))}</td>
+        <td>${escapeHtml(shiftDisplay)}</td>
         <td>${escapeHtml(String(get('line') ?? ''))}</td>
         <td>${escapeHtml(String(get('material') || get('model') || ''))}</td>
         <td>${escapeHtml(String(get('defect') ?? ''))}</td>
         <td>${escapeHtml(String(get('qty') ?? ''))}</td>
         <td>${escapeHtml(String(get('amt') ?? ''))}</td>
+        <td class="qd-import-sourcecol">${escapeHtml(sourceDisplay)}</td>
       </tr>`;
     }).join('') : '<tr class="empty-row"><td colspan="8">No candidate scrap rows found with this header row — try adjusting the row number above, or pick a different sheet.</td></tr>';
 
