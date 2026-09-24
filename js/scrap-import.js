@@ -78,13 +78,12 @@
     date: ['date'],
     // 'shift2' checked FIRST — the rich format has a genuinely messy
     // "Shift" column (e.g. "1 Jun 2026 #N", "02/06/26 #D Lineตู้", even
-    // some rows with no #D/#N code at all) that is NOT reliable to
-    // parse; "shift2" holds a clean "Day Shift"/"Night Shift" label and
-    // wins whenever both exist. The simple format only has one such
-    // column, literally named "shift", which IS clean — falls back to
-    // it correctly since shift2 won't exist there.
+    // some rows with no #D/#N code at all) that is unreliable to parse
+    // on its own; "shift2" holds a clean "Day Shift"/"Night Shift" label
+    // and wins whenever both exist. The simple format only has one such
+    // column, literally named "shift", which IS clean.
     shift: ['shift2', 'shift'],
-    line: ['line'], // deliberately NOT 'location' — Line is already clean in every real file seen; Location is noisier and kept separate (sourceLocation) rather than parsed
+    line: ['line'], // Line is already clean in every real file seen; Location is a FALLBACK only (see parseRow), not a primary alias
     model: ['model'],
     material: ['material'],
     materialname: ['materialname'],
@@ -95,7 +94,8 @@
     cause: ['cause'],
     solution: ['solution'],
     price: ['price', 'unitprice'],
-    amt: ['amt', 'amount', 'cost', 'scrapcost']
+    amt: ['amt', 'amount', 'cost', 'scrapcost'],
+    recordedby: ['empld', 'emplead', 'employeelead', 'leader', 'pic', 'รหัสพนักงาน'] // "Emp. Ld" and common real-world equivalents seen in the actual file
   };
 
   // Some exports use "#N/A" as a broken-lookup placeholder rather than
@@ -169,6 +169,56 @@
     return (Number.isFinite(n) && n > 0) ? n : null;
   }
 
+  // ---- #D / #N combined Date+Shift text parser (FALLBACK ONLY) -----------
+  // Used only when the clean Date and/or shift2/shift columns are missing
+  // or didn't resolve for a row — the clean columns are still preferred
+  // whenever they're available and valid, per the verified finding that
+  // this free-text field is inconsistent in the real file (mixed date
+  // formats, extra trailing text like "Lineตู้", and some rows with no
+  // #D/#N code at all). When it DOES parse cleanly, this recovers a
+  // usable Date+Shift for files/rows that have no other source.
+  const MONTHS = { jan:0, feb:1, mar:2, apr:3, may:4, jun:5, jul:6, aug:7, sep:8, oct:9, nov:10, dec:11 };
+
+  function parseDateShiftText(raw) {
+    const s = cleanCell(raw);
+    if (!s) return null;
+    const shiftMatch = s.match(/#\s*([DN])\b/i);
+    const shift = shiftMatch ? (shiftMatch[1].toUpperCase() === 'D' ? 'DAY' : 'NIGHT') : null;
+
+    // "25 Jul 2026" style
+    let m = s.match(/(\d{1,2})\s+([A-Za-z]{3,})\s+(\d{4})/);
+    if (m) {
+      const mon = MONTHS[m[2].slice(0, 3).toLowerCase()];
+      if (mon !== undefined) {
+        const d = parseInt(m[1], 10), y = parseInt(m[3], 10);
+        return { date: `${y}-${String(mon + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`, shift };
+      }
+    }
+    // "02/06/26" or "03/06/2026" style (DD/MM/YY or DD/MM/YYYY — this
+    // file's own convention, day-first; never guessed against US MM/DD)
+    m = s.match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
+    if (m) {
+      const d = parseInt(m[1], 10), mo = parseInt(m[2], 10);
+      let y = parseInt(m[3], 10);
+      if (y < 100) y += 2000;
+      if (mo >= 1 && mo <= 12 && d >= 1 && d <= 31) {
+        return { date: `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`, shift };
+      }
+    }
+    return null; // genuinely unparseable (e.g. "03/06/2026 Line ตู้" with no #D/#N, or missing date entirely) — never guessed
+  }
+
+  // ---- Location -> Line (FALLBACK ONLY, when the Line column itself is
+  // missing or blank for a row) — real Location values include many
+  // non-Door-Foaming process stations ("RAC5 SystemAssyA-Line", "RBC9-PU
+  // Foam B"...), so this only recognizes the specific "Door Foaming X"
+  // pattern and returns null (not a guess) for anything else.
+  function lineFromLocation(v) {
+    const s = cleanCell(v);
+    const m = s.match(/Door\s*Foaming\s*([ABC])\b/i);
+    return m ? m[1].toUpperCase() : null;
+  }
+
   // Cost is taken AS-IS from Excel — never computed. Blank/non-numeric
   // returns null (not 0), matching "do not silently convert blank cost
   // to zero" — the caller shows a warning for a null cost, but this is
@@ -229,23 +279,40 @@
     const errors = [];
     const warnings = [];
 
-    const date = normalizeDateValue(get('date'));
-    if (!date) errors.push('Date must be YYYY-MM-DD (or a real Excel date cell)');
+    // Date + Shift: prefer the clean Date column + shift2/shift columns.
+    // Only fall back to parsing the combined "25 Jul 2026 #D"-style text
+    // (wherever it appears — the messy 'shift' alias slot, if that's what
+    // resolved, or a raw 'Shift'-named column if a distinct one exists)
+    // when the clean columns didn't produce a usable value for this row.
+    let date = normalizeDateValue(get('date'));
+    let shift = normalizeShiftValue(get('shift'));
+    const rawShiftKey = Object.keys(rawRow).find(k => normalizeHeaderKey(k) === 'shift');
+    const rawShiftText = rawShiftKey ? cleanCell(rawRow[rawShiftKey]) : '';
+    if (!date || !shift) {
+      const fallback = parseDateShiftText(rawShiftText) || parseDateShiftText(get('shift'));
+      if (fallback) {
+        if (!date && fallback.date) date = fallback.date;
+        if (!shift && fallback.shift) shift = fallback.shift;
+      }
+    }
+    if (!date) errors.push('Date must be YYYY-MM-DD, a real Excel date cell, or a parseable "25 Jul 2026 #D"-style value');
+    if (!shift) errors.push('Shift must be DAY/NIGHT (or Day/Night, เช้า/ดึก, or a "#D"/"#N" code)');
 
-    const shift = normalizeShiftValue(get('shift'));
-    if (!shift) errors.push('Shift must be DAY/NIGHT (or Day/Night, เช้า/ดึก)');
-
-    const line = normalizeLineValue(get('line'));
-    if (!line) errors.push('Line must be A/B/C (or "Door A", "Line A")');
+    // Line: prefer the clean Line column; fall back to parsing Location
+    // ("...Door Foaming A...") only when Line itself is missing/blank.
+    let line = normalizeLineValue(get('line'));
+    if (!line) line = lineFromLocation(get('location'));
+    if (!line) errors.push('Line must be A/B/C (or "Door A", "Line A"), or Location must contain "Door Foaming A/B/C"');
 
     const sourceMaterial = cleanCell(get('material'));
     const sourceMaterialName = cleanCell(get('materialname'));
     const sourceLocation = cleanCell(get('location'));
     const rawModel = cleanCell(get('model'));
+    const recordedBy = cleanCell(get('recordedby'));
 
-    // Stage 2 model resolution: raw text only (Model, else MaterialName,
-    // else Material) — Stage 3 replaces this with a real lookup against
-    // scrapModelMappings + the Production V2 model roster.
+    // Raw Model/Material text — Production-model MATCHING (not renaming)
+    // happens later, once all rows are parsed, against the real Production
+    // V2 roster for each row's date+line+shift (see checkProductionMatches).
     const model = rawModel || sourceMaterialName || sourceMaterial;
     if (!model) errors.push('Model/Material is required');
 
@@ -271,19 +338,11 @@
     }
     const unitPrice = normalizeCostValue(get('price'));
 
-    // sourceDateText: capture the messy Shift-style column's raw text
-    // ONLY when it's a DIFFERENT column than the one actually used for
-    // `shift` (i.e. shift2 existed and won) — for audit, never parsed.
-    let sourceDateText = '';
-    if (headerMap.shift !== undefined) {
-      const usedKey = normalizeHeaderKey(headerMap.shift);
-      const rawShiftKey = Object.keys(rawRow).find(k => normalizeHeaderKey(k) === 'shift');
-      if (rawShiftKey && normalizeHeaderKey(rawShiftKey) !== usedKey) {
-        sourceDateText = cleanCell(rawRow[rawShiftKey]);
-      } else if (usedKey === 'shift' || usedKey === 'shift2') {
-        sourceDateText = cleanCell(get('shift'));
-      }
-    }
+    // sourceDateText: the raw text of whatever column holds the
+    // combined "25 Jul 2026 #D"-style value, kept verbatim for
+    // traceability regardless of whether it was actually needed to
+    // resolve Date/Shift (the clean columns may have already done that).
+    const sourceDateText = rawShiftText;
 
     const importFingerprint = buildImportFingerprint({
       date, shift, line, sourceMaterial, rawDefectText,
@@ -295,9 +354,10 @@
       rootCause, actionPlan,
       scrapCost, unitPrice,
       sourceMaterial, sourceMaterialName, sourceLocation, sourceDateText,
+      recordedBy,
       importFingerprint
     };
-    return { rowNum, raw: rawRow, entry, valid: errors.length === 0, errors, warnings };
+    return { rowNum, raw: rawRow, entry, formatValid: errors.length === 0, errors, warnings, unmapped: false, matchedProductionModel: null, duplicateStatus: null };
   }
 
   // ---- File parsing (SheetJS handles both .csv and .xlsx uniformly) -------
@@ -332,24 +392,120 @@
     });
   }
 
+  // ---- Production model matching (READ-ONLY against prodV2_dailyPlans) ----
+  // For every row that's format-valid so far, check whether its resolved
+  // `model` text exists in Production V2's REAL planned model roster for
+  // that exact date+line+shift (the same read-only function the Scrap
+  // Entry Model dropdown already uses — js/data-adapter.js, .get() only,
+  // never a write). A row whose model isn't found is marked UNMAPPED and
+  // excluded from the importable set, per the "do not automatically
+  // import an unmapped model" requirement — this is a real check against
+  // live Production data, not a guess.
+  async function checkProductionMatches(rows) {
+    const comboKeySet = new Set();
+    rows.forEach(r => {
+      if (r.formatValid) comboKeySet.add(`${r.entry.date}|${r.entry.line}|${r.entry.shift}`);
+    });
+    const combos = Array.from(comboKeySet).map(k => { const [date, line, shift] = k.split('|'); return { date, line, shift }; });
+    console.log(`Quality Dashboard: checking Production V2 model match for ${combos.length} distinct date/line/shift combination(s)...`);
+
+    const results = await Promise.all(combos.map(c =>
+      ProductionDataAdapter.getModelListForDayLine(window.qdDb, c.date, c.line, c.shift)
+        .then(r => ({ key: `${c.date}|${c.line}|${c.shift}`, names: r.names || [] }))
+        .catch(() => ({ key: `${c.date}|${c.line}|${c.shift}`, names: [] }))
+    ));
+    const modelsByCombo = {};
+    results.forEach(r => { modelsByCombo[r.key] = new Set(r.names); });
+
+    rows.forEach(r => {
+      if (!r.formatValid) { r.unmapped = false; r.matchedProductionModel = null; return; }
+      const key = `${r.entry.date}|${r.entry.line}|${r.entry.shift}`;
+      const set = modelsByCombo[key] || new Set();
+      if (set.has(r.entry.model)) {
+        r.unmapped = false;
+        r.matchedProductionModel = r.entry.model;
+      } else {
+        r.unmapped = true;
+        r.matchedProductionModel = null;
+      }
+    });
+  }
+
+  // ---- Duplicate detection (reads EXISTING scrapLogs — the collection
+  // this app already owns and writes to; never touches Production) ------
+  // Two tiers, per the approved design:
+  //   DUPLICATE          — exact importFingerprint match (this exact row
+  //                         was already imported, e.g. the same file was
+  //                         uploaded twice)
+  //   POSSIBLE DUPLICATE — same business key (date+shift+line+model+
+  //                         defect+qty+cost) but a different fingerprint
+  //                         (e.g. re-entered by hand, or from a different
+  //                         file) — shown for review, not silently merged
+  // Both are excluded from the importable set by default; nothing is
+  // ever auto-overwritten or auto-deleted.
+  function buildBusinessKey(r) {
+    return [r.date, r.shift, r.line, r.model, r.defectType, r.scrapQty, r.scrapCost === null ? 'null' : r.scrapCost].join('|');
+  }
+
+  async function checkDuplicates(rows) {
+    const validRows = rows.filter(r => r.formatValid);
+    if (validRows.length === 0) return;
+    const dates = validRows.map(r => r.entry.date).sort();
+    const startDate = dates[0], endDate = dates[dates.length - 1];
+
+    let existing;
+    try {
+      existing = await ScrapDataAdapter.getScrapData(window.qdDb, { startDate, endDate });
+    } catch (e) {
+      console.error('Quality Dashboard: duplicate check failed to read scrapLogs — skipping duplicate detection for this preview:', e);
+      return;
+    }
+    if (existing.error) {
+      console.error('Quality Dashboard: duplicate check could not read scrapLogs:', existing.error);
+      return;
+    }
+
+    const fingerprintSet = new Set();
+    const businessKeySet = new Set();
+    existing.records.forEach(rec => {
+      if (rec.importFingerprint) fingerprintSet.add(rec.importFingerprint);
+      businessKeySet.add(buildBusinessKey(rec));
+    });
+
+    rows.forEach(r => {
+      if (!r.formatValid) { r.duplicateStatus = null; return; }
+      if (fingerprintSet.has(r.entry.importFingerprint)) {
+        r.duplicateStatus = 'DUPLICATE';
+      } else if (businessKeySet.has(buildBusinessKey(r.entry))) {
+        r.duplicateStatus = 'POSSIBLE_DUPLICATE';
+      } else {
+        r.duplicateStatus = null;
+      }
+    });
+  }
+
   // ---- Preview rendering ---------------------------------------------
 
   const PREVIEW_ROW_LIMIT = 200; // rendering thousands of <tr> elements makes the page heavy/laggy — validation still runs on ALL rows, only the on-screen table is capped
 
   function renderSummaryCards() {
-    const validRows = parsedRows.filter(r => r.valid);
-    const errorRows = parsedRows.filter(r => !r.valid);
-    const totalQty = validRows.reduce((s, r) => s + (r.entry.scrapQty || 0), 0);
-    const rowsWithCost = validRows.filter(r => r.entry.scrapCost !== null);
+    const formatValidRows = parsedRows.filter(r => r.formatValid);
+    const errorRows = parsedRows.filter(r => !r.formatValid);
+    const unmappedRows = formatValidRows.filter(r => r.unmapped);
+    const duplicateRows = formatValidRows.filter(r => r.duplicateStatus);
+    const readyRows = formatValidRows.filter(r => !r.unmapped && !r.duplicateStatus);
+
+    const totalQty = readyRows.reduce((s, r) => s + (r.entry.scrapQty || 0), 0);
+    const rowsWithCost = readyRows.filter(r => r.entry.scrapCost !== null);
     const totalCost = rowsWithCost.reduce((s, r) => s + r.entry.scrapCost, 0);
-    const missingCostCount = validRows.length - rowsWithCost.length;
+    const missingCostCount = readyRows.length - rowsWithCost.length;
 
     $('importSummaryCards').innerHTML = `
-      <div class="qd-import-card"><div class="qd-import-card-label">Total Rows</div><div class="qd-import-card-value">${parsedRows.length}</div></div>
-      <div class="qd-import-card good"><div class="qd-import-card-label">Ready</div><div class="qd-import-card-value">${validRows.length}</div></div>
+      <div class="qd-import-card"><div class="qd-import-card-label">Rows Found</div><div class="qd-import-card-value">${parsedRows.length}</div></div>
+      <div class="qd-import-card good"><div class="qd-import-card-label">Ready</div><div class="qd-import-card-value">${readyRows.length}</div></div>
+      <div class="qd-import-card warn"><div class="qd-import-card-label">Unmapped</div><div class="qd-import-card-value">${unmappedRows.length}</div></div>
+      <div class="qd-import-card warn"><div class="qd-import-card-label">Duplicate</div><div class="qd-import-card-value">${duplicateRows.length}</div></div>
       <div class="qd-import-card bad"><div class="qd-import-card-label">Error</div><div class="qd-import-card-value">${errorRows.length}</div></div>
-      <div class="qd-import-card neutral"><div class="qd-import-card-label">Model Mapping</div><div class="qd-import-card-value">Stage 3</div></div>
-      <div class="qd-import-card neutral"><div class="qd-import-card-label">Duplicate Check</div><div class="qd-import-card-value">Stage 4</div></div>
       <div class="qd-import-card"><div class="qd-import-card-label">Total Scrap Qty</div><div class="qd-import-card-value">${totalQty.toLocaleString('en-US')}</div></div>
       <div class="qd-import-card"><div class="qd-import-card-label">Total Scrap Cost</div><div class="qd-import-card-value">${fmtThb(totalCost)}${missingCostCount > 0 ? `<span class="qd-import-card-note">(${missingCostCount} row${missingCostCount > 1 ? 's' : ''} w/o cost)</span>` : ''}</div></div>
     `;
@@ -361,37 +517,47 @@
     const rowsToShow = parsedRows.slice(0, PREVIEW_ROW_LIMIT);
     let html = rowsToShow.map(r => {
       const e = r.entry;
-      let statusHtml;
-      if (!r.valid) {
+      let statusHtml, rowClass;
+      if (!r.formatValid) {
         statusHtml = `<span class="status-error" title="${escapeHtml(r.errors.join('; '))}">✕ ${escapeHtml(r.errors[0])}</span>`;
+        rowClass = 'row-invalid';
+      } else if (r.duplicateStatus === 'DUPLICATE') {
+        statusHtml = '<span class="status-error" title="An identical row (same file content) is already in scrapLogs">✕ DUPLICATE</span>';
+        rowClass = 'row-invalid';
+      } else if (r.duplicateStatus === 'POSSIBLE_DUPLICATE') {
+        statusHtml = '<span class="status-warn" title="A record with the same Date+Shift+Line+Model+Defect+Qty+Cost already exists — review before re-importing">⚠ POSSIBLE DUPLICATE</span>';
+        rowClass = 'row-warn';
+      } else if (r.unmapped) {
+        statusHtml = `<span class="status-warn" title="\u201C${escapeHtml(e.model)}\u201D was not found in Production V2's plan for ${escapeHtml(e.date)} / ${escapeHtml(lineLabel(e.line))} / ${escapeHtml(shiftLabel(e.shift))}">⚠ UNMAPPED MODEL</span>`;
+        rowClass = 'row-warn';
       } else if (r.warnings.length > 0) {
         statusHtml = `<span class="status-warn" title="${escapeHtml(r.warnings.join('; '))}">⚠ ${escapeHtml(r.warnings[0])}</span>`;
+        rowClass = 'row-warn';
       } else {
         statusHtml = '<span class="status-ok">✓ READY</span>';
+        rowClass = '';
       }
       return `
-      <tr class="${r.valid ? (r.warnings.length ? 'row-warn' : '') : 'row-invalid'}">
+      <tr class="${rowClass}">
         <td>${statusHtml}</td>
         <td>${escapeHtml(e.date || '–')}</td>
         <td>${e.shift ? escapeHtml(shiftLabel(e.shift)) : '–'}</td>
         <td>${e.line ? escapeHtml(lineLabel(e.line)) : '–'}</td>
-        <td title="${escapeHtml(e.sourceMaterial)}">${escapeHtml(e.sourceMaterial || '–')}</td>
-        <td>${escapeHtml(e.model || '–')}</td>
+        <td title="${escapeHtml(e.sourceMaterial)}">${escapeHtml(e.sourceMaterial || e.model || '–')}</td>
+        <td>${r.matchedProductionModel ? escapeHtml(r.matchedProductionModel) : '<span class="na">— not matched</span>'}</td>
         <td>${escapeHtml(e.defectType || '–')}</td>
         <td class="num">${e.scrapQty ?? '–'}</td>
         <td class="num">${e.scrapCost !== null ? fmtThb(e.scrapCost) : '<span class="na">N/A</span>'}</td>
-        <td>${escapeHtml(e.rootCause) || '–'}</td>
-        <td>${escapeHtml(e.actionPlan) || '–'}</td>
       </tr>`;
     }).join('');
     if (parsedRows.length > PREVIEW_ROW_LIMIT) {
-      html += `<tr class="empty-row"><td colspan="11">+ ${parsedRows.length - PREVIEW_ROW_LIMIT} more row(s) not shown here — all of them are still validated and will be imported if valid.</td></tr>`;
+      html += `<tr class="empty-row"><td colspan="9">+ ${parsedRows.length - PREVIEW_ROW_LIMIT} more row(s) not shown here — all of them are still validated and will be imported if valid.</td></tr>`;
     }
     $('importPreviewBody').innerHTML = html;
 
-    const validCount = parsedRows.filter(r => r.valid).length;
+    const importableCount = parsedRows.filter(r => r.formatValid && !r.unmapped && !r.duplicateStatus).length;
     $('importPreviewWrap').style.display = parsedRows.length > 0 ? '' : 'none';
-    $('importConfirmBtn').disabled = validCount === 0;
+    $('importConfirmBtn').disabled = importableCount === 0;
     $('importMessage').style.display = 'none';
   }
 
@@ -413,12 +579,12 @@
   }
 
   async function doImport() {
-    const validRows = parsedRows.filter(r => r.valid);
-    if (validRows.length === 0) return;
+    const importableRows = parsedRows.filter(r => r.formatValid && !r.unmapped && !r.duplicateStatus);
+    if (importableRows.length === 0) return;
 
     const importBatchId = 'imp_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
     const importedAt = Date.now();
-    const validEntries = validRows.map(r => ({
+    const validEntries = importableRows.map(r => ({
       ...r.entry,
       entrySource: 'excel',
       sourceFileName: currentFileName,
@@ -506,7 +672,7 @@
       $('importFileName').textContent = file.name;
       if (typeof XLSX === 'undefined') {
         $('importSummaryCards').innerHTML = '';
-        $('importPreviewBody').innerHTML = '<tr class="empty-row"><td colspan="11">File-parsing library failed to load (check internet connection) — cannot read this file.</td></tr>';
+        $('importPreviewBody').innerHTML = '<tr class="empty-row"><td colspan="9">File-parsing library failed to load (check internet connection) — cannot read this file.</td></tr>';
         $('importPreviewWrap').style.display = '';
         return;
       }
@@ -515,7 +681,7 @@
         currentSheetName = sheetName;
         if (rawRows.length === 0) {
           parsedRows = [];
-          $('importPreviewBody').innerHTML = '<tr class="empty-row"><td colspan="11">No rows found in this file.</td></tr>';
+          $('importPreviewBody').innerHTML = '<tr class="empty-row"><td colspan="9">No rows found in this file.</td></tr>';
           $('importSummaryCards').innerHTML = '';
           $('importPreviewWrap').style.display = '';
           $('importConfirmBtn').disabled = true;
@@ -527,11 +693,21 @@
           // Skip rows that are entirely blank across every field we care about
           .filter(({ row }) => Object.values(row).some(v => String(v ?? '').trim() !== ''))
           .map(({ row, rowNum }) => parseRow(row, headerMap, rowNum));
+
+        // Model matching + duplicate detection both need Firestore reads
+        // (Production V2 read-only; scrapLogs read-only at this point) —
+        // show a loading state while they run, since a large file means
+        // many distinct date/line/shift combinations to check.
+        $('importPreviewWrap').style.display = '';
+        $('importSummaryCards').innerHTML = '<div class="qd-import-loading">Checking against Production V2 and existing scrapLogs…</div>';
+        $('importPreviewBody').innerHTML = '';
+        await checkProductionMatches(parsedRows);
+        await checkDuplicates(parsedRows);
         renderPreview();
       } catch (err) {
         console.error('Quality Dashboard: failed to parse import file:', err);
         parsedRows = [];
-        $('importPreviewBody').innerHTML = `<tr class="empty-row"><td colspan="11">Could not read this file: ${escapeHtml(err && err.message ? err.message : String(err))}</td></tr>`;
+        $('importPreviewBody').innerHTML = `<tr class="empty-row"><td colspan="9">Could not read this file: ${escapeHtml(err && err.message ? err.message : String(err))}</td></tr>`;
         $('importSummaryCards').innerHTML = '';
         $('importPreviewWrap').style.display = '';
         $('importConfirmBtn').disabled = true;
