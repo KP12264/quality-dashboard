@@ -582,35 +582,80 @@
 
     $('columnMappingBody').innerHTML = dateShiftMappingRow + mappingRows || '<tr><td colspan="3">No recognizable Scrap columns found on this row.</td></tr>';
 
-    const first10 = candidateRows.slice(0, 10);
-    $('rawPreviewBody').innerHTML = first10.length ? first10.map(r => {
-      const get = field => currentColumnMap[field] !== undefined ? r.cells[currentColumnMap[field]] : '';
-      let dateDisplay, shiftDisplay, sourceDisplay;
-      if (currentColumnMap._dateShiftColIndex !== undefined) {
-        const rawText = String(r.cells[currentColumnMap._dateShiftColIndex] ?? '').trim();
-        const parsed = parseDateShiftText(rawText);
-        dateDisplay = parsed ? parsed.date : '(unparsed)';
-        shiftDisplay = parsed && parsed.shift ? shiftLabel(parsed.shift) : '(unparsed)';
-        sourceDisplay = `${rawText} → ${dateDisplay} | ${shiftDisplay}`;
-      } else {
-        const dateCell = get('date');
-        dateDisplay = dateCell instanceof Date ? dateCell.toISOString().slice(0, 10) : String(dateCell ?? '');
-        shiftDisplay = String(get('shift') ?? '');
-        sourceDisplay = '(no combined field — using separate Date/Shift columns)';
-      }
-      return `<tr>
-        <td>${escapeHtml(dateDisplay)}</td>
-        <td>${escapeHtml(shiftDisplay)}</td>
-        <td>${escapeHtml(String(get('line') ?? ''))}</td>
-        <td>${escapeHtml(String(get('material') || get('model') || ''))}</td>
-        <td>${escapeHtml(String(get('defect') ?? ''))}</td>
-        <td>${escapeHtml(String(get('qty') ?? ''))}</td>
-        <td>${escapeHtml(String(get('amt') ?? ''))}</td>
-        <td class="qd-import-sourcecol">${escapeHtml(sourceDisplay)}</td>
-      </tr>`;
-    }).join('') : '<tr class="empty-row"><td colspan="8">No candidate scrap rows found with this header row — try adjusting the row number above, or pick a different sheet.</td></tr>';
-
+    renderRawPreviewTable(candidateRows.slice(0, 10));
     $('continueToValidationBtn').disabled = candidateRows.length === 0;
+  }
+
+  // ---- Raw Preview table: header and rows are BOTH generated from this
+  // single array, in this exact order, so the two can never drift apart —
+  // there is no other place in the code that lists these 9 columns.
+  const RAW_PREVIEW_COLUMNS = [
+    { key: 'excelRow', label: 'Excel Row' },
+    { key: 'sourceDateText', label: 'Source Date/Shift' },
+    { key: 'date', label: 'Date' },
+    { key: 'shift', label: 'Shift' },
+    { key: 'line', label: 'Line' },
+    { key: 'materialModel', label: 'Material/Model' },
+    { key: 'defect', label: 'Defect' },
+    { key: 'scrapQty', label: 'Qty' },
+    { key: 'scrapCost', label: 'Scrap Cost (THB)' }
+  ];
+
+  function renderRawPreviewHeader() {
+    $('rawPreviewHeadRow').innerHTML = RAW_PREVIEW_COLUMNS.map(c => `<th>${escapeHtml(c.label)}</th>`).join('');
+  }
+
+  // Builds the exact 9-field object for one candidate row — field NAMES
+  // match RAW_PREVIEW_COLUMNS' keys 1:1, so renderRawPreviewTable can map
+  // straight from this object to <td> cells with no separate ordering
+  // logic to keep in sync. Date/Shift parsing itself is UNCHANGED here —
+  // this only decides what to DISPLAY, reusing the same parseDateShiftText
+  // call parseRow() uses for the authoritative field.
+  function buildRawPreviewRowData(r) {
+    const get = field => currentColumnMap[field] !== undefined ? r.cells[currentColumnMap[field]] : '';
+    let dateDisplay, shiftDisplay, sourceDateText;
+    if (currentColumnMap._dateShiftColIndex !== undefined) {
+      const rawText = String(r.cells[currentColumnMap._dateShiftColIndex] ?? '').trim();
+      const parsed = parseDateShiftText(rawText);
+      dateDisplay = parsed ? parsed.date : '(unparsed)';
+      shiftDisplay = parsed && parsed.shift ? shiftLabel(parsed.shift) : '(unparsed)';
+      sourceDateText = rawText; // ONLY the original Excel value — no "→" audit formatting
+    } else {
+      const dateCell = get('date');
+      dateDisplay = dateCell instanceof Date ? dateCell.toISOString().slice(0, 10) : String(dateCell ?? '');
+      shiftDisplay = shiftLabel(normalizeShiftValue(get('shift')) || '') || String(get('shift') ?? '');
+      sourceDateText = '(no combined field — using separate Date/Shift columns)';
+    }
+    const lineCode = normalizeLineValue(get('line')) || lineFromLocation(get('location'));
+    const lineDisplay = lineCode ? lineLabel(lineCode) : String(get('line') ?? get('location') ?? '');
+
+    return {
+      excelRow: r.rowNum,
+      sourceDateText,
+      date: dateDisplay,
+      shift: shiftDisplay,
+      line: lineDisplay,
+      materialModel: String(get('material') || get('model') || ''),
+      defect: String(get('defect') ?? ''),
+      scrapQty: String(get('qty') ?? ''),
+      scrapCost: String(get('amt') ?? '')
+    };
+  }
+
+  function renderRawPreviewTable(rows) {
+    renderRawPreviewHeader();
+    if (rows.length === 0) {
+      $('rawPreviewBody').innerHTML = `<tr class="empty-row"><td colspan="${RAW_PREVIEW_COLUMNS.length}">No candidate scrap rows found with this header row — try adjusting the row number above, or pick a different sheet.</td></tr>`;
+      return;
+    }
+    $('rawPreviewBody').innerHTML = rows.map(r => {
+      const data = buildRawPreviewRowData(r);
+      // Map STRICTLY through RAW_PREVIEW_COLUMNS' key order — this is the
+      // only place cells are emitted, so header/row correspondence is
+      // structural, not something that can silently drift on a future edit.
+      const cellsHtml = RAW_PREVIEW_COLUMNS.map(c => `<td${c.key === 'sourceDateText' ? ' class="qd-import-sourcecol"' : ''}>${escapeHtml(data[c.key])}</td>`).join('');
+      return `<tr>${cellsHtml}</tr>`;
+    }).join('');
   }
 
   // ---- Step 3: user confirms detection -> parse + validate + match ------
