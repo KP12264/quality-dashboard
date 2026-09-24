@@ -81,7 +81,9 @@
       (<b>Date, Shift, Line, Model, Defect, Qty</b>, optionally Remark/Cause) and the rich format
       (<b>Material, MaterialName, Quantity, Location, Problem, Cause, Solution, Price, Amt, Model, Date, Line, shift2</b>) are supported automatically.
       For a multi-sheet workbook, the sheet named <code>Data</code> is used if present, otherwise the first sheet.
-      <br><b>Note (Stage 2):</b> Model shown below is the raw Excel text — real Model Mapping against Production V2 and Firestore-backed duplicate detection arrive in later stages.
+      Date/Shift/Line prefer the clean <code>Date</code>/<code>shift2</code>/<code>Line</code> columns; a combined <code>"25 Jul 2026 #D"</code>-style value or <code>Location</code> text
+      is used only as a fallback when those are missing. Model is checked against Production V2's real plan for that date/line/shift — an unmatched model is flagged, not silently imported.
+      Rows matching an existing <code>scrapLogs</code> record are flagged as duplicates and excluded by default.
     </div>
     <div class="qd-import-controls">
       <button type="button" class="mini-add-btn" id="downloadTemplateBtn">⬇ Download Template (.csv)</button>
@@ -96,9 +98,8 @@
       <div class="qd-table-scroll">
         <table class="qd-datatable" id="importPreviewTable">
           <thead><tr>
-            <th>Status</th><th>Date</th><th>Shift</th><th>Line</th>
-            <th>Excel Material</th><th>Model</th><th>Defect</th><th>Qty</th><th>Scrap Cost</th>
-            <th>Root Cause</th><th>Action</th>
+            <th>Import Status</th><th>Date</th><th>Shift</th><th>Line</th>
+            <th>Excel Model/Material</th><th>Matched Production Model</th><th>Defect</th><th>Scrap Qty</th><th>Scrap Cost (THB)</th>
           </tr></thead>
           <tbody id="importPreviewBody"></tbody>
         </table>
