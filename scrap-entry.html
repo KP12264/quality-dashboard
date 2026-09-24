@@ -77,13 +77,11 @@
   <section class="qd-panel qd-import-panel qd-entry-tab-section" id="tab-import" style="display:none;">
     <h2>Import Scrap Records from File</h2>
     <div class="qd-panel-note">
-      For backlog data you already tracked elsewhere. Accepts <code>.csv</code> or <code>.xlsx</code> — both the simple format
-      (<b>Date, Shift, Line, Model, Defect, Qty</b>, optionally Remark/Cause) and the rich format
-      (<b>Material, MaterialName, Quantity, Location, Problem, Cause, Solution, Price, Amt, Model, Date, Line, shift2</b>) are supported automatically.
-      For a multi-sheet workbook, the sheet named <code>Data</code> is used if present, otherwise the first sheet.
-      Date/Shift/Line prefer the clean <code>Date</code>/<code>shift2</code>/<code>Line</code> columns; a combined <code>"25 Jul 2026 #D"</code>-style value or <code>Location</code> text
-      is used only as a fallback when those are missing. Model is checked against Production V2's real plan for that date/line/shift — an unmatched model is flagged, not silently imported.
-      Rows matching an existing <code>scrapLogs</code> record are flagged as duplicates and excluded by default.
+      For backlog data you already tracked elsewhere. Accepts <code>.csv</code> or <code>.xlsx</code>. After choosing a file,
+      pick which worksheet holds the Scrap data — nothing is assumed. The header row and columns are then auto-detected
+      (editable if wrong) and shown in a Detection Preview before anything is validated or checked against Production.
+      Date/Shift prefer clean <code>Date</code>/<code>shift2</code> columns; a combined <code>"25 Jul 2026 #D"</code>-style value
+      is used only as a fallback. Model is checked against Production V2's real plan for that date/line/shift.
     </div>
     <div class="qd-import-controls">
       <button type="button" class="mini-add-btn" id="downloadTemplateBtn">⬇ Download Template (.csv)</button>
@@ -91,6 +89,46 @@
         <input type="file" id="importFileInput" accept=".csv,.xlsx,.xls" style="display:none;">
       </label>
       <span id="importFileName" class="qd-import-filename"></span>
+    </div>
+
+    <div id="detectionWarning" class="qd-form-message error" style="display:none;"></div>
+
+    <!-- Step 1: choose which worksheet holds the Scrap data -->
+    <div id="sheetSelectorWrap" style="display:none;">
+      <h3>Select Worksheet</h3>
+      <div class="qd-panel-note">This workbook has multiple sheets — pick the one that contains the Scrap records.</div>
+      <div class="qd-import-controls">
+        <select id="sheetSelect" class="qd-select-wide"></select>
+        <button type="button" class="qd-submit-btn" id="useSheetBtn" style="width:auto;">Use This Sheet</button>
+      </div>
+    </div>
+
+    <!-- Step 2: verify the detected header row + column mapping BEFORE any validation -->
+    <div id="detectionPreviewWrap" style="display:none;">
+      <h3>Excel Detection Preview</h3>
+      <div class="qd-import-cards" id="detectionSummary"></div>
+      <div class="qd-form-field" style="max-width:260px;">
+        <label for="headerRowInput">Detected Header Row (Excel row #, editable)</label>
+        <input type="number" id="headerRowInput" min="1">
+      </div>
+      <div class="qd-panel-note">Excel Column → System Field</div>
+      <div class="qd-table-scroll">
+        <table class="qd-datatable">
+          <thead><tr><th>Excel Column</th><th></th><th>System Field</th></tr></thead>
+          <tbody id="columnMappingBody"></tbody>
+        </table>
+      </div>
+      <div class="qd-panel-note">First 10 candidate rows (raw, before validation) — check these actually look like Scrap records</div>
+      <div class="qd-table-scroll">
+        <table class="qd-datatable">
+          <thead><tr><th>Excel Row</th><th>Date</th><th>Shift</th><th>Line</th><th>Material/Model</th><th>Defect</th><th>Qty</th><th>Amount</th></tr></thead>
+          <tbody id="rawPreviewBody"></tbody>
+        </table>
+      </div>
+      <div class="qd-import-controls">
+        <button type="button" class="mini-add-btn" id="backToSheetSelectBtn">← Back to Sheet Selection</button>
+        <button type="button" class="qd-submit-btn" id="continueToValidationBtn" style="width:auto;">Looks Good — Continue to Validation</button>
+      </div>
     </div>
 
     <div id="importPreviewWrap" style="display:none;">
