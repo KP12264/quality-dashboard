@@ -27,13 +27,33 @@
     return Number.isFinite(n) ? n : 0;
   }
 
+  // Optional metadata/enrichment fields a scrapLogs document MAY carry,
+  // beyond the 7 core fields every record has always had. Manual entries
+  // (js/scrap-entry-page.js, via addScrapEntries/addScrapEntry) never set
+  // these — only the Excel import path (addScrapEntryBatch) does, and
+  // only for whichever fields the source file actually provided. Dashboard/
+  // Scrap Detail/Pareto do not depend on any of these (per design) — they
+  // exist for future use (Stage 5) and for audit/dedupe (Stage 3/4).
+  const OPTIONAL_SCRAP_FIELDS = [
+    'rootCause', 'actionPlan',           // Cause / Solution (Stage 2)
+    'scrapCost', 'unitPrice',            // Amt / Price (Stage 2) — never derived, always taken as-is
+    'sourceMaterial', 'sourceMaterialName', 'sourceLocation', 'sourceDateText', // raw Excel text, for audit + Stage 3 model mapping key
+    'entrySource', 'sourceFileName', 'sourceSheet', 'sourceRow',
+    'importBatchId', 'importedAt', 'importFingerprint'   // Stage 3/4 use
+  ];
+  const OPTIONAL_NUMERIC_OR_NULL_FIELDS = new Set(['scrapCost', 'unitPrice', 'sourceRow', 'importedAt']);
+
   /**
    * normalizeScrapRecord(id, raw)
-   * -> { id, date, shift, line, model, defectType, scrapQty, remark, createdAt }
+   * -> { id, date, shift, line, model, defectType, scrapQty, remark, createdAt, ...optional fields }
+   * The optional fields (see OPTIONAL_SCRAP_FIELDS) default to null (for
+   * numeric-ish ones) or "" (for text ones) when the document doesn't
+   * have them — which is always true for records created before this
+   * field set existed, and for ordinary manual entries.
    */
   function normalizeScrapRecord(id, raw) {
     if (!raw) return null;
-    return {
+    const base = {
       id,
       date: raw.date || "",
       shift: raw.shift || "",
@@ -44,6 +64,14 @@
       remark: raw.remark || "",
       createdAt: raw.createdAt || null
     };
+    OPTIONAL_SCRAP_FIELDS.forEach(f => {
+      if (OPTIONAL_NUMERIC_OR_NULL_FIELDS.has(f)) {
+        base[f] = raw[f] !== undefined && raw[f] !== null ? raw[f] : null;
+      } else {
+        base[f] = raw[f] || "";
+      }
+    });
+    return base;
   }
 
   /**
@@ -224,10 +252,18 @@
     const batch = db.batch();
     const refs = valid.map(e => {
       const ref = db.collection(SCRAP_COLLECTION).doc();
-      batch.set(ref, {
+      const doc = {
         date: e.date, shift: e.shift, line: e.line, model: e.model, defectType: e.defectType,
         scrapQty: num(e.scrapQty), remark: e.remark || "", createdAt: Date.now()
+      };
+      // Carry through whichever optional fields this entry actually has
+      // (see OPTIONAL_SCRAP_FIELDS above) — never write `undefined`
+      // (Firestore rejects it); everything else is simply omitted from
+      // the document rather than written as a placeholder.
+      OPTIONAL_SCRAP_FIELDS.forEach(f => {
+        if (e[f] !== undefined) doc[f] = e[f];
       });
+      batch.set(ref, doc);
       return ref;
     });
 
