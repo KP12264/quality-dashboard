@@ -26,7 +26,12 @@
 
   <div id="connectionBanner" class="qd-banner" style="display:none;"></div>
 
-  <section class="qd-panel">
+  <div class="qd-tabbar" id="entryTabs">
+    <button data-tab="manual" class="active">Manual Entry</button>
+    <button data-tab="import">Import Excel</button>
+  </div>
+
+  <section class="qd-panel qd-entry-tab-section" id="tab-manual">
     <div class="qd-entry-context">
       <div class="qd-form-field">
         <label for="ctxDate">Date</label>
@@ -69,12 +74,14 @@
     <div id="entryMessage" class="qd-form-message" style="display:none;"></div>
   </section>
 
-  <section class="qd-panel qd-import-panel">
+  <section class="qd-panel qd-import-panel qd-entry-tab-section" id="tab-import" style="display:none;">
     <h2>Import Scrap Records from File</h2>
     <div class="qd-panel-note">
-      For backlog data you already tracked elsewhere (e.g. previous months). Accepts <code>.csv</code> or <code>.xlsx</code>.
-      Columns required: <b>Date, Shift, Line, Model, Defect, Qty</b> — <b>Remark</b> is optional.
-      Date as <code>YYYY-MM-DD</code>. Shift accepts <code>DAY</code>/<code>NIGHT</code> (or Day/Night, or เช้า/ดึก). Line accepts <code>A/B/C</code> (or "Door A", "Line A").
+      For backlog data you already tracked elsewhere. Accepts <code>.csv</code> or <code>.xlsx</code> — both the simple format
+      (<b>Date, Shift, Line, Model, Defect, Qty</b>, optionally Remark/Cause) and the rich format
+      (<b>Material, MaterialName, Quantity, Location, Problem, Cause, Solution, Price, Amt, Model, Date, Line, shift2</b>) are supported automatically.
+      For a multi-sheet workbook, the sheet named <code>Data</code> is used if present, otherwise the first sheet.
+      <br><b>Note (Stage 2):</b> Model shown below is the raw Excel text — real Model Mapping against Production V2 and Firestore-backed duplicate detection arrive in later stages.
     </div>
     <div class="qd-import-controls">
       <button type="button" class="mini-add-btn" id="downloadTemplateBtn">⬇ Download Template (.csv)</button>
@@ -85,10 +92,14 @@
     </div>
 
     <div id="importPreviewWrap" style="display:none;">
-      <div class="qd-import-summary" id="importSummary"></div>
+      <div class="qd-import-cards" id="importSummaryCards"></div>
       <div class="qd-table-scroll">
         <table class="qd-datatable" id="importPreviewTable">
-          <thead><tr><th>#</th><th>Date</th><th>Shift</th><th>Line</th><th>Model</th><th>Defect</th><th>Qty</th><th>Remark</th><th>Status</th></tr></thead>
+          <thead><tr>
+            <th>Status</th><th>Date</th><th>Shift</th><th>Line</th>
+            <th>Excel Material</th><th>Model</th><th>Defect</th><th>Qty</th><th>Scrap Cost</th>
+            <th>Root Cause</th><th>Action</th>
+          </tr></thead>
           <tbody id="importPreviewBody"></tbody>
         </table>
       </div>
@@ -122,5 +133,15 @@
 <script src="js/scrap-entry-page.js"></script>
 <script src="js/scrap-import.js"></script>
 <script src="js/nav.js"></script>
+<script>
+  document.getElementById('entryTabs').addEventListener('click', function (e) {
+    var btn = e.target.closest('button');
+    if (!btn) return;
+    var tab = btn.dataset.tab;
+    document.querySelectorAll('#entryTabs button').forEach(function (b) { b.classList.toggle('active', b === btn); });
+    document.getElementById('tab-manual').style.display = tab === 'manual' ? '' : 'none';
+    document.getElementById('tab-import').style.display = tab === 'import' ? '' : 'none';
+  });
+</script>
 </body>
 </html>
