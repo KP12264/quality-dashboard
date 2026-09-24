@@ -1,67 +1,65 @@
 /**
- * scrap-import.js  —  STAGE 2 (parser + preview; no Model Mapping, no
- * Firestore-backed duplicate detection yet — those are Stage 3 / Stage 4)
+ * scrap-import.js
  * ------------------------------------------------------------------
  * Lives inside the "Import Excel" tab of Scrap Entry. Only talks to
- * Firestore via ScrapDataAdapter.addScrapEntryBatch() (scrapLogs) —
- * native Firestore batched writes. Never touches productionLogs or any
- * prodV2_* collection; this page only READS a local file the user
- * picks (via SheetJS, entirely client-side — nothing is uploaded
- * anywhere) and WRITES to scrapLogs.
+ * Firestore via:
+ *   - ProductionDataAdapter.getModelListForDayLine() — READ ONLY against
+ *     prodV2_dailyPlans, for model matching
+ *   - ScrapDataAdapter.getScrapData() — READ ONLY against scrapLogs, for
+ *     duplicate detection
+ *   - ScrapDataAdapter.addScrapEntryBatch() — WRITES to scrapLogs, and
+ *     ONLY when "Import Valid Rows" is explicitly clicked
+ * Never touches productionLogs or any prodV2_* collection with a write.
+ * Selecting a file, choosing a sheet, detecting columns, and previewing
+ * — including Production model matching — perform ZERO Firestore writes.
  *
- * Supports TWO real-world file shapes, verified against actual sample
- * workbooks rather than assumed:
+ * ARCHITECTURE (rewritten after a real failure: an earlier version
+ * assumed the sheet named "Data" was always the scrap table and row 1
+ * was always the header. Against one real workbook that produced
+ * 58,099 "rows" that were actually a Material Master reference list,
+ * not scrap transactions — the wrong sheet/range entirely. Never again
+ * assume; always let the user choose and always verify before parsing
+ * thousands of rows):
  *
- *   RICH  (e.g. Scrap_Door_Line__NEW_7_9_26.xlsx — the authoritative
- *          format going forward): Line, Date, Material, MaterialName,
- *          Quantity, Location, Problem, Cause, Solution, Remark,
- *          Shift (messy free text — NOT used, see below), Price, Amt,
- *          Model, shift2 (clean "Day Shift"/"Night Shift" — used).
- *          Sits on a sheet literally named "Data" — NOT the first
- *          sheet in that workbook (the first sheet is a pivot/summary
- *          named "Dashbord"). Picking SheetNames[0] blindly (the old
- *          behavior) would silently import pivot-table junk instead —
- *          fixed below to prefer a sheet named "Data" when present.
- *
- *   SIMPLE (e.g. for-D.xlsx and anything shaped like the original
- *          Stage-1 template): Line, Date, Model, Qty, Defect, Cause,
- *          shift. No Material/Price/Amt/Solution/Remark columns at
- *          all — every field this file lacks simply comes back
- *          undefined from buildHeaderMap() and is treated as "not
- *          provided", never as an error, so this shape keeps working
- *          exactly as before.
- *
- * Field mapping decisions (confirmed with real data, not assumed):
- *   Date          <- Date column (real Excel date cell, UTC-safe)
- *   Shift         <- shift2 if present, else shift/Shift            (NOT the messy "1 Jun 2026 #N"-style column)
- *   sourceDateText<- the messy Shift-style column's raw text, ONLY when shift2 was what's actually used for `shift` (audit only, never parsed)
- *   Line          <- Line column directly (NOT derived from Location)
- *   sourceLocation<- Location column, informational only
- *   Model         <- Model column if non-blank, else MaterialName, else Material (RAW text — Stage 3 replaces this with real Model Mapping lookup)
- *   sourceMaterial, sourceMaterialName <- Material / MaterialName, kept verbatim (Stage 3's mapping key is the PAIR of these two — verified
- *                                          against the real file that NEITHER field alone is a stable unique key, but the pair has zero conflicts)
- *   Defect        <- Problem/Defect (+ consolidation map, unchanged from before)
- *   Qty           <- Quantity/Qty
- *   remark        <- Remark column ONLY (no longer falls back to Cause — Cause has its own field now)
- *   rootCause     <- Cause column
- *   actionPlan    <- Solution column
- *   scrapCost     <- Amt column, taken AS-IS — never computed as Price × Qty. Blank -> null (never 0), flagged with a visible (non-blocking) warning.
- *   unitPrice     <- Price column, informational only, never used to derive scrapCost
- *   importFingerprint <- stable hash of raw source values (date, shift, line, sourceMaterial, raw defect text, qty, raw cost text) — computed
- *                         now so Stage 4 can use it, but NOT checked against anything yet in this stage.
- *
- * Every row is validated and previewed BEFORE anything is written —
- * only rows marked "READY" are ever sent to Firestore, and only after
- * the user clicks "Import Valid Rows".
+ *   1. File chosen -> read the workbook, list EVERY sheet name (with a
+ *      row/column count for context) -> user picks one (auto-skipped
+ *      only when there's just one sheet, e.g. a .csv).
+ *   2. Sheet chosen -> scan the first 40 rows of THAT sheet, score each
+ *      one by how many recognizable Scrap-table column headers it
+ *      contains (Material, MaterialName, Quantity, Location, Problem,
+ *      Cause, Solution, Model, a Date/Shift-ish column...) -> the
+ *      highest-scoring row is the detected header row. Shown to the
+ *      user as an editable "Excel row #" — never silently trusted.
+ *   3. Every row after the detected header is checked against a
+ *      candidate-row filter BEFORE it's treated as a scrap record:
+ *      blank rows, rows containing "Total"/"Subtotal"/"รวม" anywhere,
+ *      and rows with no Defect/Qty/Date-ish value in ANY recognized
+ *      column are excluded as "ignored" — never counted as errors,
+ *      never sent to Production matching.
+ *   4. An "Excel Detection Preview" (sheet, header row, column map,
+ *      candidate count, first 10 raw candidate rows) is shown and the
+ *      user must click through it explicitly before full per-row
+ *      parsing/validation or any Firestore read happens.
+ *   5. Only THEN does per-row field parsing (Date/Shift, Line, Model,
+ *      Cost, etc. — unchanged from before, this part was already
+ *      correct) run, followed by Production model matching and
+ *      duplicate detection — now scoped to a small, sane candidate set
+ *      instead of tens of thousands of unrelated rows.
  * ------------------------------------------------------------------
  */
 
 (function () {
   const $ = id => document.getElementById(id);
 
-  let parsedRows = []; // [{ rowNum, raw, entry, valid, errors: [], warnings: [] }]
+  // ---- State --------------------------------------------------------------
+  let currentWorkbook = null;
   let currentFileName = '';
   let currentSheetName = '';
+  let currentAOA = [];              // the chosen sheet as an array-of-arrays (raw, 0-indexed)
+  let currentHeaderRowIndex = 0;    // 0-based index into currentAOA
+  let currentColumnMap = {};        // { field: columnIndex, _rawShiftColIndex?: columnIndex }
+  let candidateRows = [];           // [{ rowNum, cells }] — rowNum is the real 1-based Excel row number
+  let parsedRows = [];              // [{ rowNum, entry, formatValid, errors, warnings, unmapped, matchedProductionModel, duplicateStatus }]
 
   function escapeHtml(s) {
     return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -72,18 +70,12 @@
     return '฿' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
-  // ---- Column header matching (case/space-insensitive, with aliases) ----
+  // ---- Column header matching (case/space/punctuation-insensitive, with aliases) ----
 
   const HEADER_ALIASES = {
     date: ['date'],
-    // 'shift2' checked FIRST — the rich format has a genuinely messy
-    // "Shift" column (e.g. "1 Jun 2026 #N", "02/06/26 #D Lineตู้", even
-    // some rows with no #D/#N code at all) that is unreliable to parse
-    // on its own; "shift2" holds a clean "Day Shift"/"Night Shift" label
-    // and wins whenever both exist. The simple format only has one such
-    // column, literally named "shift", which IS clean.
-    shift: ['shift2', 'shift'],
-    line: ['line'], // Line is already clean in every real file seen; Location is a FALLBACK only (see parseRow), not a primary alias
+    shift: ['shift2', 'shift'], // 'shift2' (clean "Day Shift"/"Night Shift") preferred; the messy combined-text column falls back via parseDateShiftText, see parseRow
+    line: ['line'],
     model: ['model'],
     material: ['material'],
     materialname: ['materialname'],
@@ -95,8 +87,23 @@
     solution: ['solution'],
     price: ['price', 'unitprice'],
     amt: ['amt', 'amount', 'cost', 'scrapcost'],
-    recordedby: ['empld', 'emplead', 'employeelead', 'leader', 'pic', 'รหัสพนักงาน'] // "Emp. Ld" and common real-world equivalents seen in the actual file
+    recordedby: ['empld', 'emplead', 'employeelead', 'leader', 'pic', 'รหัสพนักงาน']
   };
+
+  const FIELD_LABELS = {
+    date: 'Date', shift: 'Date + Shift', line: 'Line', model: 'Model',
+    material: 'Material', materialname: 'Material Name', location: 'Location (Line fallback)',
+    defect: 'Defect', qty: 'Scrap Qty', remark: 'Remark', cause: 'Cause',
+    solution: 'Initial Action', price: 'Unit Price (info only)', amt: 'Scrap Cost',
+    recordedby: 'Recorded By'
+  };
+
+  const HEADER_ALIASES_FLAT = {};
+  Object.keys(HEADER_ALIASES).forEach(field => {
+    HEADER_ALIASES[field].forEach(alias => {
+      if (!(alias in HEADER_ALIASES_FLAT)) HEADER_ALIASES_FLAT[alias] = field;
+    });
+  });
 
   // Some exports use "#N/A" as a broken-lookup placeholder rather than
   // truly leaving the cell blank — treat it the same as empty everywhere.
@@ -106,26 +113,76 @@
   }
 
   function normalizeHeaderKey(h) {
-    // Strip whitespace/underscore/hyphen AND punctuation like periods —
-    // real files use headers like "Amt." (with a trailing period) or
-    // "Material name" (with a space), and both need to collapse to the
-    // same normalized key as a header with none of that noise.
     return String(h || '').trim().toLowerCase().replace(/[\s_\-.]+/g, '');
   }
 
-  function buildHeaderMap(rawRow) {
-    const normalizedKeys = {};
-    Object.keys(rawRow).forEach(k => { normalizedKeys[normalizeHeaderKey(k)] = k; });
+  function buildColumnMap(headerRowArray) {
+    const normalizedCols = (headerRowArray || []).map(c => normalizeHeaderKey(c));
     const map = {};
     for (const field of Object.keys(HEADER_ALIASES)) {
       for (const alias of HEADER_ALIASES[field]) {
-        if (normalizedKeys[alias] !== undefined) { map[field] = normalizedKeys[alias]; break; }
+        const idx = normalizedCols.indexOf(alias);
+        if (idx !== -1) { map[field] = idx; break; }
       }
     }
+    const rawShiftIdx = normalizedCols.indexOf('shift');
+    if (rawShiftIdx !== -1) map._rawShiftColIndex = rawShiftIdx;
     return map;
   }
 
-  // ---- Field normalizers ------------------------------------------------
+  // ---- Header-row auto-detection -----------------------------------------
+
+  const HEADER_SCAN_LIMIT = 40; // how many leading rows to consider as a possible header
+  const MIN_HEADER_SCORE = 3;   // need at least this many recognized columns to trust a row as the header
+
+  function scoreRowAsHeader(rowArray) {
+    const matched = new Set();
+    (rowArray || []).forEach(cell => {
+      const key = normalizeHeaderKey(cell);
+      if (key && HEADER_ALIASES_FLAT[key]) matched.add(HEADER_ALIASES_FLAT[key]);
+    });
+    return matched.size;
+  }
+
+  function detectHeaderRow(aoa) {
+    let best = { rowIndex: 0, score: 0 };
+    for (let i = 0; i < Math.min(aoa.length, HEADER_SCAN_LIMIT); i++) {
+      const score = scoreRowAsHeader(aoa[i]);
+      if (score > best.score) best = { rowIndex: i, score };
+    }
+    return best;
+  }
+
+  // ---- Candidate-row filtering (BEFORE any per-row parsing) --------------
+
+  const JUNK_KEYWORDS = ['total', 'subtotal', 'grand total', 'รวม', 'รวมทั้งหมด', 'summary', 'สรุป'];
+
+  function isBlankRow(rowArray) {
+    return !(rowArray || []).some(c => String(c ?? '').trim() !== '');
+  }
+  function isJunkRow(rowArray) {
+    return (rowArray || []).some(cell => {
+      const s = String(cell ?? '').trim().toLowerCase();
+      return s && JUNK_KEYWORDS.some(kw => s === kw || s.startsWith(kw));
+    });
+  }
+  function isCandidateScrapRow(rowArray, columnMap) {
+    if (isBlankRow(rowArray)) return false;
+    if (isJunkRow(rowArray)) return false;
+    const get = field => columnMap[field] !== undefined ? rowArray[columnMap[field]] : undefined;
+    const hasDefect = cleanCell(get('defect')) !== '';
+    const qtyVal = get('qty');
+    const hasQty = String(qtyVal ?? '').trim() !== '' && Number.isFinite(parseFloat(qtyVal));
+    const dateVal = get('date');
+    const hasCleanDate = (dateVal instanceof Date && !isNaN(dateVal.getTime())) || /^\d{4}-\d{2}-\d{2}$/.test(String(dateVal ?? '').trim());
+    const shiftFallbackText = columnMap._rawShiftColIndex !== undefined ? rowArray[columnMap._rawShiftColIndex] : get('shift');
+    const hasDateShiftFallback = !!parseDateShiftText(shiftFallbackText);
+    return hasDefect || hasQty || hasCleanDate || hasDateShiftFallback;
+  }
+
+  // ---- Field normalizers (unchanged logic — only the `get` accessor that
+  // feeds them, below in parseRow, changed from object-keyed to
+  // column-index-keyed) --------------------------------------------------
 
   function normalizeShiftValue(v) {
     const s = String(v ?? '').trim().toLowerCase();
@@ -145,11 +202,6 @@
   }
 
   function normalizeDateValue(v) {
-    // A real Excel date cell arrives here as a JS Date (SheetJS with
-    // cellDates:true). Excel date-only cells are anchored to UTC
-    // midnight by SheetJS — reading them back with UTC getters is
-    // correct in every timezone (verified: local getters lose a day in
-    // any timezone west of UTC).
     if (v instanceof Date && !isNaN(v.getTime())) {
       const y = v.getUTCFullYear();
       const mo = String(v.getUTCMonth() + 1).padStart(2, '0');
@@ -158,9 +210,6 @@
     }
     const s = String(v ?? '').trim();
     if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-    // Deliberately NOT guessing other formats (e.g. "8/9/2026" is
-    // ambiguous between Aug-9 and Sep-8) — safer to reject than silently
-    // import a misread date.
     return null;
   }
 
@@ -169,15 +218,7 @@
     return (Number.isFinite(n) && n > 0) ? n : null;
   }
 
-  // ---- #D / #N combined Date+Shift text parser (FALLBACK ONLY) -----------
-  // Used only when the clean Date and/or shift2/shift columns are missing
-  // or didn't resolve for a row — the clean columns are still preferred
-  // whenever they're available and valid, per the verified finding that
-  // this free-text field is inconsistent in the real file (mixed date
-  // formats, extra trailing text like "Lineตู้", and some rows with no
-  // #D/#N code at all). When it DOES parse cleanly, this recovers a
-  // usable Date+Shift for files/rows that have no other source.
-  const MONTHS = { jan:0, feb:1, mar:2, apr:3, may:4, jun:5, jul:6, aug:7, sep:8, oct:9, nov:10, dec:11 };
+  const MONTHS = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
 
   function parseDateShiftText(raw) {
     const s = cleanCell(raw);
@@ -185,7 +226,6 @@
     const shiftMatch = s.match(/#\s*([DN])\b/i);
     const shift = shiftMatch ? (shiftMatch[1].toUpperCase() === 'D' ? 'DAY' : 'NIGHT') : null;
 
-    // "25 Jul 2026" style
     let m = s.match(/(\d{1,2})\s+([A-Za-z]{3,})\s+(\d{4})/);
     if (m) {
       const mon = MONTHS[m[2].slice(0, 3).toLowerCase()];
@@ -194,8 +234,6 @@
         return { date: `${y}-${String(mon + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`, shift };
       }
     }
-    // "02/06/26" or "03/06/2026" style (DD/MM/YY or DD/MM/YYYY — this
-    // file's own convention, day-first; never guessed against US MM/DD)
     m = s.match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
     if (m) {
       const d = parseInt(m[1], 10), mo = parseInt(m[2], 10);
@@ -205,24 +243,15 @@
         return { date: `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`, shift };
       }
     }
-    return null; // genuinely unparseable (e.g. "03/06/2026 Line ตู้" with no #D/#N, or missing date entirely) — never guessed
+    return null;
   }
 
-  // ---- Location -> Line (FALLBACK ONLY, when the Line column itself is
-  // missing or blank for a row) — real Location values include many
-  // non-Door-Foaming process stations ("RAC5 SystemAssyA-Line", "RBC9-PU
-  // Foam B"...), so this only recognizes the specific "Door Foaming X"
-  // pattern and returns null (not a guess) for anything else.
   function lineFromLocation(v) {
     const s = cleanCell(v);
     const m = s.match(/Door\s*Foaming\s*([ABC])\b/i);
     return m ? m[1].toUpperCase() : null;
   }
 
-  // Cost is taken AS-IS from Excel — never computed. Blank/non-numeric
-  // returns null (not 0), matching "do not silently convert blank cost
-  // to zero" — the caller shows a warning for a null cost, but this is
-  // NOT a validation error (the row can still import).
   function normalizeCostValue(v) {
     const s = cleanCell(v);
     if (!s) return null;
@@ -230,9 +259,6 @@
     return Number.isFinite(n) ? n : null;
   }
 
-  // Looks up the raw Defect text against the consolidation map (see
-  // config.js) — a recognized variant becomes its canonical name;
-  // anything not in the map is kept exactly as written.
   function normalizeDefectType(v) {
     const cleaned = cleanCell(v);
     if (!cleaned) return '';
@@ -241,13 +267,6 @@
     }
     return cleaned;
   }
-
-  // ---- Fingerprint (dependency-free 32-bit FNV-1a hash) -----------------
-  // Not cryptographic — doesn't need to be. Just needs to be stable
-  // (same input -> same output every time) so Stage 4 can detect "this
-  // exact row was already imported" even if the file is re-uploaded
-  // with rows in a different order (sourceRow is deliberately NOT part
-  // of the input, per the approved design).
 
   function fnv1aHash(str) {
     let h = 0x811c9dc5;
@@ -259,11 +278,6 @@
   }
 
   function buildImportFingerprint(fields) {
-    // Stable raw source values, NOT sourceRow. Includes sourceMaterial
-    // per the approved design (it represents the original Excel
-    // record's identity). Uses the RAW defect text (pre-consolidation)
-    // and raw cost text so the fingerprint reflects exactly what was in
-    // the file, not our own normalization choices.
     const parts = [
       fields.date || '', fields.shift || '', fields.line || '',
       fields.sourceMaterial || '', fields.rawDefectText || '',
@@ -272,22 +286,16 @@
     return 'fp_' + fnv1aHash(parts.join('|||'));
   }
 
-  // ---- Parse + validate one raw row -----------------------------------
+  // ---- Parse + validate ONE candidate row (array-based) -------------------
 
-  function parseRow(rawRow, headerMap, rowNum) {
-    const get = field => headerMap[field] !== undefined ? rawRow[headerMap[field]] : undefined;
+  function parseRow(rowArray, columnMap, rowNum) {
+    const get = field => columnMap[field] !== undefined ? rowArray[columnMap[field]] : undefined;
     const errors = [];
     const warnings = [];
 
-    // Date + Shift: prefer the clean Date column + shift2/shift columns.
-    // Only fall back to parsing the combined "25 Jul 2026 #D"-style text
-    // (wherever it appears — the messy 'shift' alias slot, if that's what
-    // resolved, or a raw 'Shift'-named column if a distinct one exists)
-    // when the clean columns didn't produce a usable value for this row.
     let date = normalizeDateValue(get('date'));
     let shift = normalizeShiftValue(get('shift'));
-    const rawShiftKey = Object.keys(rawRow).find(k => normalizeHeaderKey(k) === 'shift');
-    const rawShiftText = rawShiftKey ? cleanCell(rawRow[rawShiftKey]) : '';
+    const rawShiftText = columnMap._rawShiftColIndex !== undefined ? cleanCell(rowArray[columnMap._rawShiftColIndex]) : '';
     if (!date || !shift) {
       const fallback = parseDateShiftText(rawShiftText) || parseDateShiftText(get('shift'));
       if (fallback) {
@@ -298,8 +306,6 @@
     if (!date) errors.push('Date must be YYYY-MM-DD, a real Excel date cell, or a parseable "25 Jul 2026 #D"-style value');
     if (!shift) errors.push('Shift must be DAY/NIGHT (or Day/Night, เช้า/ดึก, or a "#D"/"#N" code)');
 
-    // Line: prefer the clean Line column; fall back to parsing Location
-    // ("...Door Foaming A...") only when Line itself is missing/blank.
     let line = normalizeLineValue(get('line'));
     if (!line) line = lineFromLocation(get('location'));
     if (!line) errors.push('Line must be A/B/C (or "Door A", "Line A"), or Location must contain "Door Foaming A/B/C"');
@@ -310,9 +316,6 @@
     const rawModel = cleanCell(get('model'));
     const recordedBy = cleanCell(get('recordedby'));
 
-    // Raw Model/Material text — Production-model MATCHING (not renaming)
-    // happens later, once all rows are parsed, against the real Production
-    // V2 roster for each row's date+line+shift (see checkProductionMatches).
     const model = rawModel || sourceMaterialName || sourceMaterial;
     if (!model) errors.push('Model/Material is required');
 
@@ -330,18 +333,11 @@
 
     const amtRaw = get('amt');
     const scrapCost = normalizeCostValue(amtRaw);
-    if (scrapCost === null && headerMap.amt !== undefined) {
-      // Only warn if there IS a cost column but this particular row's
-      // value is blank/unparseable — a file with no cost column at all
-      // (the simple format) is not a warning, just "no cost data here".
+    if (scrapCost === null && columnMap.amt !== undefined) {
       warnings.push('No Scrap Cost for this row (left blank, not treated as ฿0)');
     }
     const unitPrice = normalizeCostValue(get('price'));
 
-    // sourceDateText: the raw text of whatever column holds the
-    // combined "25 Jul 2026 #D"-style value, kept verbatim for
-    // traceability regardless of whether it was actually needed to
-    // resolve Date/Shift (the clean columns may have already done that).
     const sourceDateText = rawShiftText;
 
     const importFingerprint = buildImportFingerprint({
@@ -357,57 +353,18 @@
       recordedBy,
       importFingerprint
     };
-    return { rowNum, raw: rawRow, entry, formatValid: errors.length === 0, errors, warnings, unmapped: false, matchedProductionModel: null, duplicateStatus: null };
-  }
-
-  // ---- File parsing (SheetJS handles both .csv and .xlsx uniformly) -------
-
-  function pickSheetName(workbook) {
-    // Prefer a sheet literally named "Data" (case-insensitive) — the
-    // authoritative rich format's real data lives there, NOT on the
-    // first sheet (which is a pivot/summary named "Dashbord"). Falls
-    // back to the first sheet for simple single-sheet files.
-    const dataSheet = workbook.SheetNames.find(n => n.trim().toLowerCase() === 'data');
-    return dataSheet || workbook.SheetNames[0];
-  }
-
-  function readFileAsRows(file) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onerror = () => reject(new Error('Could not read the file.'));
-      reader.onload = (e) => {
-        try {
-          const data = new Uint8Array(e.target.result);
-          const workbook = XLSX.read(data, { type: 'array', cellDates: true });
-          const sheetName = pickSheetName(workbook);
-          if (!sheetName) { resolve({ rows: [], sheetName: '' }); return; }
-          const sheet = workbook.Sheets[sheetName];
-          const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
-          resolve({ rows, sheetName });
-        } catch (err) {
-          reject(err);
-        }
-      };
-      reader.readAsArrayBuffer(file);
-    });
+    return { rowNum, entry, formatValid: errors.length === 0, errors, warnings, unmapped: false, matchedProductionModel: null, duplicateStatus: null };
   }
 
   // ---- Production model matching (READ-ONLY against prodV2_dailyPlans) ----
-  // For every row that's format-valid so far, check whether its resolved
-  // `model` text exists in Production V2's REAL planned model roster for
-  // that exact date+line+shift (the same read-only function the Scrap
-  // Entry Model dropdown already uses — js/data-adapter.js, .get() only,
-  // never a write). A row whose model isn't found is marked UNMAPPED and
-  // excluded from the importable set, per the "do not automatically
-  // import an unmapped model" requirement — this is a real check against
-  // live Production data, not a guess.
+
   async function checkProductionMatches(rows) {
     const comboKeySet = new Set();
     rows.forEach(r => {
       if (r.formatValid) comboKeySet.add(`${r.entry.date}|${r.entry.line}|${r.entry.shift}`);
     });
     const combos = Array.from(comboKeySet).map(k => { const [date, line, shift] = k.split('|'); return { date, line, shift }; });
-    console.log(`Quality Dashboard: checking Production V2 model match for ${combos.length} distinct date/line/shift combination(s)...`);
+    console.log(`Quality Dashboard: checking Production V2 model match for ${combos.length} distinct date/line/shift combination(s) across ${rows.filter(r=>r.formatValid).length} candidate rows...`);
 
     const results = await Promise.all(combos.map(c =>
       ProductionDataAdapter.getModelListForDayLine(window.qdDb, c.date, c.line, c.shift)
@@ -421,28 +378,13 @@
       if (!r.formatValid) { r.unmapped = false; r.matchedProductionModel = null; return; }
       const key = `${r.entry.date}|${r.entry.line}|${r.entry.shift}`;
       const set = modelsByCombo[key] || new Set();
-      if (set.has(r.entry.model)) {
-        r.unmapped = false;
-        r.matchedProductionModel = r.entry.model;
-      } else {
-        r.unmapped = true;
-        r.matchedProductionModel = null;
-      }
+      if (set.has(r.entry.model)) { r.unmapped = false; r.matchedProductionModel = r.entry.model; }
+      else { r.unmapped = true; r.matchedProductionModel = null; }
     });
   }
 
-  // ---- Duplicate detection (reads EXISTING scrapLogs — the collection
-  // this app already owns and writes to; never touches Production) ------
-  // Two tiers, per the approved design:
-  //   DUPLICATE          — exact importFingerprint match (this exact row
-  //                         was already imported, e.g. the same file was
-  //                         uploaded twice)
-  //   POSSIBLE DUPLICATE — same business key (date+shift+line+model+
-  //                         defect+qty+cost) but a different fingerprint
-  //                         (e.g. re-entered by hand, or from a different
-  //                         file) — shown for review, not silently merged
-  // Both are excluded from the importable set by default; nothing is
-  // ever auto-overwritten or auto-deleted.
+  // ---- Duplicate detection (reads EXISTING scrapLogs only) --------------
+
   function buildBusinessKey(r) {
     return [r.date, r.shift, r.line, r.model, r.defectType, r.scrapQty, r.scrapCost === null ? 'null' : r.scrapCost].join('|');
   }
@@ -474,19 +416,147 @@
 
     rows.forEach(r => {
       if (!r.formatValid) { r.duplicateStatus = null; return; }
-      if (fingerprintSet.has(r.entry.importFingerprint)) {
-        r.duplicateStatus = 'DUPLICATE';
-      } else if (businessKeySet.has(buildBusinessKey(r.entry))) {
-        r.duplicateStatus = 'POSSIBLE_DUPLICATE';
-      } else {
-        r.duplicateStatus = null;
-      }
+      if (fingerprintSet.has(r.entry.importFingerprint)) r.duplicateStatus = 'DUPLICATE';
+      else if (businessKeySet.has(buildBusinessKey(r.entry))) r.duplicateStatus = 'POSSIBLE_DUPLICATE';
+      else r.duplicateStatus = null;
     });
   }
 
-  // ---- Preview rendering ---------------------------------------------
+  // ---- Step 1: file -> workbook -> sheet list ----------------------------
 
-  const PREVIEW_ROW_LIMIT = 200; // rendering thousands of <tr> elements makes the page heavy/laggy — validation still runs on ALL rows, only the on-screen table is capped
+  function readWorkbook(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error('Could not read the file.'));
+      reader.onload = (e) => {
+        try {
+          const data = new Uint8Array(e.target.result);
+          resolve(XLSX.read(data, { type: 'array', cellDates: true }));
+        } catch (err) { reject(err); }
+      };
+      reader.readAsArrayBuffer(file);
+    });
+  }
+
+  function sheetDims(sheet) {
+    if (!sheet || !sheet['!ref']) return { rows: 0, cols: 0 };
+    try {
+      const range = XLSX.utils.decode_range(sheet['!ref']);
+      return { rows: range.e.r - range.s.r + 1, cols: range.e.c - range.s.c + 1 };
+    } catch (e) { return { rows: 0, cols: 0 }; }
+  }
+
+  function renderSheetSelector() {
+    const names = currentWorkbook.SheetNames;
+    const rowsHtml = names.map(name => {
+      const dims = sheetDims(currentWorkbook.Sheets[name]);
+      return `<option value="${escapeHtml(name)}">${escapeHtml(name)} (${dims.rows.toLocaleString('en-US')} rows × ${dims.cols} cols)</option>`;
+    }).join('');
+    $('sheetSelect').innerHTML = rowsHtml;
+    const dataSheet = names.find(n => n.trim().toLowerCase() === 'data');
+    if (dataSheet) $('sheetSelect').value = dataSheet;
+    $('sheetSelectorWrap').style.display = '';
+    $('detectionPreviewWrap').style.display = 'none';
+    $('importPreviewWrap').style.display = 'none';
+  }
+
+  // ---- Step 2: sheet chosen -> header-row detection + candidate rows -----
+
+  function useSheet(sheetName) {
+    currentSheetName = sheetName;
+    const sheet = currentWorkbook.Sheets[sheetName];
+    currentAOA = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+    const detected = detectHeaderRow(currentAOA);
+    currentHeaderRowIndex = detected.rowIndex;
+    $('headerRowInput').value = currentHeaderRowIndex + 1;
+    if (detected.score < MIN_HEADER_SCORE) {
+      showDetectionWarning(`Could not confidently detect a header row on "${sheetName}" (best guess: Excel row ${currentHeaderRowIndex + 1}, only ${detected.score} recognizable column${detected.score === 1 ? '' : 's'}). Check the row number below and correct it if needed.`);
+    } else {
+      hideDetectionWarning();
+    }
+    refreshDetectionPreview();
+    $('sheetSelectorWrap').style.display = 'none';
+    $('detectionPreviewWrap').style.display = '';
+    $('importPreviewWrap').style.display = 'none';
+  }
+
+  function showDetectionWarning(msg) {
+    const el = $('detectionWarning');
+    el.textContent = '⚠ ' + msg;
+    el.style.display = 'block';
+  }
+  function hideDetectionWarning() { $('detectionWarning').style.display = 'none'; }
+
+  function refreshDetectionPreview() {
+    const headerRowArray = currentAOA[currentHeaderRowIndex] || [];
+    currentColumnMap = buildColumnMap(headerRowArray);
+
+    candidateRows = [];
+    for (let i = currentHeaderRowIndex + 1; i < currentAOA.length; i++) {
+      const rowArray = currentAOA[i];
+      if (isCandidateScrapRow(rowArray, currentColumnMap)) {
+        candidateRows.push({ rowNum: i + 1, cells: rowArray });
+      }
+    }
+    const ignoredCount = (currentAOA.length - currentHeaderRowIndex - 1) - candidateRows.length;
+
+    const mappingRows = Object.keys(currentColumnMap)
+      .filter(f => f !== '_rawShiftColIndex')
+      .map(field => {
+        const colIdx = currentColumnMap[field];
+        const excelColName = headerRowArray[colIdx];
+        return `<tr><td>${escapeHtml(excelColName)}</td><td>→</td><td>${escapeHtml(FIELD_LABELS[field] || field)}</td></tr>`;
+      }).join('');
+    const rawShiftMappingRow = (currentColumnMap._rawShiftColIndex !== undefined)
+      ? `<tr><td>${escapeHtml(headerRowArray[currentColumnMap._rawShiftColIndex])}</td><td>→</td><td>sourceDateText (fallback, audit only)</td></tr>`
+      : '';
+
+    $('detectionSummary').innerHTML = `
+      <div class="qd-import-card"><div class="qd-import-card-label">Selected Sheet</div><div class="qd-import-card-value">${escapeHtml(currentSheetName)}</div></div>
+      <div class="qd-import-card"><div class="qd-import-card-label">Header Row</div><div class="qd-import-card-value">Excel row ${currentHeaderRowIndex + 1}</div></div>
+      <div class="qd-import-card good"><div class="qd-import-card-label">Candidate Scrap Rows</div><div class="qd-import-card-value">${candidateRows.length.toLocaleString('en-US')}</div></div>
+      <div class="qd-import-card neutral"><div class="qd-import-card-label">Ignored Rows</div><div class="qd-import-card-value">${ignoredCount.toLocaleString('en-US')}</div></div>
+    `;
+
+    $('columnMappingBody').innerHTML = (mappingRows + rawShiftMappingRow) || '<tr><td colspan="3">No recognizable Scrap columns found on this row.</td></tr>';
+
+    const first10 = candidateRows.slice(0, 10);
+    $('rawPreviewBody').innerHTML = first10.length ? first10.map(r => {
+      const get = field => currentColumnMap[field] !== undefined ? r.cells[currentColumnMap[field]] : '';
+      const dateCell = get('date');
+      const dateDisplay = dateCell instanceof Date ? dateCell.toISOString().slice(0, 10) : String(dateCell ?? '');
+      return `<tr>
+        <td>${r.rowNum}</td>
+        <td>${escapeHtml(dateDisplay)}</td>
+        <td>${escapeHtml(String(get('shift') ?? ''))}</td>
+        <td>${escapeHtml(String(get('line') ?? ''))}</td>
+        <td>${escapeHtml(String(get('material') || get('model') || ''))}</td>
+        <td>${escapeHtml(String(get('defect') ?? ''))}</td>
+        <td>${escapeHtml(String(get('qty') ?? ''))}</td>
+        <td>${escapeHtml(String(get('amt') ?? ''))}</td>
+      </tr>`;
+    }).join('') : '<tr class="empty-row"><td colspan="8">No candidate scrap rows found with this header row — try adjusting the row number above, or pick a different sheet.</td></tr>';
+
+    $('continueToValidationBtn').disabled = candidateRows.length === 0;
+  }
+
+  // ---- Step 3: user confirms detection -> parse + validate + match ------
+
+  async function continueToValidation() {
+    parsedRows = candidateRows.map(r => parseRow(r.cells, currentColumnMap, r.rowNum));
+
+    $('importPreviewWrap').style.display = '';
+    $('importSummaryCards').innerHTML = '<div class="qd-import-loading">Checking against Production V2 and existing scrapLogs…</div>';
+    $('importPreviewBody').innerHTML = '';
+    await checkProductionMatches(parsedRows);
+    await checkDuplicates(parsedRows);
+    renderPreview();
+    $('importPreviewWrap').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  // ---- Preview rendering (post-validation) --------------------------------
+
+  const PREVIEW_ROW_LIMIT = 200;
 
   function renderSummaryCards() {
     const formatValidRows = parsedRows.filter(r => r.formatValid);
@@ -556,12 +626,11 @@
     $('importPreviewBody').innerHTML = html;
 
     const importableCount = parsedRows.filter(r => r.formatValid && !r.unmapped && !r.duplicateStatus).length;
-    $('importPreviewWrap').style.display = parsedRows.length > 0 ? '' : 'none';
     $('importConfirmBtn').disabled = importableCount === 0;
     $('importMessage').style.display = 'none';
   }
 
-  // ---- Import (write only valid rows, in modest-sized chunks) -----------
+  // ---- Import (write only READY rows, in modest-sized chunks) -----------
 
   function chunk(arr, size) {
     const out = [];
@@ -621,8 +690,7 @@
         );
         succeeded += result.succeeded.length;
         failures.push(...result.failed);
-        const chunkMs = Date.now() - chunkStartedAt;
-        console.log(`Quality Dashboard: import batch ${i + 1}/${chunks.length} done in ${chunkMs}ms (${result.succeeded.length} ok, ${result.failed.length} failed)`);
+        console.log(`Quality Dashboard: import batch ${i + 1}/${chunks.length} done (${result.succeeded.length} ok, ${result.failed.length} failed)`);
       } catch (e) {
         console.error(`Quality Dashboard: import batch ${i + 1}/${chunks.length} failed or timed out:`, e);
         c.forEach(entry => failures.push({ entry, error: e }));
@@ -662,6 +730,13 @@
 
   // ---- Init ---------------------------------------------------------------
 
+  function resetImportUI() {
+    $('sheetSelectorWrap').style.display = 'none';
+    $('detectionPreviewWrap').style.display = 'none';
+    $('importPreviewWrap').style.display = 'none';
+    hideDetectionWarning();
+  }
+
   function init() {
     $('downloadTemplateBtn').addEventListener('click', downloadTemplate);
 
@@ -670,50 +745,52 @@
       if (!file) return;
       currentFileName = file.name;
       $('importFileName').textContent = file.name;
+      resetImportUI();
+
       if (typeof XLSX === 'undefined') {
-        $('importSummaryCards').innerHTML = '';
-        $('importPreviewBody').innerHTML = '<tr class="empty-row"><td colspan="9">File-parsing library failed to load (check internet connection) — cannot read this file.</td></tr>';
-        $('importPreviewWrap').style.display = '';
+        showDetectionWarning('File-parsing library failed to load (check internet connection) — cannot read this file.');
+        $('sheetSelectorWrap').style.display = '';
         return;
       }
       try {
-        const { rows: rawRows, sheetName } = await readFileAsRows(file);
-        currentSheetName = sheetName;
-        if (rawRows.length === 0) {
-          parsedRows = [];
-          $('importPreviewBody').innerHTML = '<tr class="empty-row"><td colspan="9">No rows found in this file.</td></tr>';
-          $('importSummaryCards').innerHTML = '';
-          $('importPreviewWrap').style.display = '';
-          $('importConfirmBtn').disabled = true;
+        currentWorkbook = await readWorkbook(file);
+        if (!currentWorkbook.SheetNames || currentWorkbook.SheetNames.length === 0) {
+          showDetectionWarning('This file has no worksheets.');
+          $('sheetSelectorWrap').style.display = '';
           return;
         }
-        const headerMap = buildHeaderMap(rawRows[0]);
-        parsedRows = rawRows
-          .map((row, i) => ({ row, rowNum: i + 2 }))
-          // Skip rows that are entirely blank across every field we care about
-          .filter(({ row }) => Object.values(row).some(v => String(v ?? '').trim() !== ''))
-          .map(({ row, rowNum }) => parseRow(row, headerMap, rowNum));
-
-        // Model matching + duplicate detection both need Firestore reads
-        // (Production V2 read-only; scrapLogs read-only at this point) —
-        // show a loading state while they run, since a large file means
-        // many distinct date/line/shift combinations to check.
-        $('importPreviewWrap').style.display = '';
-        $('importSummaryCards').innerHTML = '<div class="qd-import-loading">Checking against Production V2 and existing scrapLogs…</div>';
-        $('importPreviewBody').innerHTML = '';
-        await checkProductionMatches(parsedRows);
-        await checkDuplicates(parsedRows);
-        renderPreview();
+        if (currentWorkbook.SheetNames.length === 1) {
+          useSheet(currentWorkbook.SheetNames[0]);
+        } else {
+          renderSheetSelector();
+        }
       } catch (err) {
-        console.error('Quality Dashboard: failed to parse import file:', err);
-        parsedRows = [];
-        $('importPreviewBody').innerHTML = `<tr class="empty-row"><td colspan="9">Could not read this file: ${escapeHtml(err && err.message ? err.message : String(err))}</td></tr>`;
-        $('importSummaryCards').innerHTML = '';
-        $('importPreviewWrap').style.display = '';
-        $('importConfirmBtn').disabled = true;
+        console.error('Quality Dashboard: failed to read workbook:', err);
+        showDetectionWarning('Could not read this file: ' + (err && err.message ? err.message : String(err)));
+        $('sheetSelectorWrap').style.display = '';
       }
     });
 
+    $('useSheetBtn').addEventListener('click', () => {
+      const sheetName = $('sheetSelect').value;
+      if (sheetName) useSheet(sheetName);
+    });
+
+    $('headerRowInput').addEventListener('change', () => {
+      const v = parseInt($('headerRowInput').value, 10);
+      if (Number.isFinite(v) && v >= 1 && v <= currentAOA.length) {
+        currentHeaderRowIndex = v - 1;
+        hideDetectionWarning();
+        refreshDetectionPreview();
+      }
+    });
+
+    $('backToSheetSelectBtn').addEventListener('click', () => {
+      $('detectionPreviewWrap').style.display = 'none';
+      $('sheetSelectorWrap').style.display = '';
+    });
+
+    $('continueToValidationBtn').addEventListener('click', continueToValidation);
     $('importConfirmBtn').addEventListener('click', doImport);
   }
 
