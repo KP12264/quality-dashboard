@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scrap Entry · Quality System</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+<div class="wrap">
+
+  <div id="navRoot"></div>
+  <script>window.CURRENT_PAGE = 'scrap-entry';</script>
+
+  <div class="qd-page-header">
+    <h1>SCRAP ENTRY</h1>
+    <p>For Leaders — record scrap by Model + Defect, split across Door A / B / C. No defect time needed. Production Qty is never entered here — it always comes from the read-only production system.</p>
+  </div>
+
+  <div id="connectionBanner" class="qd-banner" style="display:none;"></div>
+
+  <div class="qd-tabbar" id="entryTabs">
+    <button data-tab="manual" class="active">Manual Entry</button>
+    <button data-tab="import">Import Excel</button>
+  </div>
+
+  <section class="qd-panel qd-entry-tab-section" id="tab-manual">
+    <div class="qd-entry-context">
+      <div class="qd-form-field">
+        <label for="ctxDate">Date</label>
+        <input type="date" id="ctxDate">
+      </div>
+      <div class="qd-form-field">
+        <label for="ctxShift">Shift</label>
+        <select id="ctxShift">
+          <option value="DAY">Day</option>
+          <option value="NIGHT">Night</option>
+        </select>
+      </div>
+      <div class="qd-entry-context-note">Date + Shift apply to every row below. Add one row per Model + Defect combination.</div>
+    </div>
+
+    <div class="qd-table-scroll">
+      <table class="qd-datatable qd-entry-table" id="entryTable">
+        <thead>
+          <tr>
+            <th style="min-width:200px;">Model</th>
+            <th style="min-width:170px;">Defect</th>
+            <th style="width:90px;">Door A</th>
+            <th style="width:90px;">Door B</th>
+            <th style="width:90px;">Door C</th>
+            <th style="width:90px;">Total</th>
+            <th style="min-width:150px;">Remark</th>
+            <th style="width:36px;"></th>
+          </tr>
+        </thead>
+        <tbody id="entryTableBody"></tbody>
+      </table>
+    </div>
+
+    <div class="qd-entry-footer">
+      <button type="button" class="mini-add-btn" id="addRowBtn">+ Add Row</button>
+      <div class="qd-entry-grand-total">Grand Total: <b id="grandTotal">0</b> pcs</div>
+    </div>
+
+    <button type="button" class="qd-submit-btn" id="reviewBtn">Review &amp; Save</button>
+    <div id="entryMessage" class="qd-form-message" style="display:none;"></div>
+  </section>
+
+  <section class="qd-panel qd-import-panel qd-entry-tab-section" id="tab-import" style="display:none;">
+    <h2>Import Scrap Records from File</h2>
+    <div class="qd-panel-note">
+      For backlog data you already tracked elsewhere. Accepts <code>.csv</code> or <code>.xlsx</code>. After choosing a file,
+      pick which worksheet holds the Scrap data — nothing is assumed. The header row and columns are then auto-detected
+      (editable if wrong) and shown in a Detection Preview before anything is validated or checked against Production.
+      Date/Shift prefer clean <code>Date</code>/<code>shift2</code> columns; a combined <code>"25 Jul 2026 #D"</code>-style value
+      is used only as a fallback. Model is checked against Production V2's real plan for that date/line/shift.
+    </div>
+    <div class="qd-import-controls">
+      <button type="button" class="mini-add-btn" id="downloadTemplateBtn">⬇ Download Template (.csv)</button>
+      <label class="qd-file-label" for="importFileInput">📂 Choose File
+        <input type="file" id="importFileInput" accept=".csv,.xlsx,.xls" style="display:none;">
+      </label>
+      <span id="importFileName" class="qd-import-filename"></span>
+    </div>
+
+    <div id="detectionWarning" class="qd-form-message error" style="display:none;"></div>
+
+    <!-- Step 1: choose which worksheet holds the Scrap data -->
+    <div id="sheetSelectorWrap" style="display:none;">
+      <h3>Select Worksheet</h3>
+      <div class="qd-panel-note">This workbook has multiple sheets — pick the one that contains the Scrap records.</div>
+      <div class="qd-import-controls">
+        <select id="sheetSelect" class="qd-select-wide"></select>
+        <button type="button" class="qd-submit-btn" id="useSheetBtn" style="width:auto;">Use This Sheet</button>
+      </div>
+    </div>
+
+    <!-- Step 2: verify the detected header row + column mapping BEFORE any validation -->
+    <div id="detectionPreviewWrap" style="display:none;">
+      <h3>Excel Detection Preview</h3>
+      <div class="qd-import-cards" id="detectionSummary"></div>
+      <div class="qd-form-field" style="max-width:260px;">
+        <label for="headerRowInput">Detected Header Row (Excel row #, editable)</label>
+        <input type="number" id="headerRowInput" min="1">
+      </div>
+      <div class="qd-panel-note">Excel Column → System Field</div>
+      <div class="qd-table-scroll">
+        <table class="qd-datatable">
+          <thead><tr><th>Excel Column</th><th></th><th>System Field</th></tr></thead>
+          <tbody id="columnMappingBody"></tbody>
+        </table>
+      </div>
+      <div class="qd-panel-note">First 10 candidate rows (raw, before validation) — check these actually look like Scrap records</div>
+      <div class="qd-table-scroll">
+        <table class="qd-datatable">
+          <thead><tr><th>Excel Row</th><th>Source Date/Shift</th><th>Date</th><th>Shift</th><th>Line</th><th>Material/Model</th><th>Defect</th><th>Qty</th><th>Scrap Cost (THB)</th></tr></thead>
+          <tbody id="rawPreviewBody"></tbody>
+        </table>
+      </div>
+      <div class="qd-import-controls">
+        <button type="button" class="mini-add-btn" id="backToSheetSelectBtn">← Back to Sheet Selection</button>
+        <button type="button" class="qd-submit-btn" id="continueToValidationBtn" style="width:auto;">Looks Good — Continue to Validation</button>
+      </div>
+    </div>
+
+    <div id="importPreviewWrap" style="display:none;">
+      <div class="qd-import-cards" id="importSummaryCards"></div>
+      <div class="qd-table-scroll">
+        <table class="qd-datatable" id="importPreviewTable">
+          <thead><tr>
+            <th>Import Status</th><th>Date</th><th>Shift</th><th>Line</th>
+            <th>Excel Model/Material</th><th>Matched Production Model</th><th>Defect</th><th>Scrap Qty</th><th>Scrap Cost (THB)</th>
+          </tr></thead>
+          <tbody id="importPreviewBody"></tbody>
+        </table>
+      </div>
+      <button type="button" class="qd-submit-btn" id="importConfirmBtn">Import Valid Rows</button>
+      <div id="importMessage" class="qd-form-message" style="display:none;"></div>
+    </div>
+  </section>
+
+  <footer class="qd-footer">
+    <span>Scrap saved here writes only to <code>scrapLogs</code> — Production V2's data (<code>prodV2_actualLogs</code>, <code>prodV2_dailyPlans</code>) is read-only and never touched.</span>
+  </footer>
+
+</div>
+
+<!-- Confirmation modal -->
+<div class="qd-modal-overlay" id="confirmOverlay">
+  <div class="qd-modal-box">
+    <h3>Confirm Scrap Entry</h3>
+    <div class="qd-modal-summary" id="confirmSummary"></div>
+    <div class="qd-modal-actions">
+      <button type="button" class="mini-add-btn" id="confirmCancel">Cancel</button>
+      <button type="button" class="qd-submit-btn" id="confirmSave" style="width:auto;">Save to Scrap Log</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/firebase-init.js"></script>
+<script src="js/data-adapter.js"></script>
+<script src="js/scrap-adapter.js"></script>
+<script src="js/scrap-entry-page.js"></script>
+<script src="js/scrap-import.js"></script>
+<script src="js/nav.js"></script>
+<script>
+  document.getElementById('entryTabs').addEventListener('click', function (e) {
+    var btn = e.target.closest('button');
+    if (!btn) return;
+    var tab = btn.dataset.tab;
+    document.querySelectorAll('#entryTabs button').forEach(function (b) { b.classList.toggle('active', b === btn); });
+    document.getElementById('tab-manual').style.display = tab === 'manual' ? '' : 'none';
+    document.getElementById('tab-import').style.display = tab === 'import' ? '' : 'none';
+  });
+</script>
+</body>
+</html>
