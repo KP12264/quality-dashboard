@@ -63,6 +63,15 @@ const PRODUCTION_COLLECTION = "productionLogs";
 const SCRAP_COLLECTION = "scrapLogs";
 const TARGET_MASTER_COLLECTION = "targetMaster";
 const IMPROVEMENT_COLLECTION = "improvements";
+// Persistent Excel-Material/Model -> Production-Model mapping, so the
+// same Excel identity gets recognized automatically on future imports
+// once a Leader has confirmed it once via "Remember Mapping". Owned by
+// this app the same way scrapLogs/targetMaster/improvements are — never
+// touches Production V2. NOTE: this collection needs its own entry in
+// Firestore Security Rules (same public-read/write pattern as the other
+// three) before "Remember Mapping" writes will succeed — it is not
+// covered by the existing scrapLogs/targetMaster/improvements rules.
+const SCRAP_MODEL_MAPPING_COLLECTION = "scrapModelMappings";
 
 // Production lines and their display labels, per the existing system.
 // Keyed by the same single-letter line codes used in the existing

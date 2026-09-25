@@ -59,7 +59,15 @@
   let currentHeaderRowIndex = 0;    // 0-based index into currentAOA
   let currentColumnMap = {};        // { field: columnIndex, _rawShiftColIndex?: columnIndex }
   let candidateRows = [];           // [{ rowNum, cells }] — rowNum is the real 1-based Excel row number
-  let parsedRows = [];              // [{ rowNum, entry, formatValid, errors, warnings, unmapped, matchedProductionModel, duplicateStatus }]
+  let parsedRows = [];              // [{ rowNum, entry, formatValid, errors, warnings, unmapped, matchedProductionModel, duplicateStatus, availableModelsForDropdown }]
+
+  // ---- Model Mapping state (Requirement: Date+Shift+Line scoped, saved-
+  // mapping-first, dropdown fallback, propagates across rows sharing the
+  // same Excel identity within one import session) ------------------------
+  let modelsByCombo = {};        // "date|line|shift" -> Set(production model strings) — read-only Production V2 data, fetched once per Continue-to-Validation
+  let savedModelMappings = {};   // excelModel -> productionModel, loaded from scrapModelMappings (read-only during Preview/Validation)
+  let sessionModelChoices = {};  // excelModel -> productionModel, chosen by the user THIS session (not yet saved unless "Remember" is checked)
+  let rememberFlags = {};        // excelModel -> boolean, whether to persist that choice to scrapModelMappings on final Confirm Import
 
   function escapeHtml(s) {
     return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -472,29 +480,73 @@
 
   // ---- Production model matching (READ-ONLY against prodV2_dailyPlans) ----
 
-  async function checkProductionMatches(rows) {
+  // ---- Production model roster fetch (READ-ONLY against prodV2_dailyPlans)
+  // Fetches the available model list for every distinct date+line+shift
+  // combination among the format-valid rows, ONCE, and caches it in
+  // modelsByCombo for the whole Validation session (dropdown population +
+  // re-resolution after a manual pick both reuse this — no re-fetching).
+  async function fetchProductionRosters(rows) {
     const comboKeySet = new Set();
     rows.forEach(r => {
       if (r.formatValid) comboKeySet.add(`${r.entry.date}|${r.entry.line}|${r.entry.shift}`);
     });
     const combos = Array.from(comboKeySet).map(k => { const [date, line, shift] = k.split('|'); return { date, line, shift }; });
-    console.log(`Quality Dashboard: checking Production V2 model match for ${combos.length} distinct date/line/shift combination(s) across ${rows.filter(r=>r.formatValid).length} candidate rows...`);
+    console.log(`Quality Dashboard: fetching Production V2 model rosters for ${combos.length} distinct date/line/shift combination(s) across ${rows.filter(r=>r.formatValid).length} candidate rows...`);
 
     const results = await Promise.all(combos.map(c =>
       ProductionDataAdapter.getModelListForDayLine(window.qdDb, c.date, c.line, c.shift)
         .then(r => ({ key: `${c.date}|${c.line}|${c.shift}`, names: r.names || [] }))
         .catch(() => ({ key: `${c.date}|${c.line}|${c.shift}`, names: [] }))
     ));
-    const modelsByCombo = {};
+    modelsByCombo = {};
     results.forEach(r => { modelsByCombo[r.key] = new Set(r.names); });
+  }
 
-    rows.forEach(r => {
-      if (!r.formatValid) { r.unmapped = false; r.matchedProductionModel = null; return; }
-      const key = `${r.entry.date}|${r.entry.line}|${r.entry.shift}`;
-      const set = modelsByCombo[key] || new Set();
-      if (set.has(r.entry.model)) { r.unmapped = false; r.matchedProductionModel = r.entry.model; }
-      else { r.unmapped = true; r.matchedProductionModel = null; }
-    });
+  // ---- Model Mapping resolution ------------------------------------------
+  // For ONE row: try this session's own choice first (propagates a pick
+  // made on one row to every other row sharing the same Excel identity),
+  // then the persistently saved mapping — but EITHER way, the resolved
+  // Production Model must actually be in THIS row's own date+line+shift
+  // roster before it counts as matched (requirement 7: verify before
+  // marking READY — a mapping that worked for one row's date doesn't
+  // automatically apply to a different date where that model wasn't run).
+  function resolveRowMapping(r) {
+    if (!r.formatValid) { r.unmapped = false; r.matchedProductionModel = null; r.availableModelsForDropdown = []; return; }
+    const comboKey = `${r.entry.date}|${r.entry.line}|${r.entry.shift}`;
+    const available = modelsByCombo[comboKey] || new Set();
+    const candidate = sessionModelChoices[r.entry.model] || savedModelMappings[r.entry.model];
+    if (candidate && available.has(candidate)) {
+      r.unmapped = false;
+      r.matchedProductionModel = candidate;
+      r.availableModelsForDropdown = [];
+    } else {
+      r.unmapped = true;
+      r.matchedProductionModel = null;
+      r.availableModelsForDropdown = Array.from(available).sort();
+    }
+  }
+
+  function resolveAllModelMappings(rows) {
+    rows.forEach(resolveRowMapping);
+  }
+
+  // Called when the user picks a value in a row's dropdown — applies it to
+  // THIS session (not Firestore yet) for every row sharing the same raw
+  // Excel Material/Model text (requirement: "multiple rows with the same
+  // Excel Material/Model should reuse the same mapping where applicable"),
+  // then re-resolves and re-renders so sibling rows update immediately.
+  function applyModelChoice(excelModel, productionModel) {
+    if (!productionModel) {
+      delete sessionModelChoices[excelModel];
+    } else {
+      sessionModelChoices[excelModel] = productionModel;
+    }
+    resolveAllModelMappings(parsedRows);
+    renderPreview();
+  }
+
+  function setRememberFlag(excelModel, checked) {
+    rememberFlags[excelModel] = checked;
   }
 
   // ---- Duplicate detection (reads EXISTING scrapLogs only) --------------
@@ -558,84 +610,6 @@
       const range = XLSX.utils.decode_range(sheet['!ref']);
       return { rows: range.e.r - range.s.r + 1, cols: range.e.c - range.s.c + 1 };
     } catch (e) { return { rows: 0, cols: 0 }; }
-  }
-
-  // ---- TEMPORARY: Scrap Cost diagnostics ---------------------------------
-  // Inspects the RAW cell objects (not the array-of-arrays view, which only
-  // carries the resolved .v value and loses formula/type metadata) so we
-  // can see exactly what SheetJS actually read for Price/Amount: a plain
-  // number, a formula with a cached result, a formula with NO cached
-  // result (nothing to read without recalculating it ourselves, which we
-  // must not do), or genuinely blank. Read-only inspection of the
-  // in-memory workbook object — no Firestore access, no recalculation.
-  function excelColLetter(colIndex) {
-    let letter = '', n = colIndex + 1;
-    while (n > 0) {
-      const rem = (n - 1) % 26;
-      letter = String.fromCharCode(65 + rem) + letter;
-      n = Math.floor((n - 1) / 26);
-    }
-    return letter;
-  }
-
-  function inspectCell(sheet, rowIndex, colIndex) {
-    if (colIndex === undefined) return { addr: '(no column detected)', kind: 'n/a', value: '' };
-    const addr = XLSX.utils.encode_cell({ r: rowIndex, c: colIndex });
-    const cell = sheet[addr];
-    if (!cell) return { addr, kind: 'blank', value: '' };
-    if (cell.f !== undefined && (cell.v === undefined || cell.v === null)) {
-      return { addr, kind: 'FORMULA — NO cached result', value: '=' + cell.f };
-    }
-    if (cell.f !== undefined) {
-      return { addr, kind: 'formula (cached result present)', value: cell.v };
-    }
-    if (cell.t === 'n') return { addr, kind: 'number', value: cell.v };
-    if (cell.v === undefined || cell.v === '') return { addr, kind: 'blank', value: '' };
-    return { addr, kind: 'text/other (t=' + cell.t + ')', value: cell.v };
-  }
-
-  function renderScrapCostDebug() {
-    const el = $('scrapCostDebug');
-    if (!el) return;
-    const sheet = currentWorkbook.Sheets[currentSheetName];
-    const headerRowArray = currentAOA[currentHeaderRowIndex] || [];
-    const priceCol = currentColumnMap.price;
-    const amtCol = currentColumnMap.amt;
-
-    const priceHeader = priceCol !== undefined ? headerRowArray[priceCol] : '(not detected)';
-    const amtHeader = amtCol !== undefined ? headerRowArray[amtCol] : '(not detected)';
-    const priceLetter = priceCol !== undefined ? excelColLetter(priceCol) : '—';
-    const amtLetter = amtCol !== undefined ? excelColLetter(amtCol) : '—';
-
-    const sampleRows = candidateRows.slice(0, 10);
-    const rowsHtml = sampleRows.map(r => {
-      const rowIndex = r.rowNum - 1; // back to 0-based AOA/sheet row index
-      const priceInfo = inspectCell(sheet, rowIndex, priceCol);
-      const amtInfo = inspectCell(sheet, rowIndex, amtCol);
-      return `<tr>
-        <td>${r.rowNum}</td>
-        <td>${escapeHtml(priceInfo.addr)}</td>
-        <td>${escapeHtml(String(priceInfo.value))}</td>
-        <td>${escapeHtml(priceInfo.kind)}</td>
-        <td>${escapeHtml(amtInfo.addr)}</td>
-        <td>${escapeHtml(String(amtInfo.value))}</td>
-        <td>${escapeHtml(amtInfo.kind)}</td>
-      </tr>`;
-    }).join('');
-
-    el.innerHTML = `
-      <div class="qd-panel-note"><b>⚠ TEMPORARY DEBUG — Scrap Cost diagnostics</b></div>
-      <div class="qd-import-cards">
-        <div class="qd-import-card"><div class="qd-import-card-label">Price Column</div><div class="qd-import-card-value">${escapeHtml(String(priceHeader))} (col ${priceLetter})</div></div>
-        <div class="qd-import-card"><div class="qd-import-card-label">Amount Column</div><div class="qd-import-card-value">${escapeHtml(String(amtHeader))} (col ${amtLetter})</div></div>
-      </div>
-      <div class="qd-table-scroll">
-        <table class="qd-datatable">
-          <thead><tr><th>Excel Row</th><th>Price Cell</th><th>Raw Price Value</th><th>Price Cell Type</th><th>Amount Cell</th><th>Raw Amount Value</th><th>Amount Cell Type</th></tr></thead>
-          <tbody>${rowsHtml || '<tr class="empty-row"><td colspan="7">No candidate rows to inspect.</td></tr>'}</tbody>
-        </table>
-      </div>
-    `;
   }
 
   function renderSheetSelector() {
@@ -730,7 +704,6 @@
     $('columnMappingBody').innerHTML = dateShiftMappingRow + mappingRows || '<tr><td colspan="3">No recognizable Scrap columns found on this row.</td></tr>';
 
     renderRawPreviewTable(candidateRows.slice(0, 10));
-    renderScrapCostDebug();
     $('continueToValidationBtn').disabled = candidateRows.length === 0;
   }
 
@@ -810,11 +783,28 @@
 
   async function continueToValidation() {
     parsedRows = candidateRows.map(r => parseRow(r.cells, currentColumnMap, r.rowNum));
+    // Fresh session state for this validation run — a previous file's
+    // in-session picks/remember-flags must not leak into a new one.
+    sessionModelChoices = {};
+    rememberFlags = {};
 
     $('importPreviewWrap').style.display = '';
     $('importSummaryCards').innerHTML = '<div class="qd-import-loading">Checking against Production V2 and existing scrapLogs…</div>';
     $('importPreviewBody').innerHTML = '';
-    await checkProductionMatches(parsedRows);
+
+    await fetchProductionRosters(parsedRows);
+    const mappingResult = await ScrapModelMappingAdapter.getAllMappings(window.qdDb);
+    savedModelMappings = mappingResult.mappings;
+    const noticeEl = $('scrapModelMappingNotice');
+    if (mappingResult.error) {
+      console.error('Quality Dashboard: could not read scrapModelMappings (saved mappings unavailable for this session):', mappingResult.error);
+      noticeEl.textContent = '⚠ Could not read saved Model Mappings (scrapModelMappings) — every row will need manual mapping this time. This usually means Firestore Security Rules don\'t yet include this collection.';
+      noticeEl.style.display = 'block';
+    } else {
+      noticeEl.style.display = 'none';
+    }
+    resolveAllModelMappings(parsedRows);
+
     await checkDuplicates(parsedRows);
     renderPreview();
     $('importPreviewWrap').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -847,6 +837,31 @@
     `;
   }
 
+  function buildMatchedModelCellHtml(r) {
+    if (!r.unmapped) {
+      return r.matchedProductionModel ? escapeHtml(r.matchedProductionModel) : '<span class="na">— not matched</span>';
+    }
+    if (!r.availableModelsForDropdown || r.availableModelsForDropdown.length === 0) {
+      return '<span class="na">— not matched (no Production plan for this date/line/shift)</span>';
+    }
+    const excelModel = r.entry.model;
+    const currentChoice = sessionModelChoices[excelModel] || '';
+    const options = r.availableModelsForDropdown.map(m =>
+      `<option value="${escapeHtml(m)}" ${m === currentChoice ? 'selected' : ''}>${escapeHtml(m)}</option>`
+    ).join('');
+    const rememberChecked = rememberFlags[excelModel] ? 'checked' : '';
+    return `
+      <div class="qd-model-map">
+        <select class="qd-model-map-select" data-excel-model="${escapeHtml(excelModel)}">
+          <option value="">— select Production Model —</option>
+          ${options}
+        </select>
+        <label class="qd-model-map-remember">
+          <input type="checkbox" class="qd-model-map-remember-cb" data-excel-model="${escapeHtml(excelModel)}" ${rememberChecked}> Remember Mapping
+        </label>
+      </div>`;
+  }
+
   function renderPreview() {
     renderSummaryCards();
 
@@ -864,7 +879,11 @@
         statusHtml = '<span class="status-warn" title="A record with the same Date+Shift+Line+Model+Defect+Qty+Cost already exists — review before re-importing">⚠ POSSIBLE DUPLICATE</span>';
         rowClass = 'row-warn';
       } else if (r.unmapped) {
-        statusHtml = `<span class="status-warn" title="\u201C${escapeHtml(e.model)}\u201D was not found in Production V2's plan for ${escapeHtml(formatDateDisplay(e.date))} / ${escapeHtml(lineLabel(e.line))} / ${escapeHtml(shiftLabel(e.shift))}">⚠ UNMAPPED MODEL</span>`;
+        if (r.availableModelsForDropdown && r.availableModelsForDropdown.length > 0) {
+          statusHtml = '<span class="status-warn">⚠ NEEDS MAPPING</span>';
+        } else {
+          statusHtml = `<span class="status-warn" title="No Production V2 plan exists at all for ${escapeHtml(formatDateDisplay(e.date))} / ${escapeHtml(lineLabel(e.line))} / ${escapeHtml(shiftLabel(e.shift))} — nothing to map to">⚠ UNMAPPED MODEL</span>`;
+        }
         rowClass = 'row-warn';
       } else if (r.warnings.length > 0) {
         statusHtml = `<span class="status-warn" title="${escapeHtml(r.warnings.join('; '))}">⚠ ${escapeHtml(r.warnings[0])}</span>`;
@@ -880,7 +899,7 @@
         <td>${e.shift ? escapeHtml(shiftLabel(e.shift)) : '–'}</td>
         <td>${e.line ? escapeHtml(lineLabel(e.line)) : '–'}</td>
         <td title="${escapeHtml(e.sourceMaterial)}">${escapeHtml(e.sourceMaterial || e.model || '–')}</td>
-        <td>${r.matchedProductionModel ? escapeHtml(r.matchedProductionModel) : '<span class="na">— not matched</span>'}</td>
+        <td>${buildMatchedModelCellHtml(r)}</td>
         <td>${escapeHtml(e.defectType || '–')}</td>
         <td class="num">${e.scrapQty ?? '–'}</td>
         <td class="num">${e.scrapCost !== null ? fmtThb(e.scrapCost) : '<span class="na">N/A</span>'}</td>
@@ -921,6 +940,7 @@
     const importedAt = Date.now();
     const validEntries = importableRows.map(r => ({
       ...r.entry,
+      model: r.matchedProductionModel, // write the CONFIRMED Production Model, not the raw Excel text — entry.sourceMaterial/sourceMaterialName still keep the original Excel identity for audit
       entrySource: 'excel',
       sourceFileName: currentFileName,
       sourceSheet: currentSheetName,
@@ -964,15 +984,33 @@
     }
 
     const totalSec = ((Date.now() - importStartedAt) / 1000).toFixed(1);
+
+    // Model Mapping is only ever persisted here — at confirmed-import time,
+    // never during Preview/Validation. Best-effort: a failure here doesn't
+    // undo or fail the scrapLogs write that already succeeded above.
+    const rememberedPairs = Object.keys(rememberFlags)
+      .filter(excelModel => rememberFlags[excelModel] && sessionModelChoices[excelModel])
+      .map(excelModel => ({ excelModel, productionModel: sessionModelChoices[excelModel] }));
+    let mappingSaveNote = '';
+    if (rememberedPairs.length > 0) {
+      const mappingResult = await ScrapModelMappingAdapter.saveMappings(window.qdDb, rememberedPairs);
+      if (mappingResult.error) {
+        console.error('Quality Dashboard: failed to save Model Mappings:', mappingResult.error);
+        mappingSaveNote = ` (Note: ${rememberedPairs.length} model mapping${rememberedPairs.length > 1 ? 's' : ''} could NOT be remembered for next time — check Firestore Security Rules include scrapModelMappings.)`;
+      } else {
+        mappingSaveNote = ` Remembered ${mappingResult.succeeded} model mapping${mappingResult.succeeded > 1 ? 's' : ''} for next time.`;
+      }
+    }
+
     btn.textContent = 'Import Valid Rows';
     btn.disabled = false;
 
     if (failures.length === 0) {
       msgEl.className = 'qd-form-message success';
-      msgEl.textContent = `Imported ${succeeded} record${succeeded > 1 ? 's' : ''} into scrapLogs in ${totalSec}s (batch ${importBatchId}). Check Scrap Detail to review them.`;
+      msgEl.textContent = `Imported ${succeeded} record${succeeded > 1 ? 's' : ''} into scrapLogs in ${totalSec}s (batch ${importBatchId}). Check Scrap Detail to review them.${mappingSaveNote}`;
     } else {
       msgEl.className = 'qd-form-message error';
-      msgEl.textContent = `Imported ${succeeded} record${succeeded > 1 ? 's' : ''}, but ${failures.length} failed: ${failures[0].error && failures[0].error.message ? failures[0].error.message : 'unknown error'}`;
+      msgEl.textContent = `Imported ${succeeded} record${succeeded > 1 ? 's' : ''}, but ${failures.length} failed: ${failures[0].error && failures[0].error.message ? failures[0].error.message : 'unknown error'}${mappingSaveNote}`;
     }
     msgEl.style.display = 'block';
   }
@@ -1058,6 +1096,22 @@
 
     $('continueToValidationBtn').addEventListener('click', continueToValidation);
     $('importConfirmBtn').addEventListener('click', doImport);
+
+    // Delegated — the preview table body's innerHTML is replaced on every
+    // re-render (e.g. after a dropdown pick propagates to sibling rows),
+    // but the <tbody> element itself persists, so one listener here
+    // covers every dropdown/checkbox that ever appears in it.
+    $('importPreviewBody').addEventListener('change', (e) => {
+      const select = e.target.closest('.qd-model-map-select');
+      if (select) {
+        applyModelChoice(select.dataset.excelModel, select.value);
+        return;
+      }
+      const checkbox = e.target.closest('.qd-model-map-remember-cb');
+      if (checkbox) {
+        setRememberFlag(checkbox.dataset.excelModel, checkbox.checked);
+      }
+    });
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
