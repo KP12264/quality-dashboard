@@ -236,6 +236,54 @@
     return bestRatio >= DATE_SHIFT_COL_MIN_MATCH_RATIO ? bestCol : -1;
   }
 
+  // ---- Amount/Price column detection by FORMULA STRUCTURE (fallback,
+  // used only when header-based detection finds nothing) -----------------
+  // Some real workbooks have NO header text at all for the Amount/Price
+  // columns (confirmed: a real file has blank header cells above columns
+  // holding "=VLOOKUP(H2,ราคา!A:L,12,0)" for Price and "=U2*J2" for
+  // Amount) — header-alias matching can never find these. This looks for
+  // a column whose FORMULAS are consistently "<cell> * <cell>" where one
+  // operand is the already-known Qty column — that structural shape is a
+  // strong, narrow signal for "this is the pre-calculated Amount", found
+  // by inspecting the formula TEXT only. The value actually used as
+  // scrapCost always comes from that column's own cached result (.v) —
+  // this function never multiplies anything itself.
+  const MULTIPLY_FORMULA_RE = /^([A-Za-z]+)(\d+)\s*\*\s*([A-Za-z]+)(\d+)$/;
+  const AMOUNT_FORMULA_SAMPLE_LIMIT = 30;
+  const AMOUNT_FORMULA_MIN_CONFIRM = 3;
+
+  function detectAmountColumnByFormula(sheet, aoa, headerRowIndex, qtyCol) {
+    if (qtyCol === undefined || !sheet) return { amtCol: -1, priceCol: -1 };
+    const numCols = (aoa[headerRowIndex] || []).length;
+    let bestAmtCol = -1, bestPriceCol = -1, bestScore = 0;
+
+    for (let c = 0; c < numCols; c++) {
+      if (c === qtyCol) continue;
+      const otherColCounts = {};
+      let sampled = 0;
+      for (let r = headerRowIndex + 1; r < aoa.length && sampled < AMOUNT_FORMULA_SAMPLE_LIMIT; r++) {
+        const addr = XLSX.utils.encode_cell({ r, c });
+        const cell = sheet[addr];
+        if (!cell || cell.f === undefined) continue;
+        sampled++;
+        const m = String(cell.f).trim().match(MULTIPLY_FORMULA_RE);
+        if (!m) continue;
+        const col1 = XLSX.utils.decode_col(m[1]);
+        const col2 = XLSX.utils.decode_col(m[3]);
+        let otherCol = null;
+        if (col1 === qtyCol) otherCol = col2;
+        else if (col2 === qtyCol) otherCol = col1;
+        if (otherCol !== null) otherColCounts[otherCol] = (otherColCounts[otherCol] || 0) + 1;
+      }
+      let topOther = -1, topCount = 0;
+      Object.keys(otherColCounts).forEach(k => {
+        if (otherColCounts[k] > topCount) { topCount = otherColCounts[k]; topOther = parseInt(k, 10); }
+      });
+      if (topCount > bestScore) { bestScore = topCount; bestAmtCol = c; bestPriceCol = topOther; }
+    }
+    return bestScore >= AMOUNT_FORMULA_MIN_CONFIRM ? { amtCol: bestAmtCol, priceCol: bestPriceCol } : { amtCol: -1, priceCol: -1 };
+  }
+
   // ---- Field normalizers (unchanged logic — only the `get` accessor that
   // feeds them, below in parseRow, changed from object-keyed to
   // column-index-keyed) --------------------------------------------------
@@ -640,6 +688,17 @@
     // the two workbook layouts this is.
     const dateShiftCol = detectDateShiftColumn(currentAOA, currentHeaderRowIndex);
     if (dateShiftCol !== -1) currentColumnMap._dateShiftColIndex = dateShiftCol;
+
+    // Amount/Price fallback: ONLY runs when the header row had no
+    // "Amt."/"Amount"/"Price"-style text to match at all — never
+    // overrides a header-based match, so the original workbook format
+    // (which DOES have these headers) is completely unaffected.
+    if (currentColumnMap.amt === undefined) {
+      const sheet = currentWorkbook.Sheets[currentSheetName];
+      const detected = detectAmountColumnByFormula(sheet, currentAOA, currentHeaderRowIndex, currentColumnMap.qty);
+      if (detected.amtCol !== -1) currentColumnMap.amt = detected.amtCol;
+      if (detected.priceCol !== -1 && currentColumnMap.price === undefined) currentColumnMap.price = detected.priceCol;
+    }
 
     candidateRows = [];
     for (let i = currentHeaderRowIndex + 1; i < currentAOA.length; i++) {
