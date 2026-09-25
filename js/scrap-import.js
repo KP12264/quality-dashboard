@@ -69,6 +69,16 @@
   function fmtThb(n) {
     return '฿' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
+  // DISPLAY ONLY — converts the internally-stored "YYYY-MM-DD" date to
+  // "DD/MM/YYYY" for the UI. The stored/internal value (entry.date,
+  // Firestore documents, fingerprint, duplicate-key matching, Production
+  // matching) always stays "YYYY-MM-DD" — this is never used for anything
+  // except what's shown on screen. Anything that isn't a clean
+  // YYYY-MM-DD string (e.g. "(unparsed)") passes through unchanged.
+  function formatDateDisplay(isoDateStr) {
+    const m = String(isoDateStr || '').trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    return m ? `${m[3]}/${m[2]}/${m[1]}` : String(isoDateStr || '');
+  }
 
   // ---- Column header matching (case/space/punctuation-insensitive, with aliases) ----
 
@@ -632,7 +642,7 @@
     return {
       excelRow: r.rowNum,
       sourceDateText,
-      date: dateDisplay,
+      date: formatDateDisplay(dateDisplay),
       shift: shiftDisplay,
       line: lineDisplay,
       materialModel: String(get('material') || get('model') || ''),
@@ -716,7 +726,7 @@
         statusHtml = '<span class="status-warn" title="A record with the same Date+Shift+Line+Model+Defect+Qty+Cost already exists — review before re-importing">⚠ POSSIBLE DUPLICATE</span>';
         rowClass = 'row-warn';
       } else if (r.unmapped) {
-        statusHtml = `<span class="status-warn" title="\u201C${escapeHtml(e.model)}\u201D was not found in Production V2's plan for ${escapeHtml(e.date)} / ${escapeHtml(lineLabel(e.line))} / ${escapeHtml(shiftLabel(e.shift))}">⚠ UNMAPPED MODEL</span>`;
+        statusHtml = `<span class="status-warn" title="\u201C${escapeHtml(e.model)}\u201D was not found in Production V2's plan for ${escapeHtml(formatDateDisplay(e.date))} / ${escapeHtml(lineLabel(e.line))} / ${escapeHtml(shiftLabel(e.shift))}">⚠ UNMAPPED MODEL</span>`;
         rowClass = 'row-warn';
       } else if (r.warnings.length > 0) {
         statusHtml = `<span class="status-warn" title="${escapeHtml(r.warnings.join('; '))}">⚠ ${escapeHtml(r.warnings[0])}</span>`;
@@ -728,7 +738,7 @@
       return `
       <tr class="${rowClass}">
         <td>${statusHtml}</td>
-        <td>${escapeHtml(e.date || '–')}</td>
+        <td>${e.date ? escapeHtml(formatDateDisplay(e.date)) : '–'}</td>
         <td>${e.shift ? escapeHtml(shiftLabel(e.shift)) : '–'}</td>
         <td>${e.line ? escapeHtml(lineLabel(e.line)) : '–'}</td>
         <td title="${escapeHtml(e.sourceMaterial)}">${escapeHtml(e.sourceMaterial || e.model || '–')}</td>
