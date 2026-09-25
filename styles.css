@@ -1102,6 +1102,14 @@ body{
   color:var(--muted);
   cursor:pointer;
 }
+.qd-resolve-mappings{
+  margin:10px 0 16px;
+  padding:12px;
+  border:1px dashed var(--border-soft);
+  border-radius:10px;
+  background:var(--card-2);
+}
+.qd-resolve-mappings h3{margin:0 0 4px;font-size:13px;}
 .qd-import-card-label{
   font-family:var(--font-mono);
   font-size:9.5px;

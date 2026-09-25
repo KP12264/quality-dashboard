@@ -68,6 +68,7 @@
   let savedModelMappings = {};   // excelModel -> productionModel, loaded from scrapModelMappings (read-only during Preview/Validation)
   let sessionModelChoices = {};  // excelModel -> productionModel, chosen by the user THIS session (not yet saved unless "Remember" is checked)
   let rememberFlags = {};        // excelModel -> boolean, whether to persist that choice to scrapModelMappings on final Confirm Import
+  let identitiesNeedingAttention = []; // excelModels that needed a decision at the START of this validation pass — snapshotted once so a resolved group doesn't vanish from "Resolve Mappings" mid-decision (e.g. before the user gets to check "Remember")
 
   function escapeHtml(s) {
     return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -510,20 +511,75 @@
   // roster before it counts as matched (requirement 7: verify before
   // marking READY — a mapping that worked for one row's date doesn't
   // automatically apply to a different date where that model wasn't run).
+  // Strict text normalization for comparing an Excel model identity
+  // against a Production V2 model string — lowercase, strip whitespace
+  // and common punctuation. Used ONLY for an EXACT match after
+  // normalization, never a fuzzy/similarity score — "never guess when
+  // ambiguous" means this tier either finds exactly one clean match or
+  // it finds nothing; it never picks a "closest" one.
+  function normalizeModelText(s) {
+    return String(s || '').toLowerCase().replace(/[\s_\-./()]+/g, '');
+  }
+
+  /**
+   * resolveRowMapping(r)
+   * Auto-mapping tiers, in order — the row is auto-mapped by the FIRST
+   * tier that produces exactly one confident answer; if none do, it's
+   * left for manual resolution (never guessed):
+   *   1. saved/session mapping for this Excel identity, if it's valid
+   *      for THIS row's own date+line+shift roster
+   *   2. exactly one available model whose normalized text matches the
+   *      Excel identity's normalized text (a real, reliable match —
+   *      not similarity/fuzzy matching)
+   *   3. exactly one model available at all for this combo (nothing to
+   *      choose between — it can only be that one)
+   *   4. otherwise: NEEDS MAPPING (multiple plausible candidates, or
+   *      zero — either way, not something to guess)
+   * Also tracks r.hadInvalidSavedMapping — a saved mapping existed for
+   * this identity but didn't hold for this specific combo, so the
+   * summary can surface that distinctly from "never mapped at all".
+   */
   function resolveRowMapping(r) {
-    if (!r.formatValid) { r.unmapped = false; r.matchedProductionModel = null; r.availableModelsForDropdown = []; return; }
+    if (!r.formatValid) {
+      r.unmapped = false; r.matchedProductionModel = null; r.availableModelsForDropdown = [];
+      r.mappingTier = null; r.hadInvalidSavedMapping = false;
+      return;
+    }
     const comboKey = `${r.entry.date}|${r.entry.line}|${r.entry.shift}`;
     const available = modelsByCombo[comboKey] || new Set();
-    const candidate = sessionModelChoices[r.entry.model] || savedModelMappings[r.entry.model];
-    if (candidate && available.has(candidate)) {
-      r.unmapped = false;
-      r.matchedProductionModel = candidate;
+    const excelModel = r.entry.model;
+
+    const savedCandidate = sessionModelChoices[excelModel] || savedModelMappings[excelModel];
+    r.hadInvalidSavedMapping = !!savedCandidate && !available.has(savedCandidate);
+
+    if (savedCandidate && available.has(savedCandidate)) {
+      r.unmapped = false; r.matchedProductionModel = savedCandidate;
+      r.mappingTier = sessionModelChoices[excelModel] ? 'session' : 'saved';
       r.availableModelsForDropdown = [];
-    } else {
-      r.unmapped = true;
-      r.matchedProductionModel = null;
-      r.availableModelsForDropdown = Array.from(available).sort();
+      return;
     }
+
+    // Tier 2: exactly one available model normalizes identically to the
+    // Excel identity text.
+    const normExcel = normalizeModelText(excelModel);
+    const normMatches = Array.from(available).filter(m => normalizeModelText(m) === normExcel);
+    if (normMatches.length === 1) {
+      r.unmapped = false; r.matchedProductionModel = normMatches[0]; r.mappingTier = 'exact-match';
+      r.availableModelsForDropdown = [];
+      return;
+    }
+
+    // Tier 3: only one model exists for this combo at all — no real
+    // choice to make.
+    if (available.size === 1) {
+      r.unmapped = false; r.matchedProductionModel = Array.from(available)[0]; r.mappingTier = 'singleton';
+      r.availableModelsForDropdown = [];
+      return;
+    }
+
+    // No confident auto-answer — needs a human decision.
+    r.unmapped = true; r.matchedProductionModel = null; r.mappingTier = null;
+    r.availableModelsForDropdown = Array.from(available).sort();
   }
 
   function resolveAllModelMappings(rows) {
@@ -804,6 +860,18 @@
       noticeEl.style.display = 'none';
     }
     resolveAllModelMappings(parsedRows);
+    // Snapshot which Excel identities need a decision, ONCE, right after
+    // this first resolution pass — "Resolve Mappings" keeps showing these
+    // for the rest of the session even after a pick resolves them, so the
+    // group doesn't vanish out from under the user before they get to
+    // check "Remember Mapping".
+    const attentionSet = new Set();
+    parsedRows.forEach(r => {
+      if (r.formatValid && r.unmapped && r.availableModelsForDropdown && r.availableModelsForDropdown.length > 0) {
+        attentionSet.add(r.entry.model);
+      }
+    });
+    identitiesNeedingAttention = Array.from(attentionSet);
 
     await checkDuplicates(parsedRows);
     renderPreview();
@@ -837,6 +905,75 @@
     `;
   }
 
+  // ---- Mapping summary line (Auto Mapped | Needs Mapping | Invalid Saved) --
+  function renderMappingSummary() {
+    const formatValidRows = parsedRows.filter(r => r.formatValid);
+    const autoMapped = formatValidRows.filter(r => !r.unmapped).length;
+    const needsMapping = formatValidRows.filter(r => r.unmapped).length;
+    const invalidSaved = formatValidRows.filter(r => r.hadInvalidSavedMapping).length;
+    $('mappingSummaryCards').innerHTML = `
+      <div class="qd-import-card good"><div class="qd-import-card-label">Auto Mapped</div><div class="qd-import-card-value">${autoMapped}</div></div>
+      <div class="qd-import-card warn"><div class="qd-import-card-label">Needs Mapping</div><div class="qd-import-card-value">${needsMapping}</div></div>
+      <div class="qd-import-card warn"><div class="qd-import-card-label">Invalid Saved Mapping</div><div class="qd-import-card-value">${invalidSaved}</div></div>
+    `;
+  }
+
+  // ---- Compact "Resolve Mappings" — each unique unresolved Excel identity
+  // shown ONCE, not once per Scrap row. Picking a value here goes through
+  // the exact same applyModelChoice() as before, which still re-verifies
+  // each individual row's own Date+Line+Shift before accepting it.
+  function renderResolveMappingsSection() {
+    const el = $('resolveMappingsSection');
+    if (identitiesNeedingAttention.length === 0) { el.style.display = 'none'; el.innerHTML = ''; return; }
+
+    const rowsHtml = identitiesNeedingAttention.map(excelModel => {
+      const memberRows = parsedRows.filter(r => r.formatValid && r.entry.model === excelModel);
+      const availableUnion = new Set();
+      let anyInvalidSaved = false;
+      memberRows.forEach(r => {
+        (r.availableModelsForDropdown || []).forEach(m => availableUnion.add(m));
+        if (r.hadInvalidSavedMapping) anyInvalidSaved = true;
+      });
+      const stillUnresolvedCount = memberRows.filter(r => r.unmapped).length;
+      const currentChoice = sessionModelChoices[excelModel] || '';
+      const options = Array.from(availableUnion).sort().map(m =>
+        `<option value="${escapeHtml(m)}" ${m === currentChoice ? 'selected' : ''}>${escapeHtml(m)}</option>`
+      ).join('');
+      const rememberChecked = rememberFlags[excelModel] ? 'checked' : '';
+      const statusNote = stillUnresolvedCount === 0
+        ? '<span class="status-ok">✓ resolved</span>'
+        : (anyInvalidSaved ? '<span class="status-warn" title="A saved mapping exists for this identity but is not valid for at least one of these rows\' own Date+Shift+Line">⚠ stale saved mapping</span>' : '');
+      return `<tr>
+        <td title="${escapeHtml(excelModel)}">${escapeHtml(excelModel)}</td>
+        <td class="num">${memberRows.length}${stillUnresolvedCount < memberRows.length && stillUnresolvedCount > 0 ? ` (${stillUnresolvedCount} still unresolved)` : ''}</td>
+        <td>${statusNote}</td>
+        <td>
+          <div class="qd-model-map">
+            <select class="qd-model-map-select" data-excel-model="${escapeHtml(excelModel)}">
+              <option value="">— select Production Model —</option>
+              ${options}
+            </select>
+            <label class="qd-model-map-remember">
+              <input type="checkbox" class="qd-model-map-remember-cb" data-excel-model="${escapeHtml(excelModel)}" ${rememberChecked}> Remember Mapping
+            </label>
+          </div>
+        </td>
+      </tr>`;
+    }).join('');
+
+    el.style.display = '';
+    el.innerHTML = `
+      <h3>Resolve Mappings</h3>
+      <div class="qd-panel-note">${identitiesNeedingAttention.length} distinct Excel Material/Model${identitiesNeedingAttention.length > 1 ? 's' : ''} needed a decision — resolve each once here; it applies to every matching Scrap row where that model is actually valid for its own Date+Shift+Line.</div>
+      <div class="qd-table-scroll">
+        <table class="qd-datatable">
+          <thead><tr><th>Excel Material/Model</th><th>Rows</th><th></th><th>Map to Production Model</th></tr></thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      </div>
+    `;
+  }
+
   function buildMatchedModelCellHtml(r) {
     if (!r.unmapped) {
       return r.matchedProductionModel ? escapeHtml(r.matchedProductionModel) : '<span class="na">— not matched</span>';
@@ -844,26 +981,13 @@
     if (!r.availableModelsForDropdown || r.availableModelsForDropdown.length === 0) {
       return '<span class="na">— not matched (no Production plan for this date/line/shift)</span>';
     }
-    const excelModel = r.entry.model;
-    const currentChoice = sessionModelChoices[excelModel] || '';
-    const options = r.availableModelsForDropdown.map(m =>
-      `<option value="${escapeHtml(m)}" ${m === currentChoice ? 'selected' : ''}>${escapeHtml(m)}</option>`
-    ).join('');
-    const rememberChecked = rememberFlags[excelModel] ? 'checked' : '';
-    return `
-      <div class="qd-model-map">
-        <select class="qd-model-map-select" data-excel-model="${escapeHtml(excelModel)}">
-          <option value="">— select Production Model —</option>
-          ${options}
-        </select>
-        <label class="qd-model-map-remember">
-          <input type="checkbox" class="qd-model-map-remember-cb" data-excel-model="${escapeHtml(excelModel)}" ${rememberChecked}> Remember Mapping
-        </label>
-      </div>`;
+    return '<span class="na">— see "Resolve Mappings" above</span>';
   }
 
   function renderPreview() {
     renderSummaryCards();
+    renderMappingSummary();
+    renderResolveMappingsSection();
 
     const rowsToShow = parsedRows.slice(0, PREVIEW_ROW_LIMIT);
     let html = rowsToShow.map(r => {
@@ -1101,7 +1225,11 @@
     // re-render (e.g. after a dropdown pick propagates to sibling rows),
     // but the <tbody> element itself persists, so one listener here
     // covers every dropdown/checkbox that ever appears in it.
-    $('importPreviewBody').addEventListener('change', (e) => {
+    // Delegated on the whole preview wrapper (covers both the main table's
+    // rows AND the "Resolve Mappings" section above it) — both areas'
+    // innerHTML gets replaced on every re-render, but this ancestor
+    // element itself persists, so one listener here covers all of it.
+    $('importPreviewWrap').addEventListener('change', (e) => {
       const select = e.target.closest('.qd-model-map-select');
       if (select) {
         applyModelChoice(select.dataset.excelModel, select.value);
