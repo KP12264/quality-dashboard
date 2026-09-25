@@ -69,6 +69,8 @@
   let sessionModelChoices = {};  // excelModel -> productionModel, chosen by the user THIS session (not yet saved unless "Remember" is checked)
   let rememberFlags = {};        // excelModel -> boolean, whether to persist that choice to scrapModelMappings on final Confirm Import
   let identitiesNeedingAttention = []; // excelModels that needed a decision at the START of this validation pass — snapshotted once so a resolved group doesn't vanish from "Resolve Mappings" mid-decision (e.g. before the user gets to check "Remember")
+  let resolveMappingsFilter = 'all'; // 'all' | 'suggested' | 'unresolved' | 'resolved'
+  let resolveMappingsSearch = '';
 
   function escapeHtml(s) {
     return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -521,6 +523,32 @@
     return String(s || '').toLowerCase().replace(/[\s_\-./()]+/g, '');
   }
 
+  // ---- Family-based suggestions (a NARROWING aid only — never bypasses
+  // the Date+Shift+Line valid-roster check, and never picks a "closest"
+  // match; it only auto-resolves when family-filtering leaves exactly
+  // one candidate from the roster, exactly like the exact-match/singleton
+  // tiers above it). Normalization strips spacing/punctuation the same
+  // way as normalizeModelText, so a clue like "FUF18/22" and text like
+  // "FRZ FOAM DR ASSY-/FUF18/22_S" compare on equal footing.
+  const MODEL_FAMILY_CLUES_RAW = [
+    '159', '199', 'FUF14', 'FUF18/22', 'TM14', 'TM19/21', '520', '620/550',
+    '636', 'BM28', 'BM23/29', 'G3 320', 'G3 350', 'CAFE', 'T-DOOR'
+  ];
+  function normalizeFamilyText(s) {
+    return String(s || '').toUpperCase().replace(/É/g, 'E').replace(/[\s_\-./()]+/g, '');
+  }
+  const MODEL_FAMILY_CLUES = MODEL_FAMILY_CLUES_RAW.map(c => ({ raw: c, norm: normalizeFamilyText(c) }));
+
+  function detectFamilies(text) {
+    const norm = normalizeFamilyText(text);
+    if (!norm) return [];
+    return MODEL_FAMILY_CLUES.filter(c => norm.includes(c.norm)).map(c => c.raw);
+  }
+
+  function sharesFamily(familiesA, familiesB) {
+    return familiesA.some(f => familiesB.includes(f));
+  }
+
   /**
    * resolveRowMapping(r)
    * Auto-mapping tiers, in order — the row is auto-mapped by the FIRST
@@ -542,7 +570,7 @@
   function resolveRowMapping(r) {
     if (!r.formatValid) {
       r.unmapped = false; r.matchedProductionModel = null; r.availableModelsForDropdown = [];
-      r.mappingTier = null; r.hadInvalidSavedMapping = false;
+      r.mappingTier = null; r.hadInvalidSavedMapping = false; r.detectedFamilies = []; r.suggestedModels = [];
       return;
     }
     const comboKey = `${r.entry.date}|${r.entry.line}|${r.entry.shift}`;
@@ -555,7 +583,7 @@
     if (savedCandidate && available.has(savedCandidate)) {
       r.unmapped = false; r.matchedProductionModel = savedCandidate;
       r.mappingTier = sessionModelChoices[excelModel] ? 'session' : 'saved';
-      r.availableModelsForDropdown = [];
+      r.availableModelsForDropdown = []; r.detectedFamilies = []; r.suggestedModels = [];
       return;
     }
 
@@ -565,7 +593,7 @@
     const normMatches = Array.from(available).filter(m => normalizeModelText(m) === normExcel);
     if (normMatches.length === 1) {
       r.unmapped = false; r.matchedProductionModel = normMatches[0]; r.mappingTier = 'exact-match';
-      r.availableModelsForDropdown = [];
+      r.availableModelsForDropdown = []; r.detectedFamilies = []; r.suggestedModels = [];
       return;
     }
 
@@ -573,13 +601,34 @@
     // choice to make.
     if (available.size === 1) {
       r.unmapped = false; r.matchedProductionModel = Array.from(available)[0]; r.mappingTier = 'singleton';
-      r.availableModelsForDropdown = [];
+      r.availableModelsForDropdown = []; r.detectedFamilies = []; r.suggestedModels = [];
       return;
     }
 
-    // No confident auto-answer — needs a human decision.
+    // Tier 4: family-based narrowing — a NARROWING aid on top of the
+    // valid roster, never a replacement for it. Only auto-maps when
+    // narrowing by shared family leaves exactly one candidate; with 2+
+    // it becomes a "Suggested" candidate set for the user to pick from
+    // (shown first, marked ★, in Resolve Mappings) rather than a guess.
+    const excelFamilies = detectFamilies(excelModel);
+    let suggestedModels = [];
+    if (excelFamilies.length > 0) {
+      suggestedModels = Array.from(available).filter(m => sharesFamily(excelFamilies, detectFamilies(m)));
+    }
+    r.detectedFamilies = excelFamilies;
+    if (suggestedModels.length === 1) {
+      r.unmapped = false; r.matchedProductionModel = suggestedModels[0]; r.mappingTier = 'family';
+      r.availableModelsForDropdown = []; r.suggestedModels = [];
+      return;
+    }
+
+    // No confident auto-answer — needs a human decision. suggestedModels
+    // (2+ entries) surfaces as "Suggested" in the UI; an empty array here
+    // means family-filtering found nothing, so the UI shows the plain
+    // full roster with no suggestions marked.
     r.unmapped = true; r.matchedProductionModel = null; r.mappingTier = null;
     r.availableModelsForDropdown = Array.from(available).sort();
+    r.suggestedModels = suggestedModels.sort();
   }
 
   function resolveAllModelMappings(rows) {
@@ -596,6 +645,9 @@
       delete sessionModelChoices[excelModel];
     } else {
       sessionModelChoices[excelModel] = productionModel;
+      // A manual selection defaults "Remember Mapping" to checked — the
+      // user can still uncheck it afterward if they don't want it saved.
+      rememberFlags[excelModel] = true;
     }
     resolveAllModelMappings(parsedRows);
     renderPreview();
@@ -843,6 +895,8 @@
     // in-session picks/remember-flags must not leak into a new one.
     sessionModelChoices = {};
     rememberFlags = {};
+    resolveMappingsFilter = 'all';
+    resolveMappingsSearch = '';
 
     $('importPreviewWrap').style.display = '';
     $('importSummaryCards').innerHTML = '<div class="qd-import-loading">Checking against Production V2 and existing scrapLogs…</div>';
@@ -922,56 +976,124 @@
   // shown ONCE, not once per Scrap row. Picking a value here goes through
   // the exact same applyModelChoice() as before, which still re-verifies
   // each individual row's own Date+Line+Shift before accepting it.
+  // Computes the per-group summary data (used for both filtering/counts
+  // and rendering) so both stay perfectly consistent with each other.
+  function buildMappingGroups() {
+    return identitiesNeedingAttention.map(excelModel => {
+      const memberRows = parsedRows.filter(r => r.formatValid && r.entry.model === excelModel);
+      const availableUnion = new Set();
+      const suggestedUnion = new Set();
+      let anyInvalidSaved = false;
+      let families = [];
+      memberRows.forEach(r => {
+        (r.availableModelsForDropdown || []).forEach(m => availableUnion.add(m));
+        (r.suggestedModels || []).forEach(m => suggestedUnion.add(m));
+        if (r.hadInvalidSavedMapping) anyInvalidSaved = true;
+        if (r.detectedFamilies && r.detectedFamilies.length) families = r.detectedFamilies;
+      });
+      const stillUnresolvedCount = memberRows.filter(r => r.unmapped).length;
+      let status;
+      if (stillUnresolvedCount === 0) status = 'resolved';
+      else if (suggestedUnion.size > 0) status = 'suggested';
+      else status = 'unresolved';
+      return {
+        excelModel, memberRows, availableUnion, suggestedUnion, anyInvalidSaved, families,
+        stillUnresolvedCount, status
+      };
+    });
+  }
+
   function renderResolveMappingsSection() {
     const el = $('resolveMappingsSection');
     if (identitiesNeedingAttention.length === 0) { el.style.display = 'none'; el.innerHTML = ''; return; }
 
-    const rowsHtml = identitiesNeedingAttention.map(excelModel => {
-      const memberRows = parsedRows.filter(r => r.formatValid && r.entry.model === excelModel);
-      const availableUnion = new Set();
-      let anyInvalidSaved = false;
-      memberRows.forEach(r => {
-        (r.availableModelsForDropdown || []).forEach(m => availableUnion.add(m));
-        if (r.hadInvalidSavedMapping) anyInvalidSaved = true;
-      });
-      const stillUnresolvedCount = memberRows.filter(r => r.unmapped).length;
-      const currentChoice = sessionModelChoices[excelModel] || '';
-      const options = Array.from(availableUnion).sort().map(m =>
+    // The whole section re-renders on every filter/search/pick change —
+    // preserve focus+cursor position in the search box across that, or
+    // typing would lose focus after every keystroke.
+    const searchHadFocus = document.activeElement && document.activeElement.id === 'resolveMappingsSearchInput';
+    const priorSelectionStart = searchHadFocus ? document.activeElement.selectionStart : null;
+
+    const allGroups = buildMappingGroups();
+    const counts = { all: allGroups.length, suggested: 0, unresolved: 0, resolved: 0 };
+    allGroups.forEach(g => { counts[g.status]++; });
+
+    const searchLower = resolveMappingsSearch.trim().toLowerCase();
+    const visibleGroups = allGroups.filter(g => {
+      if (resolveMappingsFilter !== 'all' && g.status !== resolveMappingsFilter) return false;
+      if (searchLower && !g.excelModel.toLowerCase().includes(searchLower)) return false;
+      return true;
+    });
+
+    const filterBtn = (key, label) =>
+      `<button type="button" class="qd-mapfilter-btn ${resolveMappingsFilter === key ? 'active' : ''}" data-filter="${key}">${label} <span class="qd-mapfilter-count">${counts[key]}</span></button>`;
+
+    const rowsHtml = visibleGroups.map(g => {
+      const currentChoice = sessionModelChoices[g.excelModel] || '';
+      const suggestedOptions = Array.from(g.suggestedUnion).sort().map(m =>
+        `<option value="${escapeHtml(m)}" ${m === currentChoice ? 'selected' : ''}>★ Suggested — ${escapeHtml(m)}</option>`
+      ).join('');
+      const restOptions = Array.from(g.availableUnion).filter(m => !g.suggestedUnion.has(m)).sort().map(m =>
         `<option value="${escapeHtml(m)}" ${m === currentChoice ? 'selected' : ''}>${escapeHtml(m)}</option>`
       ).join('');
-      const rememberChecked = rememberFlags[excelModel] ? 'checked' : '';
-      const statusNote = stillUnresolvedCount === 0
-        ? '<span class="status-ok">✓ resolved</span>'
-        : (anyInvalidSaved ? '<span class="status-warn" title="A saved mapping exists for this identity but is not valid for at least one of these rows\' own Date+Shift+Line">⚠ stale saved mapping</span>' : '');
+      const rememberChecked = rememberFlags[g.excelModel] ? 'checked' : '';
+
+      let statusNote;
+      if (g.status === 'resolved') statusNote = '<span class="status-ok">✓ Resolved</span>';
+      else if (g.status === 'suggested') statusNote = '<span class="status-warn">★ Suggested</span>';
+      else statusNote = '<span class="status-warn">⚠ Unresolved</span>';
+      if (g.anyInvalidSaved) statusNote += ' <span class="status-warn" title="A saved mapping exists for this identity but is not valid for at least one of these rows\' own Date+Shift+Line">(stale saved mapping)</span>';
+
+      const chipsHtml = g.status !== 'resolved' && g.suggestedUnion.size > 0
+        ? `<div class="qd-suggest-chips">${Array.from(g.suggestedUnion).sort().map(m =>
+            `<button type="button" class="qd-suggest-chip" data-excel-model="${escapeHtml(g.excelModel)}" data-model-value="${escapeHtml(m)}">★ ${escapeHtml(m)}</button>`
+          ).join('')}</div>`
+        : '';
+
       return `<tr>
-        <td title="${escapeHtml(excelModel)}">${escapeHtml(excelModel)}</td>
-        <td class="num">${memberRows.length}${stillUnresolvedCount < memberRows.length && stillUnresolvedCount > 0 ? ` (${stillUnresolvedCount} still unresolved)` : ''}</td>
+        <td title="${escapeHtml(g.excelModel)}">${escapeHtml(g.excelModel)}</td>
+        <td class="num">${g.memberRows.length}${g.stillUnresolvedCount < g.memberRows.length && g.stillUnresolvedCount > 0 ? ` (${g.stillUnresolvedCount} still unresolved)` : ''}</td>
+        <td>${g.families.length ? escapeHtml(g.families.join(', ')) : '<span class="na">—</span>'}</td>
         <td>${statusNote}</td>
         <td>
           <div class="qd-model-map">
-            <select class="qd-model-map-select" data-excel-model="${escapeHtml(excelModel)}">
+            ${chipsHtml}
+            <select class="qd-model-map-select" data-excel-model="${escapeHtml(g.excelModel)}">
               <option value="">— select Production Model —</option>
-              ${options}
+              ${suggestedOptions}
+              ${restOptions}
             </select>
             <label class="qd-model-map-remember">
-              <input type="checkbox" class="qd-model-map-remember-cb" data-excel-model="${escapeHtml(excelModel)}" ${rememberChecked}> Remember Mapping
+              <input type="checkbox" class="qd-model-map-remember-cb" data-excel-model="${escapeHtml(g.excelModel)}" ${rememberChecked}> Remember Mapping
             </label>
           </div>
         </td>
       </tr>`;
-    }).join('');
+    }).join('') || `<tr class="empty-row"><td colspan="5">No mappings match this filter/search.</td></tr>`;
 
     el.style.display = '';
     el.innerHTML = `
       <h3>Resolve Mappings</h3>
       <div class="qd-panel-note">${identitiesNeedingAttention.length} distinct Excel Material/Model${identitiesNeedingAttention.length > 1 ? 's' : ''} needed a decision — resolve each once here; it applies to every matching Scrap row where that model is actually valid for its own Date+Shift+Line.</div>
+      <div class="qd-mapfilter-bar">
+        <input type="text" id="resolveMappingsSearchInput" class="qd-mapfilter-search" placeholder="Search Excel Material/Model…" value="${escapeHtml(resolveMappingsSearch)}">
+        <div class="qd-mapfilter-btns">
+          ${filterBtn('all', 'All')}
+          ${filterBtn('suggested', 'Suggested')}
+          ${filterBtn('unresolved', 'Unresolved')}
+          ${filterBtn('resolved', 'Resolved')}
+        </div>
+      </div>
       <div class="qd-table-scroll">
         <table class="qd-datatable">
-          <thead><tr><th>Excel Material/Model</th><th>Rows</th><th></th><th>Map to Production Model</th></tr></thead>
+          <thead><tr><th>Excel Material/Model</th><th>Rows</th><th>Family</th><th>Status</th><th>Map to Production Model</th></tr></thead>
           <tbody>${rowsHtml}</tbody>
         </table>
       </div>
     `;
+    if (searchHadFocus) {
+      const newInput = $('resolveMappingsSearchInput');
+      if (newInput) { newInput.focus(); newInput.setSelectionRange(priorSelectionStart, priorSelectionStart); }
+    }
   }
 
   function buildMatchedModelCellHtml(r) {
@@ -1238,6 +1360,26 @@
       const checkbox = e.target.closest('.qd-model-map-remember-cb');
       if (checkbox) {
         setRememberFlag(checkbox.dataset.excelModel, checkbox.checked);
+      }
+    });
+
+    $('importPreviewWrap').addEventListener('click', (e) => {
+      const filterBtn = e.target.closest('.qd-mapfilter-btn');
+      if (filterBtn) {
+        resolveMappingsFilter = filterBtn.dataset.filter;
+        renderResolveMappingsSection();
+        return;
+      }
+      const chip = e.target.closest('.qd-suggest-chip');
+      if (chip) {
+        applyModelChoice(chip.dataset.excelModel, chip.dataset.modelValue);
+      }
+    });
+
+    $('importPreviewWrap').addEventListener('input', (e) => {
+      if (e.target.id === 'resolveMappingsSearchInput') {
+        resolveMappingsSearch = e.target.value;
+        renderResolveMappingsSection();
       }
     });
   }
