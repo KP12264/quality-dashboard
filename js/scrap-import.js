@@ -95,8 +95,8 @@
     remark: ['remark', 'remarks', 'note', 'notes'],
     cause: ['cause'],
     solution: ['solution'],
-    price: ['price', 'unitprice'],
-    amt: ['amt', 'amount', 'cost', 'scrapcost'],
+    price: ['price', 'unitprice', 'ราคา', 'ราคาต่อหน่วย'],
+    amt: ['amt', 'amount', 'cost', 'scrapcost', 'จำนวนเงิน', 'ยอดเงิน', 'รวมเงิน', 'มูลค่า'],
     recordedby: ['empld', 'emplead', 'employeelead', 'leader', 'pic', 'รหัสพนักงาน']
   };
 
@@ -512,6 +512,84 @@
     } catch (e) { return { rows: 0, cols: 0 }; }
   }
 
+  // ---- TEMPORARY: Scrap Cost diagnostics ---------------------------------
+  // Inspects the RAW cell objects (not the array-of-arrays view, which only
+  // carries the resolved .v value and loses formula/type metadata) so we
+  // can see exactly what SheetJS actually read for Price/Amount: a plain
+  // number, a formula with a cached result, a formula with NO cached
+  // result (nothing to read without recalculating it ourselves, which we
+  // must not do), or genuinely blank. Read-only inspection of the
+  // in-memory workbook object — no Firestore access, no recalculation.
+  function excelColLetter(colIndex) {
+    let letter = '', n = colIndex + 1;
+    while (n > 0) {
+      const rem = (n - 1) % 26;
+      letter = String.fromCharCode(65 + rem) + letter;
+      n = Math.floor((n - 1) / 26);
+    }
+    return letter;
+  }
+
+  function inspectCell(sheet, rowIndex, colIndex) {
+    if (colIndex === undefined) return { addr: '(no column detected)', kind: 'n/a', value: '' };
+    const addr = XLSX.utils.encode_cell({ r: rowIndex, c: colIndex });
+    const cell = sheet[addr];
+    if (!cell) return { addr, kind: 'blank', value: '' };
+    if (cell.f !== undefined && (cell.v === undefined || cell.v === null)) {
+      return { addr, kind: 'FORMULA — NO cached result', value: '=' + cell.f };
+    }
+    if (cell.f !== undefined) {
+      return { addr, kind: 'formula (cached result present)', value: cell.v };
+    }
+    if (cell.t === 'n') return { addr, kind: 'number', value: cell.v };
+    if (cell.v === undefined || cell.v === '') return { addr, kind: 'blank', value: '' };
+    return { addr, kind: 'text/other (t=' + cell.t + ')', value: cell.v };
+  }
+
+  function renderScrapCostDebug() {
+    const el = $('scrapCostDebug');
+    if (!el) return;
+    const sheet = currentWorkbook.Sheets[currentSheetName];
+    const headerRowArray = currentAOA[currentHeaderRowIndex] || [];
+    const priceCol = currentColumnMap.price;
+    const amtCol = currentColumnMap.amt;
+
+    const priceHeader = priceCol !== undefined ? headerRowArray[priceCol] : '(not detected)';
+    const amtHeader = amtCol !== undefined ? headerRowArray[amtCol] : '(not detected)';
+    const priceLetter = priceCol !== undefined ? excelColLetter(priceCol) : '—';
+    const amtLetter = amtCol !== undefined ? excelColLetter(amtCol) : '—';
+
+    const sampleRows = candidateRows.slice(0, 10);
+    const rowsHtml = sampleRows.map(r => {
+      const rowIndex = r.rowNum - 1; // back to 0-based AOA/sheet row index
+      const priceInfo = inspectCell(sheet, rowIndex, priceCol);
+      const amtInfo = inspectCell(sheet, rowIndex, amtCol);
+      return `<tr>
+        <td>${r.rowNum}</td>
+        <td>${escapeHtml(priceInfo.addr)}</td>
+        <td>${escapeHtml(String(priceInfo.value))}</td>
+        <td>${escapeHtml(priceInfo.kind)}</td>
+        <td>${escapeHtml(amtInfo.addr)}</td>
+        <td>${escapeHtml(String(amtInfo.value))}</td>
+        <td>${escapeHtml(amtInfo.kind)}</td>
+      </tr>`;
+    }).join('');
+
+    el.innerHTML = `
+      <div class="qd-panel-note"><b>⚠ TEMPORARY DEBUG — Scrap Cost diagnostics</b></div>
+      <div class="qd-import-cards">
+        <div class="qd-import-card"><div class="qd-import-card-label">Price Column</div><div class="qd-import-card-value">${escapeHtml(String(priceHeader))} (col ${priceLetter})</div></div>
+        <div class="qd-import-card"><div class="qd-import-card-label">Amount Column</div><div class="qd-import-card-value">${escapeHtml(String(amtHeader))} (col ${amtLetter})</div></div>
+      </div>
+      <div class="qd-table-scroll">
+        <table class="qd-datatable">
+          <thead><tr><th>Excel Row</th><th>Price Cell</th><th>Raw Price Value</th><th>Price Cell Type</th><th>Amount Cell</th><th>Raw Amount Value</th><th>Amount Cell Type</th></tr></thead>
+          <tbody>${rowsHtml || '<tr class="empty-row"><td colspan="7">No candidate rows to inspect.</td></tr>'}</tbody>
+        </table>
+      </div>
+    `;
+  }
+
   function renderSheetSelector() {
     const names = currentWorkbook.SheetNames;
     const rowsHtml = names.map(name => {
@@ -593,6 +671,7 @@
     $('columnMappingBody').innerHTML = dateShiftMappingRow + mappingRows || '<tr><td colspan="3">No recognizable Scrap columns found on this row.</td></tr>';
 
     renderRawPreviewTable(candidateRows.slice(0, 10));
+    renderScrapCostDebug();
     $('continueToValidationBtn').disabled = candidateRows.length === 0;
   }
 
