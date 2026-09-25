@@ -295,6 +295,34 @@
     return bestScore >= AMOUNT_FORMULA_MIN_CONFIRM ? { amtCol: bestAmtCol, priceCol: bestPriceCol } : { amtCol: -1, priceCol: -1 };
   }
 
+  // ---- Aggregate/Total row detection (positive-evidence only) -----------
+  // A Total/Subtotal/Grand-Total row is never assumed just because Date/
+  // Shift/Line/Defect are blank — a genuinely malformed Scrap row looks
+  // the same way and must still surface as an Error (never silently
+  // dropped). The ONLY thing this checks for is a SUM() formula spanning
+  // a MULTIPLE-row range in the Qty or Amount cell — real scrap rows are
+  // typed by hand (plain numbers or a per-row Price×Qty formula, never a
+  // range-sum), so this is a reliable, narrow, positive signal, not a
+  // guess. Confirmed against a real workbook: the actual offending row
+  // has Qty cell formula "SUM(J2:J67)" and Amount cell formula
+  // "SUM(V2:V67)", with every other column blank.
+  function isSumRangeFormula(formulaText) {
+    if (!formulaText) return false;
+    const m = String(formulaText).trim().match(/^SUM\(([A-Za-z]+)(\d+):([A-Za-z]+)(\d+)\)$/i);
+    if (!m) return false;
+    return parseInt(m[4], 10) > parseInt(m[2], 10); // spans more than one row -> an aggregate, not a single-cell calc
+  }
+
+  function isAggregateFormulaRow(sheet, rowIndex, columnMap) {
+    if (!sheet) return false;
+    const checkCols = [columnMap.qty, columnMap.amt].filter(c => c !== undefined);
+    return checkCols.some(c => {
+      const addr = XLSX.utils.encode_cell({ r: rowIndex, c });
+      const cell = sheet[addr];
+      return cell && isSumRangeFormula(cell.f);
+    });
+  }
+
   // ---- Field normalizers (unchanged logic — only the `get` accessor that
   // feeds them, below in parseRow, changed from object-keyed to
   // column-index-keyed) --------------------------------------------------
@@ -549,6 +577,30 @@
     return familiesA.some(f => familiesB.includes(f));
   }
 
+  // ---- Door-type narrowing (a FURTHER narrowing step, only applied
+  // within an already-ambiguous family-filtered candidate set — never a
+  // standalone signal, never applied to the whole roster). Two strict,
+  // literal, non-fuzzy rules:
+  //   - the EXCEL text's own PREFIX (not any letter appearing anywhere
+  //     else in it) must literally start with "REF FOAM DR ASSY" (-> R)
+  //     or "FRZ FOAM DR ASSY" (-> F). This is why "HR-SD159F_HPS" is
+  //     safe — the "F" inside that model number is never scanned; only
+  //     the dedicated prefix at the very start of the string is.
+  //   - a candidate Production Model only counts as matching a door type
+  //     if it has an EXPLICIT trailing "(F)" or "(R)" marker — a model
+  //     name that merely contains the letter F/R somewhere (e.g. from a
+  //     suffix like SS/WW/BB/BG/HPS/HPMS) is never treated as a match.
+  function detectDoorType(excelModelText) {
+    const s = String(excelModelText || '').trim().toUpperCase();
+    if (s.startsWith('REF FOAM DR ASSY')) return 'R';
+    if (s.startsWith('FRZ FOAM DR ASSY')) return 'F';
+    return null;
+  }
+  function detectExplicitDoorTypeMarker(productionModelText) {
+    const m = String(productionModelText || '').trim().match(/\(([FR])\)\s*$/i);
+    return m ? m[1].toUpperCase() : null;
+  }
+
   /**
    * resolveRowMapping(r)
    * Auto-mapping tiers, in order — the row is auto-mapped by the FIRST
@@ -620,6 +672,32 @@
       r.unmapped = false; r.matchedProductionModel = suggestedModels[0]; r.mappingTier = 'family';
       r.availableModelsForDropdown = []; r.suggestedModels = [];
       return;
+    }
+
+    // Tier 4b: door-type narrowing — ONLY applied when family-filtering
+    // above left 2+ still-ambiguous candidates (never on the whole
+    // roster, never replacing family filtering). If the Excel text's own
+    // prefix identifies a door type AND narrowing the family-filtered
+    // set by that type leaves exactly one candidate, auto-map it. If it
+    // narrows to 2+, THOSE become the (tighter) suggestions. If it
+    // narrows to 0 — e.g. the family's candidates don't carry an
+    // explicit (F)/(R) marker at all — fall back to the original,
+    // unnarrowed family suggestions untouched.
+    if (suggestedModels.length >= 2) {
+      const doorType = detectDoorType(excelModel);
+      if (doorType) {
+        const doorTypeFiltered = suggestedModels.filter(m => detectExplicitDoorTypeMarker(m) === doorType);
+        if (doorTypeFiltered.length === 1) {
+          r.unmapped = false; r.matchedProductionModel = doorTypeFiltered[0]; r.mappingTier = 'door-type';
+          r.availableModelsForDropdown = []; r.suggestedModels = [];
+          return;
+        }
+        if (doorTypeFiltered.length >= 2) {
+          suggestedModels = doorTypeFiltered;
+        }
+        // doorTypeFiltered.length === 0 -> suggestedModels stays as the
+        // original family-level set, i.e. the safe fallback.
+      }
     }
 
     // No confident auto-answer — needs a human decision. suggestedModels
@@ -775,8 +853,8 @@
     // "Amt."/"Amount"/"Price"-style text to match at all — never
     // overrides a header-based match, so the original workbook format
     // (which DOES have these headers) is completely unaffected.
+    const sheet = currentWorkbook.Sheets[currentSheetName];
     if (currentColumnMap.amt === undefined) {
-      const sheet = currentWorkbook.Sheets[currentSheetName];
       const detected = detectAmountColumnByFormula(sheet, currentAOA, currentHeaderRowIndex, currentColumnMap.qty);
       if (detected.amtCol !== -1) currentColumnMap.amt = detected.amtCol;
       if (detected.priceCol !== -1 && currentColumnMap.price === undefined) currentColumnMap.price = detected.priceCol;
@@ -785,6 +863,7 @@
     candidateRows = [];
     for (let i = currentHeaderRowIndex + 1; i < currentAOA.length; i++) {
       const rowArray = currentAOA[i];
+      if (isAggregateFormulaRow(sheet, i, currentColumnMap)) continue; // Total/Subtotal row — positive SUM-range-formula evidence, never counted as candidate OR error
       if (isCandidateScrapRow(rowArray, currentColumnMap)) {
         candidateRows.push({ rowNum: i + 1, cells: rowArray });
       }
