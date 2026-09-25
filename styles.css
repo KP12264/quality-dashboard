@@ -1036,9 +1036,79 @@ body{
 .qd-import-summary b{color:var(--text);}
 .qd-import-summary .valid-count b{color:var(--green);}
 .qd-import-summary .error-count b{color:var(--red);}
+
+/* Summary cards (Stage 2 richer preview) */
+.qd-import-cards{
+  display:grid;
+  grid-template-columns:repeat(auto-fit, minmax(120px,1fr));
+  gap:10px;
+  margin-bottom:16px;
+}
+.qd-import-card{
+  background:var(--card-2);
+  border:1px solid var(--border-soft);
+  border-radius:10px;
+  padding:10px 12px;
+}
+.qd-import-card.good{border-color:var(--green);background:var(--green-dim);}
+.qd-import-card.bad{border-color:var(--red);background:var(--red-dim);}
+.qd-import-card.warn{border-color:var(--amber);background:var(--amber-dim);}
+.qd-import-card.neutral{border-style:dashed;}
+.qd-import-loading{
+  grid-column:1/-1;
+  text-align:center;
+  padding:16px;
+  font-family:var(--font-mono);
+  font-size:12.5px;
+  color:var(--muted);
+}
+.qd-select-wide{
+  min-width:320px;
+  max-width:100%;
+  padding:8px 10px;
+  border-radius:8px;
+  border:1px solid var(--border-soft);
+  background:var(--card-2);
+  color:var(--text);
+  font-family:var(--font-body);
+  font-size:13px;
+}
+.qd-import-sourcecol{
+  font-family:var(--font-mono);
+  font-size:11px;
+  color:var(--muted);
+  white-space:nowrap;
+}
+.qd-import-card-label{
+  font-family:var(--font-mono);
+  font-size:9.5px;
+  letter-spacing:.05em;
+  text-transform:uppercase;
+  color:var(--muted);
+}
+.qd-import-card-value{
+  font-family:var(--font-mono);
+  font-weight:700;
+  font-size:16px;
+  color:var(--text);
+  margin-top:3px;
+}
+.qd-import-card-note{
+  display:block;
+  font-family:var(--font-body);
+  font-size:10px;
+  font-weight:500;
+  color:var(--red);
+  margin-top:2px;
+}
+
 #importPreviewTable tbody tr.row-invalid{background:var(--red-dim);}
+#importPreviewTable tbody tr.row-warn{background:var(--amber-dim);}
 #importPreviewTable .status-ok{color:var(--green);font-weight:700;font-size:11.5px;}
 #importPreviewTable .status-error{color:var(--red);font-weight:700;font-size:11.5px;}
+#importPreviewTable .status-warn{color:#92400E;font-weight:700;font-size:11.5px;}
+#importPreviewTable .na{color:var(--muted-soft);font-style:italic;}
+.qd-entry-tab-section{margin-top:14px;}
 
 /* ---------------- Trend panel ---------------- */
 .qd-trend-panel{margin-top:14px;}

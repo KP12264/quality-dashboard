@@ -35,11 +35,12 @@
   // Scrap Detail/Pareto do not depend on any of these (per design) — they
   // exist for future use (Stage 5) and for audit/dedupe (Stage 3/4).
   const OPTIONAL_SCRAP_FIELDS = [
-    'rootCause', 'actionPlan',           // Cause / Solution (Stage 2)
-    'scrapCost', 'unitPrice',            // Amt / Price (Stage 2) — never derived, always taken as-is
-    'sourceMaterial', 'sourceMaterialName', 'sourceLocation', 'sourceDateText', // raw Excel text, for audit + Stage 3 model mapping key
+    'rootCause', 'actionPlan',           // Cause / Solution
+    'scrapCost', 'unitPrice',            // Amt / Price — never derived, always taken as-is
+    'sourceMaterial', 'sourceMaterialName', 'sourceLocation', 'sourceDateText', // raw Excel text, for audit + model matching
+    'recordedBy',                        // Emp. Ld / Pic / employee code, when the source file has it
     'entrySource', 'sourceFileName', 'sourceSheet', 'sourceRow',
-    'importBatchId', 'importedAt', 'importFingerprint'   // Stage 3/4 use
+    'importBatchId', 'importedAt', 'importFingerprint'
   ];
   const OPTIONAL_NUMERIC_OR_NULL_FIELDS = new Set(['scrapCost', 'unitPrice', 'sourceRow', 'importedAt']);
 
