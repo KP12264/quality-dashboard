@@ -729,10 +729,49 @@
     }
     resolveAllModelMappings(parsedRows);
     renderPreview();
+    maybePersistMapping(excelModel); // fire-and-forget: persists immediately, never blocks the UI
   }
 
   function setRememberFlag(excelModel, checked) {
     rememberFlags[excelModel] = checked;
+    // Per requirement: unchecking never deletes an already-saved mapping
+    // (no delete-mapping feature exists) — only checking can ever trigger
+    // a save, and only for a selection that already exists this session.
+    if (checked) maybePersistMapping(excelModel);
+  }
+
+  // ---- Immediate Model Mapping persistence -------------------------------
+  // Writes ONLY to scrapModelMappings (via the existing adapter — no
+  // Firestore logic duplicated here) the moment a manual selection is
+  // confirmed, rather than waiting for "Import Valid Rows". Never writes
+  // scrapLogs, never touches Production V2 — this function has no access
+  // to anything but ScrapModelMappingAdapter.saveMappings().
+  async function maybePersistMapping(excelModel) {
+    if (!rememberFlags[excelModel]) return; // not asked to remember — session choice stays active, nothing persisted
+    const productionModel = sessionModelChoices[excelModel];
+    if (!productionModel) return; // nothing selected yet
+    if (savedModelMappings[excelModel] === productionModel) return; // requirement 9: already persisted exactly this value — skip the redundant write
+
+    try {
+      const result = await ScrapModelMappingAdapter.saveMappings(window.qdDb, [{ excelModel, productionModel }]);
+      if (result.error) throw result.error;
+      savedModelMappings[excelModel] = productionModel; // reflect the now-persisted value; does not touch resolution state or re-run anything
+      console.log(`Quality Dashboard: remembered mapping "${excelModel}" -> "${productionModel}"`);
+      // Deliberately does NOT hide the warning banner here — a success for
+      // THIS identity must not mask a still-unresolved failure warning
+      // from a DIFFERENT identity saved earlier in the same session. The
+      // banner only clears on the next full validation run (existing reset
+      // logic in continueToValidation), same as the original read-failure case.
+    } catch (err) {
+      console.error(`Quality Dashboard: failed to save Model Mapping for "${excelModel}" -> "${productionModel}":`, err);
+      showMappingPersistWarning(`"${excelModel}" → "${productionModel}" is applied for this import, but could NOT be permanently remembered (Firestore save failed). You may need to re-map this identity on your next import.`);
+    }
+  }
+
+  function showMappingPersistWarning(msg) {
+    const el = $('scrapModelMappingNotice');
+    el.textContent = '⚠ ' + msg;
+    el.style.display = 'block';
   }
 
   // ---- Duplicate detection (reads EXISTING scrapLogs only) --------------
@@ -1313,8 +1352,17 @@
     // Model Mapping is only ever persisted here — at confirmed-import time,
     // never during Preview/Validation. Best-effort: a failure here doesn't
     // undo or fail the scrapLogs write that already succeeded above.
+    // Most "Remember Mapping" choices are already persisted immediately
+    // (see maybePersistMapping, called the moment a selection is made) —
+    // this is now only a SAFETY-NET RETRY for anything that still hasn't
+    // made it to savedModelMappings (e.g. an earlier immediate save that
+    // failed). Re-saving an identical, already-persisted pair is skipped
+    // (requirement 9 — avoid a redundant write), not because re-saving
+    // would be unsafe (saveMappings upserts by identity, so it would be
+    // harmless either way), just because it's unnecessary.
     const rememberedPairs = Object.keys(rememberFlags)
       .filter(excelModel => rememberFlags[excelModel] && sessionModelChoices[excelModel])
+      .filter(excelModel => savedModelMappings[excelModel] !== sessionModelChoices[excelModel])
       .map(excelModel => ({ excelModel, productionModel: sessionModelChoices[excelModel] }));
     let mappingSaveNote = '';
     if (rememberedPairs.length > 0) {
@@ -1324,6 +1372,7 @@
         mappingSaveNote = ` (Note: ${rememberedPairs.length} model mapping${rememberedPairs.length > 1 ? 's' : ''} could NOT be remembered for next time — check Firestore Security Rules include scrapModelMappings.)`;
       } else {
         mappingSaveNote = ` Remembered ${mappingResult.succeeded} model mapping${mappingResult.succeeded > 1 ? 's' : ''} for next time.`;
+        rememberedPairs.forEach(p => { savedModelMappings[p.excelModel] = p.productionModel; });
       }
     }
 
