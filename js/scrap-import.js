@@ -69,7 +69,7 @@
   let sessionModelChoices = {};  // excelModel -> productionModel, chosen by the user THIS session (not yet saved unless "Remember" is checked)
   let rememberFlags = {};        // excelModel -> boolean, whether to persist that choice to scrapModelMappings on final Confirm Import
   let identitiesNeedingAttention = []; // excelModels that needed a decision at the START of this validation pass — snapshotted once so a resolved group doesn't vanish from "Resolve Mappings" mid-decision (e.g. before the user gets to check "Remember")
-  let resolveMappingsFilter = 'all'; // 'all' | 'suggested' | 'unresolved' | 'resolved'
+  let resolveMappingsFilter = 'all'; // 'all' | 'suggested' | 'unresolved' — no 'resolved' filter: Resolve Mappings only ever holds identities that still need a decision (a successfully saved/auto-mapped identity never enters it at all), so a "Resolved" bucket here would misleadingly always read near-zero
   let resolveMappingsSearch = '';
 
   function escapeHtml(s) {
@@ -1227,7 +1227,6 @@
           ${filterBtn('all', 'All')}
           ${filterBtn('suggested', 'Suggested')}
           ${filterBtn('unresolved', 'Unresolved')}
-          ${filterBtn('resolved', 'Resolved')}
         </div>
       </div>
       <div class="qd-table-scroll">
