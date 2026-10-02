@@ -1114,9 +1114,32 @@
       if (stillUnresolvedCount === 0) status = 'resolved';
       else if (suggestedUnion.size > 0) status = 'suggested';
       else status = 'unresolved';
+
+      // Once a row resolves (via ANY tier — saved, exact-match, singleton,
+      // family, door-type, or a fresh session pick), resolveRowMapping
+      // clears its availableModelsForDropdown/suggestedModels to [] (no
+      // longer needs a dropdown of candidates) — so availableUnion/
+      // suggestedUnion above end up empty for a fully-resolved group,
+      // leaving nothing for the <select> to even offer as an option.
+      // Recover the resolved value from a resolved member row's own
+      // matchedProductionModel, verify it against modelsByCombo (the
+      // SAME roster resolveRowMapping already validated it against — no
+      // new state, no re-validation logic), and fold it into
+      // availableUnion so it renders as a real, selectable <option>.
+      let resolvedModel = null;
+      const resolvedRow = memberRows.find(r => !r.unmapped && r.matchedProductionModel);
+      if (resolvedRow) {
+        const comboKey = `${resolvedRow.entry.date}|${resolvedRow.entry.line}|${resolvedRow.entry.shift}`;
+        const roster = modelsByCombo[comboKey] || new Set();
+        if (roster.has(resolvedRow.matchedProductionModel)) {
+          resolvedModel = resolvedRow.matchedProductionModel;
+          availableUnion.add(resolvedModel);
+        }
+      }
+
       return {
         excelModel, memberRows, availableUnion, suggestedUnion, anyInvalidSaved, families,
-        stillUnresolvedCount, status
+        stillUnresolvedCount, status, resolvedModel
       };
     });
   }
@@ -1146,7 +1169,13 @@
       `<button type="button" class="qd-mapfilter-btn ${resolveMappingsFilter === key ? 'active' : ''}" data-filter="${key}">${label} <span class="qd-mapfilter-count">${counts[key]}</span></button>`;
 
     const rowsHtml = visibleGroups.map(g => {
-      const currentChoice = sessionModelChoices[g.excelModel] || '';
+      // Prefer an explicit session pick (covers a fresh manual selection,
+      // and a partially-resolved group where the user already chose
+      // something this session); fall back to the verified resolved
+      // value for a group resolved purely via a saved/exact-match/
+      // singleton/family/door-type tier that never touched
+      // sessionModelChoices at all (e.g. loaded straight from Firestore).
+      const currentChoice = sessionModelChoices[g.excelModel] || g.resolvedModel || '';
       const suggestedOptions = Array.from(g.suggestedUnion).sort().map(m =>
         `<option value="${escapeHtml(m)}" ${m === currentChoice ? 'selected' : ''}>★ Suggested — ${escapeHtml(m)}</option>`
       ).join('');
