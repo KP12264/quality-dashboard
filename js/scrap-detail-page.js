@@ -19,6 +19,15 @@
 (function () {
   const $ = id => document.getElementById(id);
   const fmt = n => Number.isFinite(n) ? Math.round(n).toLocaleString('en-US') : '–';
+  // Money is NEVER rounded to an integer (unlike Qty above) — always
+  // exactly 2 decimals, with thousands separators: 597.48 -> ฿597.48,
+  // 1398.22 -> ฿1,398.22. Missing/non-numeric -> '–', never "NaN"/"฿NaN".
+  const fmtThb = n => (typeof n === 'number' && Number.isFinite(n))
+    ? '฿' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    : '–';
+  // Plain-text optional field -> "–" for anything falsy/empty, never the
+  // literal strings "undefined"/"null".
+  const textOrDash = v => (v === undefined || v === null || v === '') ? '–' : String(v);
 
   let allRecords = [];      // scrap records for the current date range (before Shift/Line/Model/Defect filters)
   let improvements = [];    // all improvement records, for the 4M/link lookup
@@ -29,6 +38,61 @@
   }
   function lineLabel(code) { return (LINES.find(l => l.code === code) || {}).label || code; }
   function shiftLabel(code) { return (SHIFTS.find(s => s.code === code) || {}).label || code; }
+
+  // Builds the structured drill-down content for one Scrap record. Pure
+  // READ-ONLY rendering of fields already present on `r` (as returned by
+  // ScrapDataAdapter.getScrapData — not modified here) — never writes
+  // anything, never alters the record. `group` (recurring-date info) is
+  // the same object renderTable already looked up before this change.
+  function renderDrilldownContent(r, group) {
+    const sectionHeader = (title, opts) => `<div class="qd-dd-section-header${opts && opts.subtle ? ' subtle' : ''}">${escapeHtml(title)}</div>`;
+    const field = (label, value) => `
+      <div class="qd-dd-field">
+        <div class="qd-dd-label">${escapeHtml(label)}</div>
+        <div class="qd-dd-value">${escapeHtml(value)}</div>
+      </div>`;
+
+    const scrapInfoHtml = `
+      <div class="qd-dd-grid">
+        ${field('Cause', textOrDash(r.rootCause))}
+        ${field('Initial Action', textOrDash(r.actionPlan))}
+        ${field('Scrap Cost', fmtThb(r.scrapCost))}
+        ${field('Unit Price', fmtThb(r.unitPrice))}
+        ${field('Recorded By', textOrDash(r.recordedBy))}
+      </div>`;
+
+    const excelSourceHtml = `
+      <div class="qd-dd-grid">
+        ${field('Material', textOrDash(r.sourceMaterial))}
+        ${field('Material Name', textOrDash(r.sourceMaterialName))}
+        ${field('Location', textOrDash(r.sourceLocation))}
+        ${field('File', textOrDash(r.sourceFileName))}
+        ${field('Sheet', textOrDash(r.sourceSheet))}
+        ${field('Row', textOrDash(r.sourceRow))}
+        ${field('Original Date', textOrDash(r.sourceDateText))}
+      </div>`;
+
+    const recurringHtml = group
+      ? `<div class="qd-dd-recurring">Seen on ${group.distinctDates} distinct day(s) in this range: ${escapeHtml(group.dates.join(', '))}</div>`
+      : '';
+
+    const auditHtml = `
+      <div class="qd-dd-grid subtle">
+        ${field('Record ID', textOrDash(r.id))}
+        ${field('Recorded', r.createdAt ? new Date(r.createdAt).toLocaleString('en-US') : '–')}
+      </div>
+      ${recurringHtml}`;
+
+    return `
+      <div class="qd-dd-wrap">
+        ${sectionHeader('Scrap Information')}
+        ${scrapInfoHtml}
+        ${sectionHeader('Excel Source')}
+        ${excelSourceHtml}
+        ${sectionHeader('Audit Information', { subtle: true })}
+        ${auditHtml}
+      </div>`;
+  }
 
   function showBanner(kind, message) {
     const el = $('connectionBanner');
@@ -160,7 +224,7 @@
           </td>
         </tr>
         <tr class="qd-detail-drilldown" data-drilldown-for="${r.id}" style="display:none;">
-          <td colspan="10">Record ID: ${escapeHtml(r.id)} · Recorded: ${r.createdAt ? new Date(r.createdAt).toLocaleString('en-US') : 'unknown'}${group ? ` · Seen on ${group.distinctDates} distinct day(s) in this range: ${group.dates.join(', ')}` : ''}</td>
+          <td colspan="10">${renderDrilldownContent(r, group)}</td>
         </tr>`;
     }).join('');
 
