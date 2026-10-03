@@ -1241,7 +1241,7 @@ body{
 .qd-pareto-layout{display:grid;grid-template-columns:1.6fr 1fr;gap:18px;align-items:start;}
 @media (max-width:860px){.qd-pareto-layout{grid-template-columns:1fr;}}
 .qd-top-defects{display:flex;flex-direction:column;gap:6px;}
-.qd-top-defect-row{
+.qd-dashboard-top-defect-row{
   display:grid;
   grid-template-columns:20px 1fr auto auto;
   align-items:center;
