@@ -150,6 +150,12 @@
     // ---- Trends: respect Line filter ----
     await renderTrends();
 
+    // ---- Attention Required: fetchRecurringProblems() uses state.date
+    // for its 30-day lookback, so this must re-run on every render() —
+    // not just once at boot — or it would stay based on whatever date
+    // was active on first load after the user changes the Date filter.
+    renderAttentionRequired();
+
     $('lastUpdated').textContent =
       'Production source: Production V2 · prodV2_actualLogs (read-only) · Scrap source: scrapLogs · Last refreshed ' + new Date().toLocaleTimeString('en-US');
   }
@@ -423,7 +429,7 @@
     const totalQty = data.reduce((s, d) => s + d.qty, 0);
     const top = data.slice(0, 5);
     el.innerHTML = top.map((d, i) => `
-      <div class="qd-top-defect-row">
+      <div class="qd-dashboard-top-defect-row">
         <span class="qd-top-defect-rank">${i + 1}</span>
         <span class="qd-top-defect-name">${escapeHtml(d.defectType)}</span>
         <span class="qd-top-defect-qty">${fmt(d.qty)} pcs</span>
@@ -637,7 +643,10 @@
   });
 
   // ---- Boot ---------------------------------------------------------------
+  // renderAttentionRequired() is called from inside render() itself now
+  // (see above) — not separately here — so it refreshes on every Date/
+  // Shift/Line filter change, not just once at boot, and isn't called
+  // twice on first load.
 
   render();
-  renderAttentionRequired();
 })();
