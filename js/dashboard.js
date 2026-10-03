@@ -134,17 +134,18 @@
     const lineFilteredScrap = scrapInScope.filter(r => linesInScope.includes(r.line));
     renderKpis(lineFilteredProduction, lineFilteredScrap, shiftEvals);
 
-    // ---- Shift Performance: all lines, split by shift ----
-    renderShiftPerformance(shiftEvals);
+    // ---- Scrap Target & Performance: per-shift, reuses shiftEvals as-is ----
+    renderShiftTargetTable(shiftEvals);
 
-    // ---- Line Performance: respects the Line filter ----
-    renderLinePerformance(lineFilteredProduction, lineFilteredScrap);
+    // ---- Door Line Comparison: ALWAYS all 3 lines (comparison is only
+    // meaningful across all of them), using the already-fetched
+    // date+shift-scoped records — never filtered by the Line selector,
+    // and never subject to the per-shift target individually.
+    renderDoorLineComparison(productionResult.records, scrapInScope);
 
-    // ---- By Model: respects the Line filter, needs per-model production ----
-    await renderByModel(linesInScope, lineFilteredScrap);
-
-    // ---- Pareto: respects Line filter ----
+    // ---- Pareto + Top Defects: respect Line filter, same underlying data ----
     renderPareto(lineFilteredScrap);
+    renderTopDefectsList(lineFilteredScrap);
 
     // ---- Trends: respect Line filter ----
     await renderTrends();
@@ -155,10 +156,9 @@
 
   function renderEmpty() {
     renderKpis(null, [], []);
-    $('shiftPerformance').innerHTML = '';
-    $('linePerformance').innerHTML = '';
-    $('modelTableBody').innerHTML = '';
-    renderTrend([]);
+    $('targetPerfTableBody').innerHTML = '<tr class="empty-row"><td colspan="5">No data.</td></tr>';
+    $('doorLineComparison').innerHTML = '';
+    $('topDefectsList').innerHTML = '';
     renderScrapTrend([]);
     renderPareto([]);
   }
@@ -250,68 +250,92 @@
     setKpiStatus($('kpiSection').querySelector('[data-kpi="status"]'), combinedStatus === 'WITHIN TARGET' ? 'good' : combinedStatus === 'OVER TARGET' ? 'bad' : 'neutral');
   }
 
-  // ---- Shift performance --------------------------------------------------
+  // ---- Scrap Target & Performance -----------------------------------------
+  // Pure presentation of shiftEvals, already computed by getShiftEvaluations
+  // above (same per-shift target evaluation used everywhere else on this
+  // page) — no new target calculation here, just a clearer table view:
+  // Shift | Actual Scrap | Target | Gap | Status.
 
-  function renderShiftPerformance(shiftEvals) {
-    const container = $('shiftPerformance');
-    container.innerHTML = '';
-
-    shiftEvals.forEach(e => {
-      const card = document.createElement('div');
-      card.className = 'qd-shift-card';
-      card.innerHTML = `
-        <div class="qd-shift-name">${e.label} Shift</div>
-        <div class="qd-shift-stats">
-          <div class="qd-stat">
-            <div class="qd-stat-label">Production</div>
-            <div class="qd-stat-value">${e.hasData ? fmt(e.totalProduction) : '–'}</div>
-          </div>
-          <div class="qd-stat">
-            <div class="qd-stat-label">Scrap</div>
-            <div class="qd-stat-value">${fmt(e.totalScrap)}</div>
-          </div>
-          <div class="qd-stat">
-            <div class="qd-stat-label">Target</div>
-            <div class="qd-stat-value">${fmt(e.target)}</div>
-          </div>
-        </div>`;
-      container.appendChild(card);
-    });
+  function renderShiftTargetTable(shiftEvals) {
+    const tbody = $('targetPerfTableBody');
+    if (!shiftEvals || shiftEvals.length === 0) {
+      tbody.innerHTML = '<tr class="empty-row"><td colspan="5">No data.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = shiftEvals.map(e => {
+      const statusClass = e.status === 'WITHIN TARGET' ? 'good' : e.status === 'OVER TARGET' ? 'bad' : 'neutral';
+      const statusPill = `<span class="qd-status-pill ${statusClass} qd-status-pill-sm">${escapeHtml(e.status)}</span>`;
+      if (!e.hasData) {
+        return `<tr><td>${escapeHtml(e.label)}</td><td class="num">–</td><td class="num">≤${fmt(e.target)}</td><td class="num">–</td><td>${statusPill}</td></tr>`;
+      }
+      const gap = e.totalScrap - e.target;
+      const gapText = (gap > 0 ? '+' : '') + fmt(gap);
+      const gapColor = gap > 0 ? 'var(--red)' : 'var(--green)';
+      return `<tr>
+        <td>${escapeHtml(e.label)}</td>
+        <td class="num">${fmt(e.totalScrap)}</td>
+        <td class="num">≤${fmt(e.target)}</td>
+        <td class="num" style="color:${gapColor};font-weight:700;">${gapText}</td>
+        <td>${statusPill}</td>
+      </tr>`;
+    }).join('');
   }
 
-  // ---- Line performance --------------------------------------------------
+  // ---- Door Line Comparison -------------------------------------------
+  // Informational only — always compares all 3 lines regardless of the
+  // top Line filter (comparison is meaningless with only one line shown).
+  // The ≤30pcs/shift target is NEVER applied per-line here, only the
+  // combined A+B+C total (enforced elsewhere, in getShiftEvaluations /
+  // renderKpis / renderShiftTargetTable) — this section adds Scrap Rate
+  // and % contribution to total scrap on top of the same Production/
+  // Scrap numbers the old Line Performance cards already showed.
 
-  function renderLinePerformance(productionRecords, scrapRecords) {
-    const container = $('linePerformance');
+  function renderDoorLineComparison(productionRecords, scrapRecords) {
+    const container = $('doorLineComparison');
     container.innerHTML = '';
 
-    activeLines().forEach(lineCode => {
+    const perLine = ALL_LINE_CODES.map(lineCode => {
       const line = LINES.find(l => l.code === lineCode);
       const lineProduction = productionRecords.filter(r => r.line === lineCode);
       const lineScrap = scrapRecords.filter(r => r.line === lineCode);
       const production = lineProduction.reduce((s, r) => s + r.productionQty, 0);
       const scrap = lineScrap.reduce((s, r) => s + r.scrapQty, 0);
       const rate = QualityAdapter.pct(scrap, production);
-      const hasAnyDoc = lineProduction.length > 0;
+      return { line, production, scrap, rate, hasAnyDoc: lineProduction.length > 0 };
+    });
+
+    const totalScrapAllLines = perLine.reduce((s, p) => s + p.scrap, 0);
+    const maxScrap = Math.max(...perLine.map(p => p.scrap));
+
+    perLine.forEach(p => {
+      const contribution = totalScrapAllLines > 0 ? (p.scrap / totalScrapAllLines) * 100 : null;
+      const isHighest = p.scrap > 0 && p.scrap === maxScrap;
 
       const card = document.createElement('div');
-      card.className = 'qd-line-card';
+      card.className = 'qd-line-card' + (isHighest ? ' qd-line-card-highest' : '');
       card.innerHTML = `
-        <div class="qd-line-badge line-${line.code}">${line.code}</div>
+        <div class="qd-line-badge line-${p.line.code}">${p.line.code}</div>
         <div class="qd-line-info">
-          <div class="qd-line-name">${line.label}</div>
-          <div class="qd-line-rate">${rate === null ? 'Scrap rate N/A' : 'Scrap rate ' + fmtPct(rate)}</div>
+          <div class="qd-line-name">${p.line.label}</div>
+          <div class="qd-line-rate">${p.rate === null ? 'Scrap rate N/A' : 'Scrap rate ' + fmtPct(p.rate)}</div>
+          ${contribution === null ? '' : `<div class="qd-line-contribution">Contribution ${contribution.toFixed(0)}%</div>`}
         </div>
-        <div class="qd-line-qty">${hasAnyDoc ? fmt(production) : '–'}<span class="unit">pcs</span></div>
+        <div class="qd-line-qty">${p.hasAnyDoc ? fmt(p.production) : '–'}<span class="unit">pcs</span></div>
         <div class="qd-line-scrap">
           <div class="qd-stat-label">Scrap</div>
-          <div class="qd-line-scrap-value${scrap === 0 ? ' zero' : ''}">${fmt(scrap)}</div>
+          <div class="qd-line-scrap-value${p.scrap === 0 ? ' zero' : ''}">${fmt(p.scrap)}</div>
         </div>`;
       container.appendChild(card);
     });
   }
 
   // ---- By Model -----------------------------------------------------------
+  // NOTE: no longer called from render() above — the "Production & Scrap
+  // by Model" table was removed from the executive Dashboard layout per
+  // the redesign (detailed Model-level data belongs on Scrap Detail /
+  // later review pages). Kept here, unmodified and unused, since the
+  // function and QualityAdapter.buildByModel() may still be useful
+  // elsewhere.
 
   async function renderByModel(lineCodes, scrapRecordsInScope) {
     const tbody = $('modelTableBody');
@@ -385,10 +409,32 @@
     else paretoChart = new Chart($('paretoChart'), { type: 'bar', data: chartData, options });
   }
 
+  // Compact Top 3–5 defect list alongside the Pareto chart — reuses the
+  // SAME pure QualityAdapter.buildParetoDefects() computation the chart
+  // above already uses (no new Firestore read; this just also derives
+  // each defect's individual % of total scrap from the same result).
+  function renderTopDefectsList(scrapRecords) {
+    const el = $('topDefectsList');
+    const data = QualityAdapter.buildParetoDefects(scrapRecords);
+    if (data.length === 0) {
+      el.innerHTML = '<div class="qd-placeholder">No defects recorded in this scope.</div>';
+      return;
+    }
+    const totalQty = data.reduce((s, d) => s + d.qty, 0);
+    const top = data.slice(0, 5);
+    el.innerHTML = top.map((d, i) => `
+      <div class="qd-top-defect-row">
+        <span class="qd-top-defect-rank">${i + 1}</span>
+        <span class="qd-top-defect-name">${escapeHtml(d.defectType)}</span>
+        <span class="qd-top-defect-qty">${fmt(d.qty)} pcs</span>
+        <span class="qd-top-defect-pct">${totalQty > 0 ? ((d.qty / totalQty) * 100).toFixed(0) + '%' : '–'}</span>
+      </div>`).join('');
+  }
+
   // ---- Trends ---------------------------------------------------------
 
   async function renderTrends() {
-    if (window.qdFirebaseError) { renderTrend([]); renderScrapTrend([]); return; }
+    if (window.qdFirebaseError) { renderScrapTrend([]); return; }
 
     const dates = ProductionDataAdapter.dateRange(state.date, state.trendRangeDays);
     const lineCodes = activeLines();
@@ -400,17 +446,26 @@
       ]);
     } catch (e) {
       console.error('Quality Dashboard: trend fetch failed:', e);
-      renderTrend([]); renderScrapTrend([]);
+      renderScrapTrend([]);
       return;
     }
 
     const scrapInScope = scrapResult.records.filter(r => activeShifts().includes(r.shift) && lineCodes.includes(r.line));
     const trend = QualityAdapter.buildDailyTrend(dates, productionResult.records, scrapInScope);
 
-    renderTrend(trend.map(t => ({ date: t.date, production: t.production })));
+    // Production Trend is no longer a major panel on the executive
+    // Dashboard (per design) — renderTrend()/trendChart below are kept
+    // defined but intentionally unused, not deleted, in case a future
+    // page wants the same production-only line chart. Scrap Trend still
+    // needs productionResult for its Scrap Rate % line, so that fetch
+    // above is unchanged.
     renderScrapTrend(trend);
   }
 
+  // NOTE: no longer called from renderTrends() above — the standalone
+  // Production Trend panel was removed from the executive Dashboard
+  // layout per the redesign. Kept here, unmodified, since the function
+  // (and the trendChart variable below) may still be useful elsewhere.
   function renderTrend(points) {
     if (typeof Chart === 'undefined') return;
     const labels = points.map(p => p.date.slice(5));
@@ -481,62 +536,76 @@
   // (Removed — the entry form now lives on its own page, scrap-entry.html.
   // See js/scrap-entry-page.js.)
 
-  // ---- Improvement Status + Recurring Problems (Dashboard widgets) --------
+  // ---- Attention Required (merges the old separate Improvement Status
+  // and Recurring Problems panels into one compact section) --------------
+  // Both halves below call the EXACT SAME adapter functions the old two
+  // panels used (ImprovementAdapter.getImprovements, QualityAdapter.
+  // buildRecurringProblems, ScrapDataAdapter.getScrapData) — only the
+  // presentation is merged/condensed; no new data source, no invented
+  // statuses beyond IMPROVEMENT_STATUSES, which already exists.
 
-  async function renderImprovementStatus() {
-    const container = $('improvementStatusBreakdown');
-    if (typeof ImprovementAdapter === 'undefined' || window.qdFirebaseError) {
-      container.innerHTML = '<div class="qd-placeholder">Improvement data unavailable.</div>';
-      return;
-    }
+  async function fetchImprovementStatusCounts() {
+    if (typeof ImprovementAdapter === 'undefined' || window.qdFirebaseError) return { error: true };
     try {
       const { records, error } = await ImprovementAdapter.getImprovements(window.qdDb, { limit: 200 });
-      if (error) { container.innerHTML = '<div class="qd-placeholder">Could not load improvement records.</div>'; return; }
-      if (records.length === 0) {
-        container.innerHTML = '<div class="qd-placeholder"><strong>No improvement records yet</strong>Create one from the Improvement page once a recurring or high-impact defect needs root-cause action.</div>';
-        return;
-      }
+      if (error) return { error: true };
       const counts = {};
       IMPROVEMENT_STATUSES.forEach(s => { counts[s] = 0; });
       records.forEach(r => { counts[r.status] = (counts[r.status] || 0) + 1; });
-      container.innerHTML = IMPROVEMENT_STATUSES.map(s => `
-        <div class="qd-status-chip">
-          <div class="count">${counts[s] || 0}</div>
-          <div class="label">${escapeHtml(s)}</div>
-        </div>`).join('');
+      return { error: false, counts, total: records.length };
     } catch (e) {
       console.error('Quality Dashboard: failed to load improvement status:', e);
-      container.innerHTML = '<div class="qd-placeholder">Could not load improvement records.</div>';
+      return { error: true };
     }
   }
 
-  async function renderRecurringProblems() {
-    const tbody = $('recurringTableBody');
-    tbody.innerHTML = '<tr class="empty-row"><td colspan="5">Loading…</td></tr>';
-    if (window.qdFirebaseError) { tbody.innerHTML = '<tr class="empty-row"><td colspan="5">Data unavailable.</td></tr>'; return; }
+  async function fetchRecurringProblems() {
+    if (window.qdFirebaseError) return { error: true };
     try {
       const lookbackDates = ProductionDataAdapter.dateRange(state.date, 30);
       const scrapResult = await ScrapDataAdapter.getScrapData(window.qdDb, { startDate: lookbackDates[0], endDate: lookbackDates[lookbackDates.length - 1] });
-      if (scrapResult.error) { tbody.innerHTML = '<tr class="empty-row"><td colspan="5">Could not load scrap data.</td></tr>'; return; }
-      const groups = QualityAdapter.buildRecurringProblems(scrapResult.records, RECURRING_THRESHOLD_DISTINCT_DATES)
-        .filter(g => g.recurring)
-        .slice(0, 8);
-      if (groups.length === 0) {
-        tbody.innerHTML = '<tr class="empty-row"><td colspan="5">No recurring problems in the last 30 days.</td></tr>';
-        return;
-      }
-      tbody.innerHTML = groups.map(g => `
-        <tr>
-          <td>${escapeHtml(g.line)}</td>
-          <td>${escapeHtml(g.model)}</td>
-          <td>${escapeHtml(g.defectType)} <span class="qd-badge recurring">RECURRING</span></td>
-          <td class="num">${g.distinctDates}</td>
-          <td class="num">${fmt(g.totalQty)}</td>
-        </tr>`).join('');
+      if (scrapResult.error) return { error: true };
+      const groups = QualityAdapter.buildRecurringProblems(scrapResult.records, RECURRING_THRESHOLD_DISTINCT_DATES).filter(g => g.recurring);
+      return { error: false, groups };
     } catch (e) {
       console.error('Quality Dashboard: failed to load recurring problems:', e);
-      tbody.innerHTML = '<tr class="empty-row"><td colspan="5">Could not load recurring problems.</td></tr>';
+      return { error: true };
     }
+  }
+
+  async function renderAttentionRequired() {
+    const container = $('attentionSummary');
+    container.innerHTML = '<div class="qd-placeholder">Loading…</div>';
+
+    const [impResult, recResult] = await Promise.all([fetchImprovementStatusCounts(), fetchRecurringProblems()]);
+    const parts = [];
+
+    parts.push(`<div class="qd-attention-block">
+      <div class="qd-attention-label">Recurring Problems${recResult.error ? '' : ` <span class="qd-attention-count">${recResult.groups.length}</span>`}</div>
+      ${recResult.error
+        ? '<div class="qd-placeholder">Could not load recurring problems.</div>'
+        : recResult.groups.length === 0
+          ? '<div class="qd-placeholder">No recurring problems in the last 30 days.</div>'
+          : recResult.groups.slice(0, 5).map(g => `
+              <div class="qd-attention-item">
+                <span>${escapeHtml(g.line)} · ${escapeHtml(g.model)} · ${escapeHtml(g.defectType)}</span>
+                <span class="qd-attention-meta">${g.distinctDates}d · ${fmt(g.totalQty)} pcs</span>
+              </div>`).join('')}
+      <a class="qd-link-btn" href="scrap-detail.html">View in Scrap Detail →</a>
+    </div>`);
+
+    parts.push(`<div class="qd-attention-block">
+      <div class="qd-attention-label">Improvement Records${!impResult.error ? ` <span class="qd-attention-count">${impResult.total}</span>` : ''}</div>
+      ${impResult.error
+        ? '<div class="qd-placeholder">Could not load improvement records.</div>'
+        : impResult.total === 0
+          ? '<div class="qd-placeholder">No improvement records yet.</div>'
+          : `<div class="qd-status-breakdown">${IMPROVEMENT_STATUSES.map(s => `
+              <div class="qd-status-chip"><div class="count">${impResult.counts[s] || 0}</div><div class="label">${escapeHtml(s)}</div></div>`).join('')}</div>`}
+      <a class="qd-link-btn" href="improvement.html">View all →</a>
+    </div>`);
+
+    container.innerHTML = parts.join('');
   }
 
   // ---- Event wiring (top filters) ---------------------------------------------------
@@ -570,6 +639,5 @@
   // ---- Boot ---------------------------------------------------------------
 
   render();
-  renderImprovementStatus();
-  renderRecurringProblems();
+  renderAttentionRequired();
 })();

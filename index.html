@@ -23,7 +23,6 @@
     <div class="qd-title-block">
       <span class="qd-eyebrow">Quality Dashboard · Page 1 of 6</span>
       <h1>DAILY PRODUCTION &amp; QUALITY</h1>
-      <span class="qd-subtitle">Production: read-only from the existing system · Scrap: recorded via the Scrap Entry page</span>
     </div>
     <div class="qd-filters">
       <div class="qd-filter-group">
@@ -52,6 +51,7 @@
 
   <div id="connectionBanner" class="qd-banner" style="display:none;"></div>
 
+  <!-- Section 2: Executive KPI Summary -->
   <section class="qd-kpis" id="kpiSection">
     <div class="qd-kpi" data-kpi="production">
       <div class="qd-kpi-bar"></div>
@@ -87,81 +87,56 @@
   <div class="qd-kpi-footnote qd-kpi-footnote-dynamic" id="kpiStatusNote"></div>
   <div class="qd-kpi-footnote qd-kpi-footnote-dynamic" id="kpiShiftBreakdown"></div>
 
-  <section class="qd-panels-row">
-    <div class="qd-panel">
-      <h2>Shift Performance</h2>
-      <div class="qd-shift-cards" id="shiftPerformance"></div>
-    </div>
-    <div class="qd-panel">
-      <h2>Line Performance</h2>
-      <div class="qd-panel-note">Production &amp; Scrap by Line — respects the Line filter above</div>
-      <div class="qd-line-cards" id="linePerformance"></div>
-    </div>
-  </section>
-
+  <!-- Section 3: Scrap Target & Performance -->
   <section class="qd-panel">
-    <h2>Production &amp; Scrap by Model</h2>
-    <div class="qd-panel-note">Matched by Date + Shift + Line + Model. A model with scrap but no matching production record is flagged.</div>
+    <h2>Scrap Target &amp; Performance</h2>
+    <div class="qd-panel-note">Each shift judged against its own ≤30 pcs target (Door A+B+C combined) — never summed across shifts.</div>
     <div class="qd-table-scroll">
-      <table class="qd-model-table" id="modelTable">
-        <thead>
-          <tr><th>Model</th><th>Production</th><th>Scrap</th><th>Scrap Rate</th></tr>
-        </thead>
-        <tbody id="modelTableBody"></tbody>
+      <table class="qd-datatable" id="targetPerfTable">
+        <thead><tr><th>Shift</th><th>Actual Scrap</th><th>Target</th><th>Gap</th><th>Status</th></tr></thead>
+        <tbody id="targetPerfTableBody"></tbody>
       </table>
     </div>
   </section>
 
+  <!-- Section 4 + 5: Door Line Comparison + Scrap Trend -->
   <section class="qd-panels-row">
+    <div class="qd-panel">
+      <h2>Door Line Comparison</h2>
+      <div class="qd-panel-note">Production, Scrap, Rate and % contribution to total Scrap — always shows all 3 lines, informational only (not subject to the ≤30/shift target individually).</div>
+      <div class="qd-line-cards" id="doorLineComparison"></div>
+    </div>
     <section class="qd-panel qd-trend-panel">
       <div class="qd-trend-header">
-        <h2>Production Trend</h2>
+        <h2>Scrap Trend</h2>
         <div class="qd-segmented" id="trendRange">
           <button data-range="7" class="active">7 Days</button>
           <button data-range="30">30 Days</button>
         </div>
       </div>
-      <div class="qd-chart-holder">
-        <canvas id="trendChart"></canvas>
-      </div>
-    </section>
-
-    <section class="qd-panel qd-trend-panel">
-      <div class="qd-trend-header">
-        <h2>Scrap Trend</h2>
-        <span class="qd-panel-note" style="margin:0;">Bars = scrap qty · Line = scrap rate %</span>
-      </div>
+      <div class="qd-panel-note" style="margin-top:-4px;">Bars = scrap qty · Line = scrap rate %</div>
       <div class="qd-chart-holder">
         <canvas id="scrapTrendChart"></canvas>
       </div>
     </section>
   </section>
 
+  <!-- Section 6: Top Defects / Pareto -->
   <section class="qd-panel">
-    <h2>Pareto Defect</h2>
+    <h2>Top Defects</h2>
     <div class="qd-panel-note">All defect types in the current Date + Shift + Line scope, ranked by quantity.</div>
-    <div class="qd-chart-holder" style="height:260px;">
-      <canvas id="paretoChart"></canvas>
+    <div class="qd-pareto-layout">
+      <div class="qd-chart-holder" style="height:260px;">
+        <canvas id="paretoChart"></canvas>
+      </div>
+      <div id="topDefectsList" class="qd-top-defects"></div>
     </div>
   </section>
 
-  <section class="qd-panels-row">
-    <section class="qd-panel">
-      <h2>Improvement Status</h2>
-      <div class="qd-panel-note">Status breakdown of the most recent improvement records (all defects, not filtered by the Date/Shift/Line above).</div>
-      <div class="qd-status-breakdown" id="improvementStatusBreakdown"></div>
-    </section>
-
-    <section class="qd-panel">
-      <h2>Recurring Problems</h2>
-      <div class="qd-panel-note">Line + Model + Defect combinations seen on 3+ different days in the last 30 days.</div>
-      <div class="qd-table-scroll">
-        <table class="qd-datatable" id="recurringTable" style="min-width:420px;">
-          <thead><tr><th>Line</th><th>Model</th><th>Defect</th><th>Days</th><th>Total Qty</th></tr></thead>
-          <tbody id="recurringTableBody"></tbody>
-        </table>
-      </div>
-    </section>
+  <!-- Section 7: Attention Required -->
+  <section class="qd-panel">
+    <h2>Attention Required</h2>
+    <div id="attentionSummary" class="qd-attention"></div>
   </section>
 
   <footer class="qd-footer">
