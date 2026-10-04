@@ -73,7 +73,18 @@
       const shiftScrap = allLinesScrap.filter(r => r.shift === shiftCode);
       const targetResult = await TargetAdapter.getTargetForShift(window.qdDb, shiftCode, dateStr);
       const summary = QualityAdapter.buildOverallSummary(shiftProduction, shiftScrap, targetResult.targetQty);
-      return { shiftCode, label: shiftLabel(shiftCode), hasData: shiftProduction.length > 0, ...summary };
+      const hasData = shiftProduction.length > 0;
+      // FIX: QualityAdapter.buildOverallSummary() only checks whether a
+      // target number exists — it never checks whether this shift has
+      // any production data — so "no production, no scrap" and
+      // "production exists, scrap=0" both came back as WITHIN TARGET.
+      // Correct that here, without touching QualityAdapter itself:
+      // no production data for this shift means NO DATA, full stop,
+      // regardless of what the raw scrap-vs-target comparison says.
+      // When hasData is true, QualityAdapter's own WITHIN/OVER
+      // determination is used exactly as before.
+      const status = hasData ? summary.status : 'NO DATA';
+      return { shiftCode, label: shiftLabel(shiftCode), hasData, ...summary, status };
     }));
     return evals;
   }
@@ -205,6 +216,9 @@
       statusEl.className = 'qd-status-pill neutral';
       noteEl.textContent = '';
       breakdownEl.textContent = '';
+      $('targetStripText').innerHTML = state.line === 'all'
+        ? 'Target <strong>&le;30 pcs / Shift</strong> &middot; Door A+B+C combined &middot; Day/Night evaluated separately'
+        : 'Target <strong>&le;30 pcs / Shift</strong> &middot; Door A+B+C combined &middot; Status still uses all lines';
       ['production', 'scrap', 'scrapRate', 'target', 'status'].forEach(k =>
         setKpiStatus($(`kpiSection`).querySelector(`[data-kpi="${k}"]`), 'neutral'));
       return;
@@ -234,6 +248,14 @@
       const lineLabel = (LINES.find(l => l.code === state.line) || {}).label || state.line;
       noteEl.textContent = `Target Status uses combined Scrap (Door A+B+C) = ${fmt(combinedScrap)} pcs — not just ${lineLabel}'s ${fmt(displaySummary.totalScrap)} pcs shown above.`;
     }
+
+    // Short Target strip text — presentation only, same underlying rule
+    // as the long version it replaced, just two compact sentences
+    // depending on whether a single Line is selected.
+    const stripEl = $('targetStripText');
+    stripEl.innerHTML = state.line === 'all'
+      ? 'Target <strong>&le;30 pcs / Shift</strong> &middot; Door A+B+C combined &middot; Day/Night evaluated separately'
+      : 'Target <strong>&le;30 pcs / Shift</strong> &middot; Door A+B+C combined &middot; Status still uses all lines';
 
     // Per-shift breakdown, so "one shift went over" is never hidden inside
     // a combined number when Shift = All (or in general, whenever more
@@ -513,7 +535,31 @@
     else trendChart = new Chart($('trendChart'), { type: 'line', data: chartData, options });
   }
 
+  // Hides the Chart.js canvas and shows a compact message (same visual
+  // language as the Top Defects empty state — .qd-dashboard-pareto-empty
+  // is reused as-is) when NOTHING across the whole trend range has any
+  // production or scrap — a day with production>0/scrap=0, or
+  // production=0/scrap>0, still counts as meaningful and shows the real
+  // chart. Does not touch the underlying daily-trend calculation at all.
   function renderScrapTrend(points) {
+    const holder = $('scrapTrendChartHolder');
+    const existingEmpty = holder.parentElement.querySelector('.qd-dashboard-pareto-empty');
+    if (existingEmpty) existingEmpty.remove();
+
+    const hasMeaningfulData = points.some(p => p.production > 0 || p.scrap > 0);
+    if (!hasMeaningfulData) {
+      if (scrapTrendChart) { scrapTrendChart.destroy(); scrapTrendChart = null; }
+      holder.style.display = 'none';
+      const empty = document.createElement('div');
+      empty.className = 'qd-dashboard-pareto-empty';
+      empty.innerHTML = `
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="14 7 21 7 21 14"/></svg>
+        <span>No production or scrap data in this period.</span>`;
+      holder.insertAdjacentElement('afterend', empty);
+      return;
+    }
+    holder.style.display = '';
+
     if (typeof Chart === 'undefined') return;
     const labels = points.map(p => p.date.slice(5));
     const scrapQty = points.map(p => p.scrap);

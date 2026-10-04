@@ -154,7 +154,7 @@
 
     <div class="qd-dashboard-target-strip">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-      <span>Target is always <strong>&le;30 pcs per Shift</strong> (Door A+B+C combined) &mdash; never doubled across shifts. <strong>Status always uses combined A+B+C scrap</strong>, even with a single Line selected; each shift is judged against its own target separately.</span>
+      <span id="targetStripText"></span>
     </div>
     <div class="qd-dashboard-target-note" id="kpiStatusNote"></div>
 
@@ -188,7 +188,7 @@
             </div>
           </div>
           <div class="qd-panel-note">Daily Scrap Quantity and Scrap Rate %</div>
-          <div class="qd-chart-holder">
+          <div class="qd-chart-holder" id="scrapTrendChartHolder">
             <canvas id="scrapTrendChart"></canvas>
           </div>
         </section>
