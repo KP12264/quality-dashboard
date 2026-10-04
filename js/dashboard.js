@@ -164,9 +164,9 @@
     renderKpis(null, [], []);
     $('targetPerfTableBody').innerHTML = '<tr class="empty-row"><td colspan="5">No data.</td></tr>';
     $('doorLineComparison').innerHTML = '';
-    $('topDefectsList').innerHTML = '';
     renderScrapTrend([]);
     renderPareto([]);
+    renderTopDefectsList([]);
   }
 
   // ---- KPI cards --------------------------------------------------------
@@ -318,18 +318,17 @@
       const isHighest = p.scrap > 0 && p.scrap === maxScrap;
 
       const card = document.createElement('div');
-      card.className = 'qd-line-card' + (isHighest ? ' qd-line-card-highest' : '');
+      card.className = 'qd-dashboard-doorline-card' + (isHighest ? ' qd-dashboard-doorline-card-highest' : '');
       card.innerHTML = `
-        <div class="qd-line-badge line-${p.line.code}">${p.line.code}</div>
-        <div class="qd-line-info">
-          <div class="qd-line-name">${p.line.label}</div>
-          <div class="qd-line-rate">${p.rate === null ? 'Scrap rate N/A' : 'Scrap rate ' + fmtPct(p.rate)}</div>
-          ${contribution === null ? '' : `<div class="qd-line-contribution">Contribution ${contribution.toFixed(0)}%</div>`}
+        <div class="qd-dashboard-doorline-head">
+          <div class="qd-line-badge line-${p.line.code}">${p.line.code}</div>
+          <div class="qd-dashboard-doorline-name">${p.line.label}</div>
         </div>
-        <div class="qd-line-qty">${p.hasAnyDoc ? fmt(p.production) : '–'}<span class="unit">pcs</span></div>
-        <div class="qd-line-scrap">
-          <div class="qd-stat-label">Scrap</div>
-          <div class="qd-line-scrap-value${p.scrap === 0 ? ' zero' : ''}">${fmt(p.scrap)}</div>
+        <div class="qd-dashboard-doorline-rows">
+          <div class="qd-dashboard-doorline-row"><span>Production</span><span class="val">${p.hasAnyDoc ? fmt(p.production) : '–'} pcs</span></div>
+          <div class="qd-dashboard-doorline-row"><span>Scrap</span><span class="val${p.scrap === 0 ? ' zero' : ' bad'}">${fmt(p.scrap)} pcs</span></div>
+          <div class="qd-dashboard-doorline-row"><span>Scrap Rate</span><span class="val">${p.rate === null ? 'N/A' : fmtPct(p.rate)}</span></div>
+          <div class="qd-dashboard-doorline-row"><span>% of Total Scrap</span><span class="val">${contribution === null ? '–' : contribution.toFixed(0) + '%'}</span></div>
         </div>`;
       container.appendChild(card);
     });
@@ -419,21 +418,44 @@
   // SAME pure QualityAdapter.buildParetoDefects() computation the chart
   // above already uses (no new Firestore read; this just also derives
   // each defect's individual % of total scrap from the same result).
+  // Owns the shared empty-state for the whole Top Defects / Pareto layout
+  // (table + chart together) — a single clean "No defects recorded in
+  // this scope." panel instead of a tall blank table next to a tall
+  // blank chart. Uses the Dashboard-specific .qd-dashboard-top-defect-row
+  // class (never Scrap Detail's .qd-top-defect-row).
   function renderTopDefectsList(scrapRecords) {
-    const el = $('topDefectsList');
+    const list = $('topDefectsList');
+    const tableWrap = $('topDefectsTableWrap');
+    const chartHolder = $('paretoChartHolder');
+    const layout = $('paretoLayout');
     const data = QualityAdapter.buildParetoDefects(scrapRecords);
+
+    const existingEmpty = layout.querySelector('.qd-dashboard-pareto-empty');
+    if (existingEmpty) existingEmpty.remove();
+
     if (data.length === 0) {
-      el.innerHTML = '<div class="qd-placeholder">No defects recorded in this scope.</div>';
+      tableWrap.style.display = 'none';
+      chartHolder.style.display = 'none';
+      list.innerHTML = '';
+      const empty = document.createElement('div');
+      empty.className = 'qd-dashboard-pareto-empty';
+      empty.innerHTML = `
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+        <span>No defects recorded in this scope.</span>`;
+      layout.appendChild(empty);
       return;
     }
+
+    tableWrap.style.display = '';
+    chartHolder.style.display = '';
     const totalQty = data.reduce((s, d) => s + d.qty, 0);
     const top = data.slice(0, 5);
-    el.innerHTML = top.map((d, i) => `
+    list.innerHTML = top.map((d, i) => `
       <div class="qd-dashboard-top-defect-row">
-        <span class="qd-top-defect-rank">${i + 1}</span>
-        <span class="qd-top-defect-name">${escapeHtml(d.defectType)}</span>
-        <span class="qd-top-defect-qty">${fmt(d.qty)} pcs</span>
-        <span class="qd-top-defect-pct">${totalQty > 0 ? ((d.qty / totalQty) * 100).toFixed(0) + '%' : '–'}</span>
+        <span>${i + 1}</span>
+        <span>${escapeHtml(d.defectType)}</span>
+        <span>${fmt(d.qty)} pcs</span>
+        <span>${totalQty > 0 ? ((d.qty / totalQty) * 100).toFixed(0) + '%' : '–'}</span>
       </div>`).join('');
   }
 
@@ -579,6 +601,20 @@
     }
   }
 
+  // "Last Seen" is a real derived value — the most recent entry in
+  // buildRecurringProblems()'s own `dates` array (sorted ascending), not
+  // an invented field — expressed relative to the Dashboard's currently
+  // selected Date (state.date), same reference point the rest of the
+  // page uses.
+  function daysAgoLabel(dateStr) {
+    const target = new Date(dateStr + 'T00:00:00');
+    const ref = new Date(state.date + 'T00:00:00');
+    const diffDays = Math.round((ref - target) / 86400000);
+    if (diffDays <= 0) return 'today';
+    if (diffDays === 1) return '1d ago';
+    return diffDays + 'd ago';
+  }
+
   async function renderAttentionRequired() {
     const container = $('attentionSummary');
     container.innerHTML = '<div class="qd-placeholder">Loading…</div>';
@@ -586,32 +622,59 @@
     const [impResult, recResult] = await Promise.all([fetchImprovementStatusCounts(), fetchRecurringProblems()]);
     const parts = [];
 
-    parts.push(`<div class="qd-attention-block">
-      <div class="qd-attention-label">Recurring Problems${recResult.error ? '' : ` <span class="qd-attention-count">${recResult.groups.length}</span>`}</div>
-      ${recResult.error
-        ? '<div class="qd-placeholder">Could not load recurring problems.</div>'
-        : recResult.groups.length === 0
-          ? '<div class="qd-placeholder">No recurring problems in the last 30 days.</div>'
-          : recResult.groups.slice(0, 5).map(g => `
-              <div class="qd-attention-item">
-                <span>${escapeHtml(g.line)} · ${escapeHtml(g.model)} · ${escapeHtml(g.defectType)}</span>
-                <span class="qd-attention-meta">${g.distinctDates}d · ${fmt(g.totalQty)} pcs</span>
-              </div>`).join('')}
-      <a class="qd-link-btn" href="scrap-detail.html">View in Scrap Detail →</a>
-    </div>`);
+    parts.push(`
+      <div class="qd-dashboard-attention-block">
+        <div class="qd-dashboard-attention-head">
+          <div class="qd-dashboard-attention-title">
+            <span class="qd-dashboard-attention-dot blue"></span>
+            Recurring Problems${recResult.error ? '' : ` <span class="qd-dashboard-attention-count">${recResult.groups.length}</span>`}
+          </div>
+          <a class="qd-link-btn" href="scrap-detail.html">View in Scrap Detail →</a>
+        </div>
+        ${recResult.error
+          ? '<div class="qd-placeholder">Could not load recurring problems.</div>'
+          : recResult.groups.length === 0
+            ? '<div class="qd-placeholder">No recurring problems in the last 30 days.</div>'
+            : `<div class="qd-table-scroll"><table class="qd-datatable qd-dashboard-table">
+                <thead><tr><th>#</th><th>Defect / Issue</th><th>Last Seen</th><th>Qty</th></tr></thead>
+                <tbody>${recResult.groups.slice(0, 5).map((g, i) => `
+                  <tr>
+                    <td class="num">${i + 1}</td>
+                    <td>${escapeHtml(g.line)} &middot; ${escapeHtml(g.model)} &middot; ${escapeHtml(g.defectType)}</td>
+                    <td>${escapeHtml(daysAgoLabel(g.dates[g.dates.length - 1]))}</td>
+                    <td class="num">${fmt(g.totalQty)}</td>
+                  </tr>`).join('')}</tbody>
+              </table></div>`}
+      </div>`);
 
-    parts.push(`<div class="qd-attention-block">
-      <div class="qd-attention-label">Improvement Records${!impResult.error ? ` <span class="qd-attention-count">${impResult.total}</span>` : ''}</div>
-      ${impResult.error
-        ? '<div class="qd-placeholder">Could not load improvement records.</div>'
-        : impResult.total === 0
-          ? '<div class="qd-placeholder">No improvement records yet.</div>'
-          : `<div class="qd-status-breakdown">${IMPROVEMENT_STATUSES.map(s => `
-              <div class="qd-status-chip"><div class="count">${impResult.counts[s] || 0}</div><div class="label">${escapeHtml(s)}</div></div>`).join('')}</div>`}
-      <a class="qd-link-btn" href="improvement.html">View all →</a>
-    </div>`);
+    parts.push(`
+      <div class="qd-dashboard-attention-block">
+        <div class="qd-dashboard-attention-head">
+          <div class="qd-dashboard-attention-title">
+            <span class="qd-dashboard-attention-dot blue"></span>
+            Improvement Records${!impResult.error ? ` <span class="qd-dashboard-attention-count">${impResult.total}</span>` : ''}
+          </div>
+          <a class="qd-link-btn" href="improvement.html">View in Improvement →</a>
+        </div>
+        ${impResult.error
+          ? '<div class="qd-placeholder">Could not load improvement records.</div>'
+          : impResult.total === 0
+            ? '<div class="qd-placeholder">No improvement records yet.</div>'
+            : `<div class="qd-dashboard-improvement-stats">${IMPROVEMENT_STATUSES.map(s => `
+                <div class="qd-dashboard-improvement-stat ${statusAccentClass(s)}"><div class="count">${impResult.counts[s] || 0}</div><div class="label">${escapeHtml(s)}</div></div>`).join('')}</div>`}
+      </div>`);
 
     container.innerHTML = parts.join('');
+  }
+
+  // Purely a visual accent choice (not new business logic) matching the
+  // mockup's per-status coloring; the status VALUES themselves are still
+  // only ever IMPROVEMENT_STATUSES, nothing invented.
+  function statusAccentClass(status) {
+    if (status === 'Controlled') return 'green';
+    if (status === 'Not Effective') return 'amber';
+    if (status === 'Recurring') return 'red';
+    return 'blue'; // Monitoring
   }
 
   // ---- Event wiring (top filters) ---------------------------------------------------
@@ -641,6 +704,26 @@
     $('trendRange').querySelectorAll('button').forEach(b => b.classList.toggle('active', b === btn));
     renderTrends();
   });
+
+  // Refresh button: just re-runs the existing render() pipeline on
+  // demand — no new fetch, no new adapter call, purely a convenience
+  // trigger for the same data flow the filters already use.
+  $('refreshBtn').addEventListener('click', () => { render(); });
+
+  // ---- Mobile sidebar drawer (UI-only — no data/business logic) ---------
+  // Dashboard-only; the sidebar itself replaces the shared top nav on
+  // this page only (see index.html comment) — this wiring never touches
+  // nav.js or any other page.
+  (function wireMobileSidebar() {
+    const sidebar = $('dashboardSidebar');
+    const toggle = $('dashboardMobileToggle');
+    const overlay = $('dashboardSidebarOverlay');
+    if (!sidebar || !toggle || !overlay) return;
+    const open = () => { sidebar.classList.add('open'); overlay.classList.add('open'); };
+    const close = () => { sidebar.classList.remove('open'); overlay.classList.remove('open'); };
+    toggle.addEventListener('click', () => sidebar.classList.contains('open') ? close() : open());
+    overlay.addEventListener('click', close);
+  })();
 
   // ---- Boot ---------------------------------------------------------------
   // renderAttentionRequired() is called from inside render() itself now
