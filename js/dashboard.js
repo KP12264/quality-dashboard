@@ -547,15 +547,6 @@
     if (existingEmpty) existingEmpty.remove();
 
     const hasMeaningfulData = points.some(p => p.production > 0 || p.scrap > 0);
-    // TEMPORARY DIAGNOSTIC — remove once the live Scrap Trend empty-state
-    // behavior is confirmed. Prints the exact trend points this function
-    // received (value + JS type), so a "chart shown although it looks
-    // empty" report can be traced to real data instead of guessed at.
-    console.log('[Scrap Trend debug] range days =', state.trendRangeDays, '| hasMeaningfulData =', hasMeaningfulData);
-    console.table(points.map(p => ({
-      date: p.date, production: p.production, scrap: p.scrap, scrapRatePct: p.scrapRatePct,
-      productionType: typeof p.production, scrapType: typeof p.scrap
-    })));
     if (!hasMeaningfulData) {
       if (scrapTrendChart) { scrapTrendChart.destroy(); scrapTrendChart = null; }
       holder.style.display = 'none';
