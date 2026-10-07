@@ -34,7 +34,8 @@
     date: ProductionDataAdapter.toDateStr(new Date()),
     shift: 'all',   // 'all' | 'DAY' | 'NIGHT'
     line: 'all',    // 'all' | 'A' | 'B' | 'C'
-    trendRangeDays: 7
+    trendRangeDays: 7,
+    trendMode: 'days'   // 'days' = last N days (7); 'month' = 1st of the SELECTED Date's month through the selected Date
   };
 
   let trendChart = null;
@@ -484,10 +485,24 @@
 
   // ---- Trends ---------------------------------------------------------
 
+  // "This Month" = the calendar month of the Dashboard's selected Date
+  // (state.date), from the 1st through the selected day — NOT the device's
+  // current month. Pure string arithmetic on 'YYYY-MM-DD' (no Date object,
+  // so no timezone drift): 2026-10-07 -> 2026-10-01 … 2026-10-07. One
+  // entry per day, so zero-scrap days are preserved as daily points.
+  function monthToDateDates(dateStr) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr || '');
+    if (!m) return ProductionDataAdapter.dateRange(dateStr, 7);
+    const day = parseInt(m[3], 10);
+    return Array.from({ length: day }, (_, i) => `${m[1]}-${m[2]}-${String(i + 1).padStart(2, '0')}`);
+  }
+
   async function renderTrends() {
     if (window.qdFirebaseError) { renderScrapTrend([]); return; }
 
-    const dates = ProductionDataAdapter.dateRange(state.date, state.trendRangeDays);
+    const dates = state.trendMode === 'month'
+      ? monthToDateDates(state.date)
+      : ProductionDataAdapter.dateRange(state.date, state.trendRangeDays);
     const lineCodes = activeLines();
     let productionResult, scrapResult;
     try {
@@ -562,7 +577,12 @@
     holder.style.display = '';
 
     if (typeof Chart === 'undefined') return;
-    const labels = points.map(p => p.date.slice(5));
+    // 7 Days: unchanged ('MM-DD' labels, default ticks). This Month: every
+    // daily point is kept and labelled with its full date (so the tooltip
+    // title is the exact date); only the x-axis TICK text is shortened to
+    // the day number, with auto-skip so ~31 labels never overlap.
+    const isMonth = state.trendMode === 'month';
+    const labels = points.map(p => isMonth ? p.date : p.date.slice(5));
     const scrapQty = points.map(p => p.scrap);
     const rate = points.map(p => p.scrapRatePct);
 
@@ -578,7 +598,10 @@
       interaction: { mode: 'index', intersect: false },
       plugins: { legend: { display: true, labels: { boxWidth: 10, usePointStyle: true, font: { family: "'Inter', sans-serif", size: 11 } } } },
       scales: {
-        x: { grid: { display: false }, ticks: { font: { family: "'JetBrains Mono', monospace", size: 10 } } },
+        x: { grid: { display: false }, ticks: Object.assign({ font: { family: "'JetBrains Mono', monospace", size: 10 } }, isMonth ? {
+          autoSkip: true, maxRotation: 0, autoSkipPadding: 8,
+          callback: function (value) { return String(this.getLabelForValue(value)).slice(-2).replace(/^0/, ''); }
+        } : {}) },
         y: { beginAtZero: true, position: 'left', grid: { color: 'rgba(15,39,71,0.08)' }, ticks: { font: { family: "'JetBrains Mono', monospace", size: 10 } } },
         y1: { beginAtZero: true, position: 'right', grid: { display: false }, ticks: { font: { family: "'JetBrains Mono', monospace", size: 10 }, callback: v => v + '%' } }
       }
@@ -747,7 +770,12 @@
   $('trendRange').addEventListener('click', (e) => {
     const btn = e.target.closest('button');
     if (!btn) return;
-    state.trendRangeDays = parseInt(btn.dataset.range, 10);
+    if (btn.dataset.range === 'month') {
+      state.trendMode = 'month';
+    } else {
+      state.trendMode = 'days';
+      state.trendRangeDays = parseInt(btn.dataset.range, 10);
+    }
     $('trendRange').querySelectorAll('button').forEach(b => b.classList.toggle('active', b === btn));
     renderTrends();
   });
