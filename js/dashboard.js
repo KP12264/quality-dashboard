@@ -168,7 +168,7 @@
     renderAttentionRequired();
 
     $('lastUpdated').textContent =
-      'Production source: Production V2 · prodV2_actualLogs (read-only) · Scrap source: scrapLogs · Last refreshed ' + new Date().toLocaleTimeString('en-US');
+      'Production V2 (read-only) · Scrap: scrapLogs · Last refreshed ' + new Date().toLocaleTimeString('en-US');
   }
 
   function renderEmpty() {
