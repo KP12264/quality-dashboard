@@ -148,14 +148,11 @@
         </div>
         <div class="qd-dashboard-kpi-label">Status</div>
         <div class="qd-status-pill" id="kpiStatus">&ndash;</div>
-        <div class="qd-dashboard-kpi-unit" id="kpiShiftBreakdown"></div>
+        <!-- Day/Night detail intentionally hidden: Scrap Target & Performance already shows it. Element kept (not removed) because renderKpis() still writes to it. -->
+        <div class="qd-dashboard-kpi-unit" id="kpiShiftBreakdown" hidden></div>
       </div>
     </section>
 
-    <div class="qd-dashboard-target-strip">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-      <span id="targetStripText"></span>
-    </div>
     <div class="qd-dashboard-target-note" id="kpiStatusNote"></div>
 
     <!-- Scrap Target & Performance (left column) + Door Line Comparison (right column) -->
@@ -163,13 +160,18 @@
       <div class="qd-dashboard-col">
 
         <section class="qd-dashboard-section">
-          <h2>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
-            Scrap Target &amp; Performance
-          </h2>
-          <div class="qd-panel-note">Each shift judged against its own &le;30 pcs target (Door A+B+C combined) &mdash; never summed across shifts.</div>
+          <div class="qd-dashboard-section-header-row">
+            <h2>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+              Scrap Target &amp; Performance
+            </h2>
+            <span class="qd-dashboard-target-rule">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              <span id="targetStripText"></span>
+            </span>
+          </div>
           <div class="qd-table-scroll">
-            <table class="qd-datatable qd-dashboard-table" id="targetPerfTable">
+            <table class="qd-datatable qd-dashboard-table qd-dashboard-table-compact" id="targetPerfTable">
               <thead><tr><th>Shift</th><th>Actual Scrap</th><th>Target</th><th>Gap</th><th>Status</th></tr></thead>
               <tbody id="targetPerfTableBody"></tbody>
             </table>
@@ -187,8 +189,8 @@
               <button data-range="30">30 Days</button>
             </div>
           </div>
-          <div class="qd-panel-note">Daily Scrap Quantity and Scrap Rate %</div>
-          <div class="qd-chart-holder" id="scrapTrendChartHolder">
+          <div class="qd-panel-note">Daily Scrap Qty &amp; Rate</div>
+          <div class="qd-chart-holder qd-dashboard-trend-chart" id="scrapTrendChartHolder">
             <canvas id="scrapTrendChart"></canvas>
           </div>
         </section>
@@ -201,7 +203,7 @@
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>
             Door Line Comparison
           </h2>
-          <div class="qd-panel-note">Production, Scrap, Rate and % contribution to total Scrap &mdash; always all 3 lines, informational only.</div>
+          <div class="qd-panel-note">Production &middot; Scrap &middot; Rate &middot; Contribution</div>
           <div class="qd-dashboard-doorline-cards" id="doorLineComparison"></div>
         </section>
 
@@ -210,7 +212,7 @@
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
             Top Defects
           </h2>
-          <div class="qd-panel-note">Top 5 defect types by Scrap quantity (current Date + Shift + Line scope).</div>
+          <div class="qd-panel-note">Top 5 by Scrap Qty</div>
           <div class="qd-dashboard-pareto-layout" id="paretoLayout">
             <div class="qd-top-defects-table-wrap" id="topDefectsTableWrap">
               <div class="qd-dashboard-top-defect-row qd-dashboard-top-defect-header">

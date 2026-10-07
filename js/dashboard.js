@@ -217,8 +217,8 @@
       noteEl.textContent = '';
       breakdownEl.textContent = '';
       $('targetStripText').innerHTML = state.line === 'all'
-        ? 'Target <strong>&le;30 pcs / Shift</strong> &middot; Door A+B+C combined &middot; Day/Night evaluated separately'
-        : 'Target <strong>&le;30 pcs / Shift</strong> &middot; Door A+B+C combined &middot; Status still uses all lines';
+        ? '<strong>&le;30 pcs/shift</strong> &middot; A+B+C combined &middot; Day/Night separate'
+        : '<strong>&le;30 pcs/shift</strong> &middot; A+B+C combined &middot; Status still uses all lines';
       ['production', 'scrap', 'scrapRate', 'target', 'status'].forEach(k =>
         setKpiStatus($(`kpiSection`).querySelector(`[data-kpi="${k}"]`), 'neutral'));
       return;
@@ -254,8 +254,8 @@
     // depending on whether a single Line is selected.
     const stripEl = $('targetStripText');
     stripEl.innerHTML = state.line === 'all'
-      ? 'Target <strong>&le;30 pcs / Shift</strong> &middot; Door A+B+C combined &middot; Day/Night evaluated separately'
-      : 'Target <strong>&le;30 pcs / Shift</strong> &middot; Door A+B+C combined &middot; Status still uses all lines';
+      ? '<strong>&le;30 pcs/shift</strong> &middot; A+B+C combined &middot; Day/Night separate'
+      : '<strong>&le;30 pcs/shift</strong> &middot; A+B+C combined &middot; Status still uses all lines';
 
     // Per-shift breakdown, so "one shift went over" is never hidden inside
     // a combined number when Shift = All (or in general, whenever more
@@ -346,11 +346,12 @@
           <div class="qd-line-badge line-${p.line.code}">${p.line.code}</div>
           <div class="qd-dashboard-doorline-name">${p.line.label}</div>
         </div>
-        <div class="qd-dashboard-doorline-rows">
-          <div class="qd-dashboard-doorline-row"><span>Production</span><span class="val">${p.hasAnyDoc ? fmt(p.production) : '–'} pcs</span></div>
-          <div class="qd-dashboard-doorline-row"><span>Scrap</span><span class="val${p.scrap === 0 ? ' zero' : ' bad'}">${fmt(p.scrap)} pcs</span></div>
-          <div class="qd-dashboard-doorline-row"><span>Scrap Rate</span><span class="val">${p.rate === null ? 'N/A' : fmtPct(p.rate)}</span></div>
-          <div class="qd-dashboard-doorline-row"><span>% of Total Scrap</span><span class="val">${contribution === null ? '–' : contribution.toFixed(0) + '%'}</span></div>
+        <div class="qd-dashboard-doorline-prod"><span class="num">${p.hasAnyDoc ? fmt(p.production) : '–'}</span><span class="unit">pcs</span></div>
+        <div class="qd-dashboard-doorline-prodlabel">Production</div>
+        <div class="qd-dashboard-doorline-metrics">
+          <div><span class="k">Scrap</span><span class="v${p.scrap === 0 ? ' zero' : ' bad'}">${fmt(p.scrap)}</span></div>
+          <div><span class="k">Rate</span><span class="v">${p.rate === null ? 'N/A' : fmtPct(p.rate)}</span></div>
+          <div><span class="k">Share</span><span class="v">${contribution === null ? '–' : contribution.toFixed(0) + '%'}</span></div>
         </div>`;
       container.appendChild(card);
     });
