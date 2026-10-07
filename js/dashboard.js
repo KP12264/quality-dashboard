@@ -30,13 +30,18 @@
   const ALL_LINE_CODES = LINES.map(l => l.code);
   const ALL_SHIFT_CODES = SHIFTS.map(s => s.code);
 
+  // Date Range (inclusive). Both default to today, so first load behaves
+  // exactly like the old single-date Dashboard — a range is only loaded
+  // when the user explicitly widens it.
+  const MAX_RANGE_DAYS = 366;   // safety net against an accidental multi-year range, not a "short" limit
+  const todayStr = ProductionDataAdapter.toDateStr(new Date());
   const state = {
-    date: ProductionDataAdapter.toDateStr(new Date()),
+    dateFrom: todayStr,
+    dateTo: todayStr,
     shift: 'all',   // 'all' | 'DAY' | 'NIGHT'
-    line: 'all',    // 'all' | 'A' | 'B' | 'C'
-    trendRangeDays: 7,
-    trendMode: 'days'   // 'days' = last N days (7); 'month' = 1st of the SELECTED Date's month through the selected Date
+    line: 'all'     // 'all' | 'A' | 'B' | 'C'
   };
+  let renderSeq = 0;   // lets a newer render() discard the results of an older, slower one
 
   let trendChart = null;
   let scrapTrendChart = null;
@@ -47,6 +52,36 @@
   }
   function activeShifts() {
     return state.shift === 'all' ? ALL_SHIFT_CODES.slice() : [state.shift];
+  }
+
+  // ---- Date Range helpers (pure string/UTC arithmetic) -------------------
+  const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+  function isMultiDay() { return state.dateFrom !== state.dateTo; }
+  function daysInclusive(from, to) {
+    const [fy, fm, fd] = from.split('-').map(Number);
+    const [ty, tm, td] = to.split('-').map(Number);
+    return Math.round((Date.UTC(ty, tm - 1, td) - Date.UTC(fy, fm - 1, fd)) / 86400000) + 1;
+  }
+  // An invalid range is never fetched and never rendered, and dates are
+  // never silently swapped — the user sees exactly what is wrong.
+  function validateRange() {
+    if (!DATE_RE.test(state.dateFrom || '') || !DATE_RE.test(state.dateTo || '')) {
+      return { ok: false, message: 'Select both a From date and a To date.' };
+    }
+    if (state.dateFrom > state.dateTo) {
+      return { ok: false, message: 'From date must be on or before To date. Nothing is loaded until the range is valid.' };
+    }
+    const days = daysInclusive(state.dateFrom, state.dateTo);
+    if (days > MAX_RANGE_DAYS) {
+      return { ok: false, message: `Date range is too long (${days} days). Maximum is ${MAX_RANGE_DAYS} days.` };
+    }
+    return { ok: true, days };
+  }
+  function showRangeValidation(check) {
+    const el = $('rangeError');
+    el.hidden = check.ok;
+    el.textContent = check.ok ? '' : '⚠ ' + check.message;
+    ['dateFrom', 'dateTo'].forEach(id => $(id).classList.toggle('invalid', !check.ok));
   }
 
   // ---- Connection banner --------------------------------------------------
@@ -62,31 +97,69 @@
   // ---- Target lookup: ALWAYS per-shift (30 pcs/shift), NEVER summed across shifts ----
 
   /**
-   * getShiftEvaluations(dateStr, shiftCodes, allLinesProduction, allLinesScrap)
-   * Evaluates EACH shift independently against its OWN target (default
-   * 30 pcs, or whatever TargetAdapter/targetMaster says for that date).
-   * A 30 pcs/shift target must never become "60 pcs" just because two
-   * shifts are in view — each shift is judged only against its own 30.
+   * getRangeShiftEvaluations(dates, shiftCodes, allLinesProduction, allLinesScrap)
+   * Evaluates EVERY Date + Shift as its own independent unit, each against
+   * its OWN per-shift target (default 30 pcs, or whatever targetMaster says
+   * is effective on THAT date), using the combined Door A+B+C scrap for that
+   * Date + Shift. There is deliberately NO range-wide target: 7 days is
+   * never "7 x 30 = 210" and Day + Night is never "60" — a range just
+   * produces more independent Date + Shift results, which are then counted
+   * (and combined by OVER > WITHIN > NO DATA priority) elsewhere.
+   *
+   * A single date is simply a range of one, so the old Day/Night result is
+   * produced by the same code path.
+   *
+   * Targets are effective-dated, so each shift's targetMaster history is
+   * read ONCE (TargetAdapter.getTargetHistory, 1 query per shift for the
+   * whole range) and the per-date target is resolved here with the exact
+   * rule TargetAdapter.getTargetForShift uses: the newest record whose
+   * effectiveDate <= that date, else DEFAULT_TARGET_PER_SHIFT_PCS.
    */
-  async function getShiftEvaluations(dateStr, shiftCodes, allLinesProduction, allLinesScrap) {
-    const evals = await Promise.all(shiftCodes.map(async (shiftCode) => {
-      const shiftProduction = allLinesProduction.filter(r => r.shift === shiftCode);
-      const shiftScrap = allLinesScrap.filter(r => r.shift === shiftCode);
-      const targetResult = await TargetAdapter.getTargetForShift(window.qdDb, shiftCode, dateStr);
-      const summary = QualityAdapter.buildOverallSummary(shiftProduction, shiftScrap, targetResult.targetQty);
-      const hasData = shiftProduction.length > 0;
-      // FIX: QualityAdapter.buildOverallSummary() only checks whether a
-      // target number exists — it never checks whether this shift has
-      // any production data — so "no production, no scrap" and
-      // "production exists, scrap=0" both came back as WITHIN TARGET.
-      // Correct that here, without touching QualityAdapter itself:
-      // no production data for this shift means NO DATA, full stop,
-      // regardless of what the raw scrap-vs-target comparison says.
-      // When hasData is true, QualityAdapter's own WITHIN/OVER
-      // determination is used exactly as before.
-      const status = hasData ? summary.status : 'NO DATA';
-      return { shiftCode, label: shiftLabel(shiftCode), hasData, ...summary, status };
+  async function getRangeShiftEvaluations(dates, shiftCodes, allLinesProduction, allLinesScrap) {
+    const histories = {};
+    await Promise.all(shiftCodes.map(async (shiftCode) => {
+      try {
+        histories[shiftCode] = await TargetAdapter.getTargetHistory(window.qdDb, shiftCode);
+      } catch (e) {
+        console.error('Quality Dashboard: failed to read targetMaster for shift', shiftCode, e);
+        histories[shiftCode] = null;   // same fallback TargetAdapter uses: the default target
+      }
     }));
+    const targetFor = (shiftCode, dateStr) => {
+      const history = histories[shiftCode];
+      const applicable = history && history.find(r => r.effectiveDate && r.effectiveDate <= dateStr);
+      return applicable ? applicable.targetQty : (DEFAULT_TARGET_PER_SHIFT_PCS[shiftCode] || 0);
+    };
+    const bucket = (records) => {
+      const m = new Map();
+      records.forEach(r => {
+        const k = `${r.date}|${r.shift}`;
+        if (!m.has(k)) m.set(k, []);
+        m.get(k).push(r);
+      });
+      return m;
+    };
+    const productionBy = bucket(allLinesProduction);
+    const scrapBy = bucket(allLinesScrap);
+
+    const evals = [];
+    dates.forEach(dateStr => {
+      shiftCodes.forEach(shiftCode => {
+        const key = `${dateStr}|${shiftCode}`;
+        const shiftProduction = productionBy.get(key) || [];
+        const shiftScrap = scrapBy.get(key) || [];
+        const summary = QualityAdapter.buildOverallSummary(shiftProduction, shiftScrap, targetFor(shiftCode, dateStr));
+        const hasData = shiftProduction.length > 0;
+        // QualityAdapter.buildOverallSummary() only checks that a target
+        // number exists, never that this shift has production data — so
+        // "no production, no scrap" and "production exists, scrap=0" both
+        // came back WITHIN TARGET. Corrected here (QualityAdapter itself
+        // untouched): no production for this Date + Shift is NO DATA,
+        // regardless of the raw scrap-vs-target comparison.
+        const status = hasData ? summary.status : 'NO DATA';
+        evals.push({ date: dateStr, shiftCode, label: shiftLabel(shiftCode), hasData, ...summary, status });
+      });
+    });
     return evals;
   }
 
@@ -98,7 +171,23 @@
   // ---- Main render ----------------------------------------------------
 
   async function render() {
-    $('dateFilter').value = state.date;
+    const seq = ++renderSeq;
+    $('dateFrom').value = state.dateFrom;
+    $('dateTo').value = state.dateTo;
+
+    // Validate BEFORE touching Firestore: an invalid range is neither
+    // fetched nor rendered (and bumping renderSeq above also discards any
+    // slower render still in flight for the previous, valid range).
+    const check = validateRange();
+    showRangeValidation(check);
+    if (!check.ok) {
+      renderEmpty();
+      // Attention Required is fetched/rendered separately, so clear it too
+      // — nothing from the previous (valid) range should linger on screen.
+      $('attentionSummary').innerHTML = '<div class="qd-placeholder">Select a valid date range to see recurring problems.</div>';
+      return;
+    }
+    const scopeWord = isMultiDay() ? 'date range' : 'date';
 
     if (window.qdFirebaseError) {
       showBanner('error', '⚠ ' + window.qdFirebaseError + ' — data cannot be shown until this is resolved.');
@@ -106,67 +195,70 @@
       return;
     }
 
-    // Always fetch Production + Scrap for ALL lines (Target Status needs
-    // the combined A+B+C total PER SHIFT, and Shift Performance needs
-    // all lines too); the Line filter is applied client-side afterwards
-    // for the displayed KPI numbers and the by-Line/by-Model/trend panels.
+    // ONE load for the whole range, then everything below is derived from
+    // it in memory (KPIs, target evaluation, Door Line, Pareto, Trend,
+    // Recurring Problems): Production = one document read per date/line/
+    // shift (the same reads the old 30-day trend did), Scrap = ONE range
+    // query. All lines are loaded (Target Status needs combined A+B+C per
+    // Date + Shift); the Line filter is applied client-side afterwards.
+    const dates = ProductionDataAdapter.dateRange(state.dateTo, check.days);
     let productionResult, scrapResult;
     try {
       [productionResult, scrapResult] = await Promise.all([
         ProductionDataAdapter.getProductionData(window.qdDb, {
-          dates: [state.date], lines: ALL_LINE_CODES, shifts: activeShifts()
+          dates, lines: ALL_LINE_CODES, shifts: activeShifts()
         }),
-        ScrapDataAdapter.getScrapData(window.qdDb, { startDate: state.date, endDate: state.date })
+        ScrapDataAdapter.getScrapData(window.qdDb, { startDate: state.dateFrom, endDate: state.dateTo })
       ]);
     } catch (e) {
       console.error('Quality Dashboard: failed to load dashboard data:', e);
+      if (seq !== renderSeq) return;
       showBanner('error', '⚠ Could not read data from Firestore. Nothing is shown to avoid displaying incorrect numbers. Try refreshing.');
       renderEmpty();
       return;
     }
+    if (seq !== renderSeq) return;
 
     if (productionResult.errors.length > 0) {
-      showBanner('warn', `⚠ ${productionResult.errors.length} production read${productionResult.errors.length > 1 ? 's' : ''} failed for this date — figures below may be incomplete. Try refreshing.`);
+      showBanner('warn', `⚠ ${productionResult.errors.length} production read${productionResult.errors.length > 1 ? 's' : ''} failed for this ${scopeWord} — figures below may be incomplete. Try refreshing.`);
     } else if (scrapResult.error) {
-      showBanner('warn', '⚠ Could not read scrap data for this date — scrap figures may be incomplete. Try refreshing.');
+      showBanner('warn', `⚠ Could not read scrap data for this ${scopeWord} — scrap figures may be incomplete. Try refreshing.`);
     } else {
       hideBanner();
     }
 
     const scrapInScope = scrapResult.records.filter(r => activeShifts().includes(r.shift));
 
-    // Evaluate each active shift against its OWN target (never summed).
-    const shiftEvals = await getShiftEvaluations(state.date, activeShifts(), productionResult.records, scrapInScope);
+    // Evaluate each Date + Shift on its own against its OWN target
+    // (never summed across shifts, never across days).
+    const shiftEvals = await getRangeShiftEvaluations(dates, activeShifts(), productionResult.records, scrapInScope);
+    if (seq !== renderSeq) return;
 
     // ---- Top KPI row: Production/Scrap/Rate follow the Line filter,
-    // Target Status is the worst-case across the per-shift evaluations
-    // (each shift judged against its own 30 pcs, never a summed 60).
+    // Target Status is the worst-case across every Date + Shift
+    // evaluation (OVER > WITHIN > NO DATA).
     const linesInScope = activeLines();
     const lineFilteredProduction = productionResult.records.filter(r => linesInScope.includes(r.line));
     const lineFilteredScrap = scrapInScope.filter(r => linesInScope.includes(r.line));
     renderKpis(lineFilteredProduction, lineFilteredScrap, shiftEvals);
 
-    // ---- Scrap Target & Performance: per-shift, reuses shiftEvals as-is ----
-    renderShiftTargetTable(shiftEvals);
+    // ---- Scrap Target & Performance: Day/Night table for one date,
+    // range summary + drill-down for several ----
+    renderTargetPerformance(shiftEvals, dates);
 
-    // ---- Door Line Comparison: ALWAYS all 3 lines (comparison is only
-    // meaningful across all of them), using the already-fetched
-    // date+shift-scoped records — never filtered by the Line selector,
-    // and never subject to the per-shift target individually.
+    // ---- Door Line Comparison: ALWAYS all 3 lines, aggregated over the
+    // range; never subject to the per-shift target individually. ----
     renderDoorLineComparison(productionResult.records, scrapInScope);
 
-    // ---- Pareto + Top Defects: respect Line filter, same underlying data ----
+    // ---- Pareto + Top Defects: respect Line filter, same range ----
     renderPareto(lineFilteredScrap);
     renderTopDefectsList(lineFilteredScrap);
 
-    // ---- Trends: respect Line filter ----
-    await renderTrends();
+    // ---- Scrap Trend: one daily point per date in the range (no extra fetch) ----
+    renderScrapTrend(QualityAdapter.buildDailyTrend(dates, lineFilteredProduction, lineFilteredScrap));
 
-    // ---- Attention Required: fetchRecurringProblems() uses state.date
-    // for its 30-day lookback, so this must re-run on every render() —
-    // not just once at boot — or it would stay based on whatever date
-    // was active on first load after the user changes the Date filter.
-    renderAttentionRequired();
+    // ---- Attention Required: re-runs on every render() so it follows the range ----
+    renderAttentionRequired(scrapResult);
 
     $('lastUpdated').textContent =
       'Production V2 (read-only) · Scrap: scrapLogs · Last refreshed ' + new Date().toLocaleTimeString('en-US');
@@ -174,6 +266,8 @@
 
   function renderEmpty() {
     renderKpis(null, [], []);
+    $('targetPerfSingle').hidden = false;
+    $('targetPerfRange').hidden = true;
     $('targetPerfTableBody').innerHTML = '<tr class="empty-row"><td colspan="5">No data.</td></tr>';
     $('doorLineComparison').innerHTML = '';
     renderScrapTrend([]);
@@ -196,7 +290,20 @@
     if (targets.length === 0) return '–';
     const unique = Array.from(new Set(targets));
     if (unique.length === 1) return `≤${fmt(unique[0])}`;
-    return shiftEvals.map(e => `${e.label} ≤${fmt(e.target)}`).join(' · ');
+    // (a range has one eval per Date + Shift — list each distinct shift/target pair once)
+    const seen = new Set();
+    return shiftEvals
+      .filter(e => { const k = `${e.label}|${e.target}`; if (seen.has(k)) return false; seen.add(k); return true; })
+      .map(e => `${e.label} ≤${fmt(e.target)}`).join(' · ');
+  }
+
+  // Short Target rule shown in the Scrap Target & Performance header.
+  // Same rule in both modes; the range wording just makes clear that every
+  // Date + Shift is judged on its own (never against a range-wide target).
+  function targetRuleHtml() {
+    const base = '<strong>&le;30 pcs/shift</strong> &middot; A+B+C combined &middot; ';
+    if (state.line === 'all') return base + (isMultiDay() ? 'each Date + Shift separate' : 'Day/Night separate');
+    return base + (isMultiDay() ? 'each Date + Shift separate &middot; ' : '') + 'Status still uses all lines';
   }
 
   function renderKpis(displayProductionRecords, displayScrapRecords, shiftEvals) {
@@ -217,9 +324,7 @@
       statusEl.className = 'qd-status-pill neutral';
       noteEl.textContent = '';
       breakdownEl.textContent = '';
-      $('targetStripText').innerHTML = state.line === 'all'
-        ? '<strong>&le;30 pcs/shift</strong> &middot; A+B+C combined &middot; Day/Night separate'
-        : '<strong>&le;30 pcs/shift</strong> &middot; A+B+C combined &middot; Status still uses all lines';
+      $('targetStripText').innerHTML = targetRuleHtml();
       ['production', 'scrap', 'scrapRate', 'target', 'status'].forEach(k =>
         setKpiStatus($(`kpiSection`).querySelector(`[data-kpi="${k}"]`), 'neutral'));
       return;
@@ -247,21 +352,19 @@
     } else {
       const combinedScrap = shiftEvals.reduce((s, e) => s + e.totalScrap, 0);
       const lineLabel = (LINES.find(l => l.code === state.line) || {}).label || state.line;
-      noteEl.textContent = `Target Status uses combined Scrap (Door A+B+C) = ${fmt(combinedScrap)} pcs — not just ${lineLabel}'s ${fmt(displaySummary.totalScrap)} pcs shown above.`;
+      noteEl.textContent = `Target Status uses combined Scrap (Door A+B+C) = ${fmt(combinedScrap)} pcs — not just ${lineLabel}'s ${fmt(displaySummary.totalScrap)} pcs shown above.`
+        + (isMultiDay() ? ' Each Date + Shift is judged against its own target.' : '');
     }
 
     // Short Target strip text — presentation only, same underlying rule
     // as the long version it replaced, just two compact sentences
     // depending on whether a single Line is selected.
-    const stripEl = $('targetStripText');
-    stripEl.innerHTML = state.line === 'all'
-      ? '<strong>&le;30 pcs/shift</strong> &middot; A+B+C combined &middot; Day/Night separate'
-      : '<strong>&le;30 pcs/shift</strong> &middot; A+B+C combined &middot; Status still uses all lines';
+    $('targetStripText').innerHTML = targetRuleHtml();
 
     // Per-shift breakdown, so "one shift went over" is never hidden inside
     // a combined number when Shift = All (or in general, whenever more
     // than one shift is being evaluated at once).
-    if (shiftEvals.length > 1) {
+    if (shiftEvals.length > 1 && !isMultiDay()) {
       breakdownEl.textContent = shiftEvals.map(e => {
         if (!e.hasData) return `${e.label} Shift: no data`;
         const diff = e.totalScrap - e.target;
@@ -280,7 +383,7 @@
   }
 
   // ---- Scrap Target & Performance -----------------------------------------
-  // Pure presentation of shiftEvals, already computed by getShiftEvaluations
+  // Pure presentation of shiftEvals, already computed by getRangeShiftEvaluations
   // above (same per-shift target evaluation used everywhere else on this
   // page) — no new target calculation here, just a clearer table view:
   // Shift | Actual Scrap | Target | Gap | Status.
@@ -310,11 +413,53 @@
     }).join('');
   }
 
+  // Multi-day: replace the 2-row Day/Night table with a COUNT of the
+  // independent Date + Shift results, plus a drill-down listing each one.
+  // Nothing here is a range target — every row keeps its own ≤30 target.
+  const MONTH_ABBR = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+  function renderTargetPerformance(shiftEvals, dates) {
+    const single = $('targetPerfSingle');
+    const range = $('targetPerfRange');
+    if (!isMultiDay()) {
+      single.hidden = false;
+      range.hidden = true;
+      renderShiftTargetTable(shiftEvals);
+      return;
+    }
+    single.hidden = true;
+    range.hidden = false;
+
+    const count = status => shiftEvals.filter(e => e.status === status).length;
+    const within = count('WITHIN TARGET');
+    const over = count('OVER TARGET');
+    const noData = count('NO DATA');
+    const evaluated = within + over;   // valid shifts = those with production data
+
+    $('targetPerfRangeSummary').innerHTML = `
+      <div class="qd-dashboard-range-stat good"><div class="num">${fmt(within)}</div><div class="lbl">Shifts Within</div></div>
+      <div class="qd-dashboard-range-stat bad"><div class="num">${fmt(over)}</div><div class="lbl">Shifts Over</div></div>
+      <div class="qd-dashboard-range-stat neutral"><div class="num">${fmt(noData)}</div><div class="lbl">No Data</div></div>
+      <div class="qd-dashboard-range-stat total"><div class="num">${fmt(evaluated)}</div><div class="lbl">Total Evaluated</div></div>`;
+
+    const spansYears = dates[0].slice(0, 4) !== dates[dates.length - 1].slice(0, 4);
+    const fmtDay = d => `${d.slice(8)} ${MONTH_ABBR[parseInt(d.slice(5, 7), 10) - 1]}${spansYears ? ' ' + d.slice(0, 4) : ''}`;
+    $('targetPerfDetailBody').innerHTML = shiftEvals.map(e => {
+      const statusClass = e.status === 'WITHIN TARGET' ? 'good' : e.status === 'OVER TARGET' ? 'bad' : 'neutral';
+      const pill = `<span class="qd-status-pill ${statusClass} qd-status-pill-sm">${escapeHtml(e.status)}</span>`;
+      if (!e.hasData) {
+        return `<tr><td>${fmtDay(e.date)}</td><td>${escapeHtml(e.label)}</td><td class="num">—</td><td class="num">≤${fmt(e.target)}</td><td class="num">—</td><td>${pill}</td></tr>`;
+      }
+      const gap = e.totalScrap - e.target;
+      return `<tr><td>${fmtDay(e.date)}</td><td>${escapeHtml(e.label)}</td><td class="num">${fmt(e.totalScrap)}</td><td class="num">≤${fmt(e.target)}</td><td class="num" style="color:${gap > 0 ? 'var(--red)' : 'var(--green)'};font-weight:700;">${(gap > 0 ? '+' : '') + fmt(gap)}</td><td>${pill}</td></tr>`;
+    }).join('');
+  }
+
   // ---- Door Line Comparison -------------------------------------------
   // Informational only — always compares all 3 lines regardless of the
   // top Line filter (comparison is meaningless with only one line shown).
   // The ≤30pcs/shift target is NEVER applied per-line here, only the
-  // combined A+B+C total (enforced elsewhere, in getShiftEvaluations /
+  // combined A+B+C total (enforced elsewhere, in getRangeShiftEvaluations /
   // renderKpis / renderShiftTargetTable) — this section adds Scrap Rate
   // and % contribution to total scrap on top of the same Production/
   // Scrap numbers the old Line Performance cards already showed.
@@ -373,7 +518,7 @@
     let byModelResult;
     try {
       byModelResult = await ProductionDataAdapter.getProductionDataByModel(window.qdDb, {
-        dates: [state.date], lines: lineCodes, shifts: activeShifts()
+        dates: [state.dateTo], lines: lineCodes, shifts: activeShifts()
       });
     } catch (e) {
       console.error('Quality Dashboard: by-model fetch failed:', e);
@@ -485,50 +630,12 @@
 
   // ---- Trends ---------------------------------------------------------
 
-  // "This Month" = the calendar month of the Dashboard's selected Date
-  // (state.date), from the 1st through the selected day — NOT the device's
-  // current month. Pure string arithmetic on 'YYYY-MM-DD' (no Date object,
-  // so no timezone drift): 2026-10-07 -> 2026-10-01 … 2026-10-07. One
-  // entry per day, so zero-scrap days are preserved as daily points.
-  function monthToDateDates(dateStr) {
-    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr || '');
-    if (!m) return ProductionDataAdapter.dateRange(dateStr, 7);
-    const day = parseInt(m[3], 10);
-    return Array.from({ length: day }, (_, i) => `${m[1]}-${m[2]}-${String(i + 1).padStart(2, '0')}`);
-  }
+  // Scrap Trend has no range buttons of its own any more: renderScrapTrend()
+  // is fed one daily point per date of the selected Date Range, built in
+  // render() from the data already loaded for the whole page (no extra
+  // fetch), with the same Line + Shift filtering as the KPIs.
 
-  async function renderTrends() {
-    if (window.qdFirebaseError) { renderScrapTrend([]); return; }
-
-    const dates = state.trendMode === 'month'
-      ? monthToDateDates(state.date)
-      : ProductionDataAdapter.dateRange(state.date, state.trendRangeDays);
-    const lineCodes = activeLines();
-    let productionResult, scrapResult;
-    try {
-      [productionResult, scrapResult] = await Promise.all([
-        ProductionDataAdapter.getProductionData(window.qdDb, { dates, lines: lineCodes, shifts: activeShifts() }),
-        ScrapDataAdapter.getScrapData(window.qdDb, { startDate: dates[0], endDate: dates[dates.length - 1] })
-      ]);
-    } catch (e) {
-      console.error('Quality Dashboard: trend fetch failed:', e);
-      renderScrapTrend([]);
-      return;
-    }
-
-    const scrapInScope = scrapResult.records.filter(r => activeShifts().includes(r.shift) && lineCodes.includes(r.line));
-    const trend = QualityAdapter.buildDailyTrend(dates, productionResult.records, scrapInScope);
-
-    // Production Trend is no longer a major panel on the executive
-    // Dashboard (per design) — renderTrend()/trendChart below are kept
-    // defined but intentionally unused, not deleted, in case a future
-    // page wants the same production-only line chart. Scrap Trend still
-    // needs productionResult for its Scrap Rate % line, so that fetch
-    // above is unchanged.
-    renderScrapTrend(trend);
-  }
-
-  // NOTE: no longer called from renderTrends() above — the standalone
+  // NOTE: no longer called from anywhere — the standalone
   // Production Trend panel was removed from the executive Dashboard
   // layout per the redesign. Kept here, unmodified, since the function
   // (and the trendChart variable below) may still be useful elsewhere.
@@ -577,12 +684,15 @@
     holder.style.display = '';
 
     if (typeof Chart === 'undefined') return;
-    // 7 Days: unchanged ('MM-DD' labels, default ticks). This Month: every
-    // daily point is kept and labelled with its full date (so the tooltip
-    // title is the exact date); only the x-axis TICK text is shortened to
-    // the day number, with auto-skip so ~31 labels never overlap.
-    const isMonth = state.trendMode === 'month';
-    const labels = points.map(p => isMonth ? p.date : p.date.slice(5));
+    // Every daily point is kept and labelled with its FULL date, so the
+    // tooltip title is always the exact date. Only the x-axis TICK text is
+    // shortened: 'MM-DD' for short ranges (<= 7 points, as before), the
+    // bare day number when a longer range stays inside one month, 'MM-DD'
+    // when it crosses months — and, for long ranges, labels (never data
+    // points) are auto-skipped so they cannot overlap.
+    const longRange = points.length > 7;
+    const sameMonth = points.every(p => p.date.slice(0, 7) === points[0].date.slice(0, 7));
+    const labels = points.map(p => p.date);
     const scrapQty = points.map(p => p.scrap);
     const rate = points.map(p => p.scrapRatePct);
 
@@ -598,10 +708,13 @@
       interaction: { mode: 'index', intersect: false },
       plugins: { legend: { display: true, labels: { boxWidth: 10, usePointStyle: true, font: { family: "'Inter', sans-serif", size: 11 } } } },
       scales: {
-        x: { grid: { display: false }, ticks: Object.assign({ font: { family: "'JetBrains Mono', monospace", size: 10 } }, isMonth ? {
-          autoSkip: true, maxRotation: 0, autoSkipPadding: 8,
-          callback: function (value) { return String(this.getLabelForValue(value)).slice(-2).replace(/^0/, ''); }
-        } : {}) },
+        x: { grid: { display: false }, ticks: Object.assign({
+          font: { family: "'JetBrains Mono', monospace", size: 10 },
+          callback: function (value) {
+            const d = String(this.getLabelForValue(value));
+            return (longRange && sameMonth) ? d.slice(-2).replace(/^0/, '') : d.slice(5);
+          }
+        }, longRange ? { autoSkip: true, maxRotation: 0, autoSkipPadding: 8 } : {}) },
         y: { beginAtZero: true, position: 'left', grid: { color: 'rgba(15,39,71,0.08)' }, ticks: { font: { family: "'JetBrains Mono', monospace", size: 10 } } },
         y1: { beginAtZero: true, position: 'right', grid: { display: false }, ticks: { font: { family: "'JetBrains Mono', monospace", size: 10 }, callback: v => v + '%' } }
       }
@@ -657,14 +770,24 @@
     }
   }
 
-  async function fetchRecurringProblems() {
+  // Single date (From = To): unchanged — the existing 30-day lookback ending
+  // at that date. Several dates: the selected range itself, using the scrap
+  // render() already loaded for the whole page (no extra query); a problem
+  // still has to occur on RECURRING_THRESHOLD_DISTINCT_DATES different days
+  // inside that range to count as recurring.
+  async function fetchRecurringProblems(rangeScrapResult) {
     if (window.qdFirebaseError) return { error: true };
     try {
-      const lookbackDates = ProductionDataAdapter.dateRange(state.date, 30);
+      if (isMultiDay()) {
+        if (!rangeScrapResult || rangeScrapResult.error) return { error: true };
+        const groups = QualityAdapter.buildRecurringProblems(rangeScrapResult.records, RECURRING_THRESHOLD_DISTINCT_DATES).filter(g => g.recurring);
+        return { error: false, groups, scope: 'range' };
+      }
+      const lookbackDates = ProductionDataAdapter.dateRange(state.dateTo, 30);
       const scrapResult = await ScrapDataAdapter.getScrapData(window.qdDb, { startDate: lookbackDates[0], endDate: lookbackDates[lookbackDates.length - 1] });
       if (scrapResult.error) return { error: true };
       const groups = QualityAdapter.buildRecurringProblems(scrapResult.records, RECURRING_THRESHOLD_DISTINCT_DATES).filter(g => g.recurring);
-      return { error: false, groups };
+      return { error: false, groups, scope: '30d' };
     } catch (e) {
       console.error('Quality Dashboard: failed to load recurring problems:', e);
       return { error: true };
@@ -674,22 +797,24 @@
   // "Last Seen" is a real derived value — the most recent entry in
   // buildRecurringProblems()'s own `dates` array (sorted ascending), not
   // an invented field — expressed relative to the Dashboard's currently
-  // selected Date (state.date), same reference point the rest of the
-  // page uses.
+  // selected range's To date (state.dateTo), same reference point the
+  // rest of the page uses.
   function daysAgoLabel(dateStr) {
     const target = new Date(dateStr + 'T00:00:00');
-    const ref = new Date(state.date + 'T00:00:00');
+    const ref = new Date(state.dateTo + 'T00:00:00');
     const diffDays = Math.round((ref - target) / 86400000);
     if (diffDays <= 0) return 'today';
     if (diffDays === 1) return '1d ago';
     return diffDays + 'd ago';
   }
 
-  async function renderAttentionRequired() {
+  async function renderAttentionRequired(rangeScrapResult) {
+    const seq = renderSeq;
     const container = $('attentionSummary');
     container.innerHTML = '<div class="qd-placeholder">Loading…</div>';
 
-    const [impResult, recResult] = await Promise.all([fetchImprovementStatusCounts(), fetchRecurringProblems()]);
+    const [impResult, recResult] = await Promise.all([fetchImprovementStatusCounts(), fetchRecurringProblems(rangeScrapResult)]);
+    if (seq !== renderSeq) return;   // a newer render() owns this panel now
     const parts = [];
 
     parts.push(`
@@ -704,7 +829,12 @@
         ${recResult.error
           ? '<div class="qd-placeholder">Could not load recurring problems.</div>'
           : recResult.groups.length === 0
-            ? '<div class="qd-placeholder">No recurring problems in the last 30 days.</div>'
+            ? `<div class="qd-placeholder">${
+                recResult.scope === 'range'
+                  ? (daysInclusive(state.dateFrom, state.dateTo) < RECURRING_THRESHOLD_DISTINCT_DATES
+                      ? `Range is shorter than ${RECURRING_THRESHOLD_DISTINCT_DATES} days — a recurring problem needs ${RECURRING_THRESHOLD_DISTINCT_DATES}+ different days.`
+                      : 'No recurring problems in this date range.')
+                  : 'No recurring problems in the last 30 days.'}</div>`
             : `<div class="qd-table-scroll"><table class="qd-datatable qd-dashboard-table">
                 <thead><tr><th>#</th><th>Defect / Issue</th><th>Last Seen</th><th>Qty</th></tr></thead>
                 <tbody>${recResult.groups.slice(0, 5).map((g, i) => `
@@ -749,7 +879,15 @@
 
   // ---- Event wiring (top filters) ---------------------------------------------------
 
-  $('dateFilter').addEventListener('change', () => { state.date = $('dateFilter').value; render(); });
+  // Either date changing re-runs render(); an invalid combination is
+  // reported by render() itself and never fetched.
+  function onDateRangeChange() {
+    state.dateFrom = $('dateFrom').value;
+    state.dateTo = $('dateTo').value;
+    render();
+  }
+  $('dateFrom').addEventListener('change', onDateRangeChange);
+  $('dateTo').addEventListener('change', onDateRangeChange);
 
   $('shiftFilter').addEventListener('click', (e) => {
     const btn = e.target.closest('button');
@@ -765,19 +903,6 @@
     state.line = btn.dataset.line;
     $('lineFilter').querySelectorAll('button').forEach(b => b.classList.toggle('active', b === btn));
     render();
-  });
-
-  $('trendRange').addEventListener('click', (e) => {
-    const btn = e.target.closest('button');
-    if (!btn) return;
-    if (btn.dataset.range === 'month') {
-      state.trendMode = 'month';
-    } else {
-      state.trendMode = 'days';
-      state.trendRangeDays = parseInt(btn.dataset.range, 10);
-    }
-    $('trendRange').querySelectorAll('button').forEach(b => b.classList.toggle('active', b === btn));
-    renderTrends();
   });
 
   // Refresh button: just re-runs the existing render() pipeline on

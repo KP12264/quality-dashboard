@@ -1877,3 +1877,59 @@ body{
 @media (max-width:760px){
   .qd-dashboard-trend-chart{height:270px;}
 }
+
+/* ---------------- Date Range filter + multi-day Target & Performance ---------------- */
+.qd-dashboard-section [hidden]{display:none;}
+.qd-dashboard-daterange{display:flex;align-items:center;gap:6px;}
+.qd-dashboard-daterange input[type="date"]{width:128px;}
+.qd-dashboard-daterange-arrow{color:var(--muted-soft);font-size:13px;line-height:1;}
+.qd-dashboard-daterange input.invalid{color:var(--red);outline:1px solid var(--red);outline-offset:2px;border-radius:4px;}
+.qd-dashboard-range-error{
+  margin:-4px 0 10px;
+  padding:6px 12px;
+  border:1px solid rgba(220,38,38,0.35);
+  background:var(--red-dim);
+  color:var(--red);
+  border-radius:8px;
+  font-family:var(--font-body);
+  font-size:12px;
+  font-weight:600;
+}
+.qd-dashboard-range-summary{
+  display:grid;
+  grid-template-columns:repeat(4, minmax(0, 1fr));
+  gap:8px;
+}
+.qd-dashboard-range-stat{border-radius:10px;padding:8px 6px;text-align:center;background:var(--slate-dim);}
+.qd-dashboard-range-stat .num{
+  font-family:var(--font-display);
+  font-size:22px;
+  font-weight:700;
+  line-height:1.15;
+  color:var(--text);
+  font-variant-numeric:tabular-nums;
+}
+.qd-dashboard-range-stat .lbl{font-family:var(--font-body);font-size:10.5px;color:var(--muted);margin-top:1px;}
+.qd-dashboard-range-stat.good{background:var(--green-dim);}
+.qd-dashboard-range-stat.good .num{color:var(--green);}
+.qd-dashboard-range-stat.bad{background:var(--red-dim);}
+.qd-dashboard-range-stat.bad .num{color:var(--red);}
+.qd-dashboard-range-stat.neutral .num{color:var(--muted);}
+.qd-dashboard-range-stat.total{background:var(--blue-dim);}
+.qd-dashboard-range-stat.total .num{color:var(--navy);}
+.qd-dashboard-range-details{margin-top:8px;}
+.qd-dashboard-range-details > summary{
+  cursor:pointer;
+  font-family:var(--font-body);
+  font-size:11.5px;
+  font-weight:600;
+  color:var(--blue);
+  padding:2px 0;
+}
+.qd-dashboard-range-scroll{max-height:240px;overflow:auto;margin-top:6px;}
+.qd-dashboard-range-scroll thead th{position:sticky;top:0;z-index:1;}
+.qd-dashboard-range-details .qd-dashboard-table-compact thead th:nth-child(2){text-align:left;}
+.qd-dashboard-range-details .qd-dashboard-table-compact thead th:nth-child(5){text-align:right;}
+@media (max-width:480px){
+  .qd-dashboard-range-summary{grid-template-columns:repeat(2, minmax(0, 1fr));}
+}

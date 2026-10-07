@@ -81,11 +81,15 @@
 
     <div class="qd-dashboard-filters">
       <div class="qd-dashboard-filter-card">
-        <label for="dateFilter">
+        <label for="dateFrom">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-          Date
+          Date Range
         </label>
-        <input type="date" id="dateFilter">
+        <div class="qd-dashboard-daterange">
+          <input type="date" id="dateFrom" aria-label="From date">
+          <span class="qd-dashboard-daterange-arrow" aria-hidden="true">&rarr;</span>
+          <input type="date" id="dateTo" aria-label="To date">
+        </div>
       </div>
       <div class="qd-dashboard-filter-card">
         <label>Shift</label>
@@ -105,6 +109,8 @@
         </div>
       </div>
     </div>
+
+    <div id="rangeError" class="qd-dashboard-range-error" role="alert" hidden></div>
 
     <div id="connectionBanner" class="qd-banner" style="display:none;"></div>
 
@@ -170,11 +176,26 @@
               <span id="targetStripText"></span>
             </span>
           </div>
-          <div class="qd-table-scroll">
+          <div class="qd-table-scroll" id="targetPerfSingle">
             <table class="qd-datatable qd-dashboard-table qd-dashboard-table-compact" id="targetPerfTable">
               <thead><tr><th>Shift</th><th>Actual Scrap</th><th>Target</th><th>Gap</th><th>Status</th></tr></thead>
               <tbody id="targetPerfTableBody"></tbody>
             </table>
+          </div>
+          <!-- Shown INSTEAD of the Day/Night table when From Date != To Date.
+               Every Date + Shift is evaluated on its own against its own
+               target; this panel only counts those independent results. -->
+          <div id="targetPerfRange" hidden>
+            <div class="qd-dashboard-range-summary" id="targetPerfRangeSummary"></div>
+            <details class="qd-dashboard-range-details">
+              <summary>Daily / shift detail</summary>
+              <div class="qd-table-scroll qd-dashboard-range-scroll">
+                <table class="qd-datatable qd-dashboard-table qd-dashboard-table-compact" id="targetPerfDetailTable">
+                  <thead><tr><th>Date</th><th>Shift</th><th>Actual Scrap</th><th>Target</th><th>Gap</th><th>Status</th></tr></thead>
+                  <tbody id="targetPerfDetailBody"></tbody>
+                </table>
+              </div>
+            </details>
           </div>
         </section>
 
@@ -184,10 +205,6 @@
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="14 7 21 7 21 14"/></svg>
               Scrap Trend
             </h2>
-            <div class="qd-segmented" id="trendRange">
-              <button data-range="7" class="active">7 Days</button>
-              <button data-range="month">This Month</button>
-            </div>
           </div>
           <div class="qd-panel-note">Daily Scrap Qty &amp; Rate</div>
           <div class="qd-chart-holder qd-dashboard-trend-chart" id="scrapTrendChartHolder">
