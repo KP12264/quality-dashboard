@@ -558,9 +558,9 @@
     const chartData = {
       labels,
       datasets: [
-        { type: 'bar', label: 'Qty', data: qty, backgroundColor: '#2563EB', borderRadius: 4, order: 3, yAxisID: 'y' },
-        { type: 'line', label: 'Cumulative %', data: cumulative, borderColor: '#F59E0B', borderWidth: 2, pointRadius: 3, pointBackgroundColor: '#F59E0B', fill: false, order: 2, yAxisID: 'y1' },
-        { type: 'line', label: '80%', data: eightyLine, borderColor: '#94A3B8', borderWidth: 1.5, borderDash: [6, 4], pointRadius: 0, pointHoverRadius: 0, fill: false, order: 1, yAxisID: 'y1' }
+        { type: 'bar', label: 'Qty', data: qty, backgroundColor: '#14B8A6', borderColor: '#14B8A6', borderRadius: 4, order: 3, yAxisID: 'y' },
+        { type: 'line', label: 'Cumulative %', data: cumulative, borderColor: '#2563EB', backgroundColor: '#2563EB', borderWidth: 2, pointRadius: 3, pointBackgroundColor: '#2563EB', fill: false, order: 2, yAxisID: 'y1' },
+        { type: 'line', label: '80%', data: eightyLine, borderColor: '#F59E0B', backgroundColor: '#F59E0B', borderWidth: 1.5, borderDash: [6, 4], pointRadius: 0, pointHoverRadius: 0, fill: false, order: 1, yAxisID: 'y1' }
       ]
     };
     const options = {
@@ -699,8 +699,8 @@
     const chartData = {
       labels,
       datasets: [
-        { type: 'bar', label: 'Scrap (pcs)', data: scrapQty, backgroundColor: '#DC2626', borderRadius: 4, order: 2, yAxisID: 'y' },
-        { type: 'line', label: 'Scrap Rate %', data: rate, borderColor: '#F59E0B', borderWidth: 2, pointRadius: 3, pointBackgroundColor: '#F59E0B', fill: false, order: 1, yAxisID: 'y1', spanGaps: true }
+        { type: 'bar', label: 'Scrap (pcs)', data: scrapQty, backgroundColor: '#14B8A6', borderColor: '#14B8A6', borderRadius: 4, order: 2, yAxisID: 'y' },
+        { type: 'line', label: 'Scrap Rate %', data: rate, borderColor: '#2563EB', backgroundColor: '#2563EB', borderWidth: 2, pointRadius: 3, pointBackgroundColor: '#2563EB', fill: false, order: 1, yAxisID: 'y1', spanGaps: true }
       ]
     };
     const options = {
