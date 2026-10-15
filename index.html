@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Daily Production &amp; Quality Dashboard</title>
+<title>Door Line Quality Overview</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="styles.css?v=20261015-4">
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.0/chart.umd.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
@@ -28,13 +28,13 @@
       </span>
       <div>
         <div class="qd-dashboard-sidebar-title">QUALITY<br>SYSTEM</div>
-        <div class="qd-dashboard-sidebar-subtitle">Production &amp; Scrap Management</div>
+        <div class="qd-dashboard-sidebar-subtitle">Door Line Control</div>
       </div>
     </div>
     <nav class="qd-dashboard-sidebar-nav">
       <a href="index.html" class="qd-dashboard-sidebar-link active">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-        Dashboard
+        Overview
       </a>
       <a href="scrap-entry.html" class="qd-dashboard-sidebar-link">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
@@ -57,6 +57,11 @@
         Admin
       </a>
     </nav>
+    <div class="qd-dashboard-sidebar-rule">
+      <span>Target rule</span>
+      <strong>Door A+B+C &middot; Day+Night</strong>
+      <small>&le; 50 pcs/day from 01 Oct 2026</small>
+    </div>
   </aside>
 
   <!-- Mobile-only controls: hamburger toggle + tap-away overlay. Sidebar
@@ -69,8 +74,8 @@
 
     <header class="qd-dashboard-header">
       <div class="qd-dashboard-header-left">
-        <h1>DAILY PRODUCTION &amp; QUALITY</h1>
-        <span class="qd-dashboard-subtitle">Production: read-only from existing system &nbsp;&middot;&nbsp; Scrap: recorded via Scrap Entry</span>
+        <h1>Door Line Quality Overview</h1>
+        <span class="qd-dashboard-subtitle">Scrap performance and reduction status &middot; Production V2 + Scrap Logs</span>
       </div>
       <button type="button" class="qd-dashboard-refresh" id="refreshBtn" title="Refresh now">
         <span class="qd-dashboard-refresh-ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></span>
@@ -106,6 +111,10 @@
           <button data-line="B">Door B</button>
           <button data-line="C">Door C</button>
         </div>
+      </div>
+      <div class="qd-dashboard-filter-rule">
+        <span class="qd-dashboard-filter-rule-icon" aria-hidden="true">i</span>
+        <span>Target status always uses <strong>Door A+B+C</strong> and <strong>Day+Night</strong></span>
       </div>
     </div>
 
@@ -274,6 +283,6 @@
 <script src="js/quality-adapter.js?v=20261015-3"></script>
 <script src="js/target-evaluator.js?v=20261015-3"></script>
 <script src="js/improvement-adapter.js?v=20261015-3"></script>
-<script src="js/dashboard.js?v=20261015-3"></script>
+<script src="js/dashboard.js?v=20261015-4"></script>
 </body>
 </html>
