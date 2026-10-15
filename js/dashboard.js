@@ -41,7 +41,8 @@
     shift: 'all',   // 'all' | 'DAY' | 'NIGHT'
     line: 'all'     // 'all' | 'A' | 'B' | 'C'
   };
-  let renderSeq = 0;   // lets a newer render() discard the results of an older, slower one
+  let renderSeq = 0;
+  let scrapLoadFailed = false;   // display only: lets the KPI helper text avoid claiming "no scrap" when the read failed   // lets a newer render() discard the results of an older, slower one
 
   let trendChart = null;
   let scrapTrendChart = null;
@@ -76,6 +77,10 @@
       return { ok: false, message: `Date range is too long (${days} days). Maximum is ${MAX_RANGE_DAYS} days.` };
     }
     return { ok: true, days };
+  }
+  function rangeLabelText() {
+    const f = d => `${d.slice(8)} ${MONTH_ABBR[parseInt(d.slice(5, 7), 10) - 1]} ${d.slice(0, 4)}`;
+    return state.dateFrom === state.dateTo ? f(state.dateFrom) : `${f(state.dateFrom)} – ${f(state.dateTo)}`;
   }
   function showRangeValidation(check) {
     const el = $('rangeError');
@@ -180,6 +185,8 @@
     // slower render still in flight for the previous, valid range).
     const check = validateRange();
     showRangeValidation(check);
+    $('scrapTrendRangeLabel').textContent = check.ok ? rangeLabelText() : '';
+    $('topDefectsRangeLabel').textContent = check.ok ? rangeLabelText() : '';
     if (!check.ok) {
       renderEmpty();
       // Attention Required is fetched/rendered separately, so clear it too
@@ -227,6 +234,7 @@
       hideBanner();
     }
 
+    scrapLoadFailed = !!scrapResult.error;
     const scrapInScope = scrapResult.records.filter(r => activeShifts().includes(r.shift));
 
     // Evaluate each Date + Shift on its own against its OWN target
@@ -260,15 +268,20 @@
     // ---- Attention Required: re-runs on every render() so it follows the range ----
     renderAttentionRequired(scrapResult);
 
-    $('lastUpdated').textContent =
-      'Production V2 (read-only) · Scrap: scrapLogs · Last refreshed ' + new Date().toLocaleTimeString('en-US');
+    // Same moment as before (new Date()); only the layout changed: time on line 1, date on line 2.
+    // The data-source note that used to share this chip stays in the page footer.
+    const refreshedAt = new Date();
+    $('lastUpdated').textContent = 'Last refreshed ' + refreshedAt.toLocaleTimeString('en-US') + '\n'
+      + `${String(refreshedAt.getDate()).padStart(2, '0')} ${MONTH_ABBR[refreshedAt.getMonth()]} ${refreshedAt.getFullYear()}`;
   }
 
   function renderEmpty() {
     renderKpis(null, [], []);
-    $('targetPerfSingle').hidden = false;
-    $('targetPerfRange').hidden = true;
-    $('targetPerfTableBody').innerHTML = '<tr class="empty-row"><td colspan="5">No data.</td></tr>';
+    $('targetPerfSingle').hidden = true;
+    $('targetPerfRange').hidden = false;
+    $('targetPerfRangeSummary').innerHTML = ['Shifts Within', 'Shifts Over', 'No Data', 'Total Evaluated'].map((l, i) =>
+      `<div class="qd-dashboard-range-stat ${['good', 'bad', 'neutral', 'total'][i]}"><div class="num">–</div><div class="lbl">${l}</div></div>`).join('');
+    $('targetPerfDetailBody').innerHTML = '';
     $('doorLineComparison').innerHTML = '';
     renderScrapTrend([]);
     renderPareto([]);
@@ -324,7 +337,10 @@
       statusEl.className = 'qd-status-pill neutral';
       noteEl.textContent = '';
       breakdownEl.textContent = '';
+      breakdownEl.hidden = true;
       $('targetStripText').innerHTML = targetRuleHtml();
+      $('kpiScrapUnit').textContent = '–';
+      $('kpiScrapRateUnit').textContent = '–';
       ['production', 'scrap', 'scrapRate', 'target', 'status'].forEach(k =>
         setKpiStatus($(`kpiSection`).querySelector(`[data-kpi="${k}"]`), 'neutral'));
       return;
@@ -342,6 +358,12 @@
     scrapEl.classList.remove('na');
     scrapRateEl.textContent = fmtPct(displaySummary.scrapRatePct);
     scrapRateEl.classList.remove('na');
+    // Helper text under Scrap / Scrap Rate: describes what was actually loaded
+    // (it used to be a fixed "No scrap data source yet" that contradicted real numbers).
+    $('kpiScrapUnit').textContent = scrapLoadFailed ? 'Scrap data could not be read'
+      : displayScrapRecords.length > 0 ? 'pcs' : 'No scrap recorded in this scope';
+    $('kpiScrapRateUnit').textContent = Number.isFinite(displaySummary.scrapRatePct)
+      ? 'Scrap ÷ Production' : 'No production in this scope';
     targetEl.textContent = formatTargetLabel(shiftEvals);
 
     statusEl.textContent = combinedStatus;
@@ -361,19 +383,13 @@
     // depending on whether a single Line is selected.
     $('targetStripText').innerHTML = targetRuleHtml();
 
-    // Per-shift breakdown, so "one shift went over" is never hidden inside
-    // a combined number when Shift = All (or in general, whenever more
-    // than one shift is being evaluated at once).
-    if (shiftEvals.length > 1 && !isMultiDay()) {
-      breakdownEl.textContent = shiftEvals.map(e => {
-        if (!e.hasData) return `${e.label} Shift: no data`;
-        const diff = e.totalScrap - e.target;
-        const tag = e.status === 'OVER TARGET' ? `+${fmt(diff)} OVER` : e.status === 'WITHIN TARGET' ? 'WITHIN' : 'NO DATA';
-        return `${e.label} Shift: ${fmt(e.totalScrap)}/${fmt(e.target)} pcs (${tag})`;
-      }).join('  ·  ');
-    } else {
-      breakdownEl.textContent = '';
-    }
+    // Helper under the Status pill: how many of the ALREADY-evaluated Date + Shift
+    // results are over target (a count of the same evaluations that drive the status).
+    const overCount = shiftEvals.filter(e => e.status === 'OVER TARGET').length;
+    const evaluatedCount = shiftEvals.filter(e => e.status === 'OVER TARGET' || e.status === 'WITHIN TARGET').length;
+    breakdownEl.hidden = false;
+    breakdownEl.textContent = overCount > 0 ? `${overCount} shift${overCount > 1 ? 's' : ''} over target`
+      : evaluatedCount > 0 ? 'All evaluated shifts within target' : 'No evaluated shifts';
 
     setKpiStatus($('kpiSection').querySelector('[data-kpi="production"]'), 'neutral');
     setKpiStatus($('kpiSection').querySelector('[data-kpi="scrap"]'), combinedStatus === 'OVER TARGET' ? 'bad' : 'good');
@@ -418,17 +434,25 @@
   // Nothing here is a range target — every row keeps its own ≤30 target.
   const MONTH_ABBR = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
+  let lastPerfMode = null;
+  // "View Daily / Shift Detail →" in the card header toggles the existing <details> panel.
+  function syncPerfDetailButton() {
+    const d = document.querySelector('#targetPerfRange details'), b = $('targetPerfDetailBtn');
+    if (!d || !b) return;
+    b.textContent = d.open ? 'Hide Daily / Shift Detail' : 'View Daily / Shift Detail →';
+    b.setAttribute('aria-expanded', d.open ? 'true' : 'false');
+  }   // lets the detail panel open itself once per mode change, then respect the user's toggle
   function renderTargetPerformance(shiftEvals, dates) {
-    const single = $('targetPerfSingle');
-    const range = $('targetPerfRange');
-    if (!isMultiDay()) {
-      single.hidden = false;
-      range.hidden = true;
-      renderShiftTargetTable(shiftEvals);
-      return;
-    }
-    single.hidden = true;
-    range.hidden = false;
+    // V4: the four summary cards (Within / Over / No Data / Total Evaluated) are
+    // shown for a single date AND for a range; the per-Date + Shift rows
+    // (incl. the old Day / Night rows) live in the expandable detail below them.
+    // Evaluation itself is unchanged: every Date + Shift is judged on its own.
+    $('targetPerfSingle').hidden = true;
+    $('targetPerfRange').hidden = false;
+    const perfMode = isMultiDay() ? 'range' : 'single';
+    const detailsEl = document.querySelector('#targetPerfRange details');
+    if (detailsEl && perfMode !== lastPerfMode) { detailsEl.open = perfMode === 'single'; syncPerfDetailButton(); }   // one date = only 2 rows, so show them
+    lastPerfMode = perfMode;
 
     const count = status => shiftEvals.filter(e => e.status === status).length;
     const within = count('WITHIN TARGET');
@@ -436,11 +460,13 @@
     const noData = count('NO DATA');
     const evaluated = within + over;   // valid shifts = those with production data
 
+    // Share of the EVALUATED shifts (Within + Over) — plain arithmetic on the counts above.
+    const pctOfEval = n => evaluated > 0 ? Math.round(n / evaluated * 100) + '%' : '–';
     $('targetPerfRangeSummary').innerHTML = `
-      <div class="qd-dashboard-range-stat good"><div class="num">${fmt(within)}</div><div class="lbl">Shifts Within</div></div>
-      <div class="qd-dashboard-range-stat bad"><div class="num">${fmt(over)}</div><div class="lbl">Shifts Over</div></div>
-      <div class="qd-dashboard-range-stat neutral"><div class="num">${fmt(noData)}</div><div class="lbl">No Data</div></div>
-      <div class="qd-dashboard-range-stat total"><div class="num">${fmt(evaluated)}</div><div class="lbl">Total Evaluated</div></div>`;
+      <div class="qd-dashboard-range-stat good"><div class="num">${fmt(within)}</div><div class="lbl">Shifts Within</div><div class="sub">${pctOfEval(within)}</div></div>
+      <div class="qd-dashboard-range-stat bad"><div class="num">${fmt(over)}</div><div class="lbl">Shifts Over</div><div class="sub">${pctOfEval(over)}</div></div>
+      <div class="qd-dashboard-range-stat neutral"><div class="num">${fmt(noData)}</div><div class="lbl">No Data</div><div class="sub">–</div></div>
+      <div class="qd-dashboard-range-stat total"><div class="num">${fmt(evaluated)}</div><div class="lbl">Total Evaluated</div><div class="sub">of ${fmt(within + over + noData)} shifts</div></div>`;
 
     const spansYears = dates[0].slice(0, 4) !== dates[dates.length - 1].slice(0, 4);
     const fmtDay = d => `${d.slice(8)} ${MONTH_ABBR[parseInt(d.slice(5, 7), 10) - 1]}${spansYears ? ' ' + d.slice(0, 4) : ''}`;
@@ -481,26 +507,26 @@
     const totalScrapAllLines = perLine.reduce((s, p) => s + p.scrap, 0);
     const maxScrap = Math.max(...perLine.map(p => p.scrap));
 
-    perLine.forEach(p => {
+    // Compact comparison table: Line | Production | Scrap | Scrap Rate | Share (+ proportional bar).
+    // Same per-line numbers as before; the bar is the Share value drawn to scale.
+    // The row with the highest scrap contribution is highlighted — no threshold involved.
+    const body = perLine.map(p => {
       const contribution = totalScrapAllLines > 0 ? (p.scrap / totalScrapAllLines) * 100 : null;
       const isHighest = p.scrap > 0 && p.scrap === maxScrap;
-
-      const card = document.createElement('div');
-      card.className = 'qd-dashboard-doorline-card' + (isHighest ? ' qd-dashboard-doorline-card-highest' : '');
-      card.innerHTML = `
-        <div class="qd-dashboard-doorline-head">
-          <div class="qd-line-badge line-${p.line.code}">${p.line.code}</div>
-          <div class="qd-dashboard-doorline-name">${p.line.label}</div>
-        </div>
-        <div class="qd-dashboard-doorline-prod"><span class="num">${p.hasAnyDoc ? fmt(p.production) : '–'}</span><span class="unit">pcs</span></div>
-        <div class="qd-dashboard-doorline-prodlabel">Production</div>
-        <div class="qd-dashboard-doorline-metrics">
-          <div><span class="k">Scrap</span><span class="v${p.scrap === 0 ? ' zero' : ' bad'}">${fmt(p.scrap)}</span></div>
-          <div><span class="k">Rate</span><span class="v">${p.rate === null ? 'N/A' : fmtPct(p.rate)}</span></div>
-          <div><span class="k">Share</span><span class="v">${contribution === null ? '–' : contribution.toFixed(0) + '%'}</span></div>
-        </div>`;
-      container.appendChild(card);
-    });
+      return `
+        <tr class="${isHighest ? 'is-highest' : ''}"${isHighest ? ' title="Highest share of total scrap"' : ''}>
+          <td><span class="qd-line-badge line-${p.line.code}">${p.line.code}</span><span class="qd-dashboard-doortable-name">${p.line.label}</span></td>
+          <td class="num"><b>${p.hasAnyDoc ? fmt(p.production) : '–'}</b><span class="u">pcs</span></td>
+          <td class="num scrap${p.scrap === 0 ? ' zero' : ''}"><b>${fmt(p.scrap)}</b><span class="u">pcs</span></td>
+          <td class="num rate"><b>${p.rate === null ? 'N/A' : fmtPct(p.rate)}</b></td>
+          <td><div class="qd-dashboard-doortable-share"><span class="pct">${contribution === null ? '–' : contribution.toFixed(0) + '%'}</span><span class="bar" title="Share of total scrap"><i style="width:${contribution === null ? 0 : contribution.toFixed(1)}%"></i></span></div></td>
+        </tr>`;
+    }).join('');
+    container.innerHTML = `
+      <table class="qd-datatable qd-dashboard-table qd-dashboard-doortable">
+        <thead><tr><th>Line</th><th class="num">Production</th><th class="num">Scrap</th><th class="num">Scrap Rate</th><th>Share</th></tr></thead>
+        <tbody>${body}</tbody>
+      </table>`;
   }
 
   // ---- By Model -----------------------------------------------------------
@@ -547,6 +573,49 @@
 
   // ---- Pareto defect --------------------------------------------------
 
+  // Visual-only label shortening for crowded x-axes. Cuts on grapheme
+  // boundaries (so Thai vowel/tone marks are never split); the dataset and
+  // the tooltip title always keep the FULL defect name.
+  const graphemeSegmenter = (typeof Intl !== 'undefined' && Intl.Segmenter) ? new Intl.Segmenter(undefined, { granularity: 'grapheme' }) : null;
+  function shortLabel(text, max) {
+    const t = String(text ?? '');
+    const parts = graphemeSegmenter ? Array.from(graphemeSegmenter.segment(t), x => x.segment) : Array.from(t);
+    return parts.length > max ? parts.slice(0, max - 1).join('') + '…' : t;
+  }
+  // Compact, readable tooltip shared by both dashboard charts.
+  function compactTooltip(callbacks) {
+    return {
+      backgroundColor: '#0B2540', titleColor: '#fff', bodyColor: '#EAF1FE',
+      padding: 8, cornerRadius: 6, caretSize: 5, bodySpacing: 3, titleMarginBottom: 4,
+      titleFont: { family: "'Inter', sans-serif", size: 11, weight: '600' },
+      bodyFont: { family: "'Inter', sans-serif", size: 11 },
+      usePointStyle: true, boxWidth: 7, boxHeight: 7, boxPadding: 3,
+      callbacks
+    };
+  }
+  // Draws the value above each bar (presentation only; opt-in per chart via options.plugins.valueLabels).
+  const valueLabelsPlugin = {
+    id: 'valueLabels',
+    afterDatasetsDraw(chart, args, opts) {
+      if (!opts || !opts.enabled) return;
+      const c = chart.ctx;
+      c.save(); c.font = "600 11px 'Inter', sans-serif"; c.fillStyle = '#0B2340'; c.textAlign = 'center'; c.textBaseline = 'bottom';
+      chart.data.datasets.forEach((ds, i) => {
+        if (ds.type !== 'bar') return;
+        chart.getDatasetMeta(i).data.forEach((bar, idx) => {
+          const v = ds.data[idx];
+          if (v > 0) {
+            c.lineWidth = 3; c.strokeStyle = '#FFFFFF'; c.lineJoin = 'round';   // halo keeps the number readable where the rate line crosses it
+            c.strokeText(fmt(v), bar.x, bar.y - 4);
+            c.fillText(fmt(v), bar.x, bar.y - 4);
+          }
+        });
+      });
+      c.restore();
+    }
+  };
+  const axisTitle = text => ({ display: true, text, color: '#64748B', font: { family: "'Inter', sans-serif", size: 10, weight: '500' }, padding: { top: 0, bottom: 2 } });
+
   function renderPareto(scrapRecords) {
     if (typeof Chart === 'undefined') return;
     const data = QualityAdapter.buildParetoDefects(scrapRecords);
@@ -558,20 +627,38 @@
     const chartData = {
       labels,
       datasets: [
-        { type: 'bar', label: 'Qty', data: qty, backgroundColor: '#14B8A6', borderColor: '#14B8A6', borderRadius: 4, order: 3, yAxisID: 'y' },
+        { type: 'bar', label: 'Scrap Qty', data: qty, backgroundColor: '#14B8A6', borderColor: '#14B8A6', borderRadius: 4, order: 3, yAxisID: 'y' },
         { type: 'line', label: 'Cumulative %', data: cumulative, borderColor: '#2563EB', backgroundColor: '#2563EB', borderWidth: 2, pointRadius: 3, pointBackgroundColor: '#2563EB', fill: false, order: 2, yAxisID: 'y1' },
-        { type: 'line', label: '80%', data: eightyLine, borderColor: '#F59E0B', backgroundColor: '#F59E0B', borderWidth: 1.5, borderDash: [6, 4], pointRadius: 0, pointHoverRadius: 0, fill: false, order: 1, yAxisID: 'y1' }
+        { type: 'line', label: '80% Reference', data: eightyLine, borderColor: '#F59E0B', backgroundColor: '#F59E0B', borderWidth: 1.5, borderDash: [6, 4], pointRadius: 0, pointHoverRadius: 0, fill: false, order: 1, yAxisID: 'y1' }
       ]
     };
+    // Many defects -> tilt and shorten the visible labels (never skip any, never drop data).
+    const nDefects = labels.length;
+    const tilt = nDefects > 6;
+    const maxLabelLen = nDefects > 10 ? 9 : nDefects > 6 ? 11 : 14;
     const options = {
       responsive: true,
       maintainAspectRatio: false,
+      layout: { padding: { top: 16 } },
       interaction: { mode: 'index', intersect: false },
-      plugins: { legend: { display: true, labels: { boxWidth: 10, usePointStyle: true, font: { family: "'Inter', sans-serif", size: 11 } } } },
+      plugins: {
+        legend: { display: true, align: 'end', labels: { boxWidth: 10, usePointStyle: true, font: { family: "'Inter', sans-serif", size: 11 } } },
+        valueLabels: { enabled: labels.length <= 16 },
+        tooltip: compactTooltip({
+          title: items => items.length ? labels[items[0].dataIndex] : '',   // full defect name
+          label: ctx => ctx.dataset.yAxisID === 'y1'
+            ? (ctx.dataset.label === '80% Reference' ? ' 80% reference' : ' Cumulative: ' + Number(ctx.parsed.y).toFixed(1) + '%')
+            : ' Scrap Qty: ' + fmt(ctx.parsed.y) + ' pcs'
+        })
+      },
       scales: {
-        x: { grid: { display: false }, ticks: { font: { family: "'Inter', sans-serif", size: 10 }, maxRotation: 20 } },
-        y: { beginAtZero: true, position: 'left', grid: { color: 'rgba(15,39,71,0.08)' }, ticks: { font: { family: "'JetBrains Mono', monospace", size: 10 } } },
-        y1: { beginAtZero: true, min: 0, max: 100, position: 'right', grid: { display: false }, ticks: { font: { family: "'JetBrains Mono', monospace", size: 10 }, callback: v => v + '%' } }
+        x: { grid: { display: false }, ticks: {
+          font: { family: "'Inter', sans-serif", size: 10 }, autoSkip: false,
+          maxRotation: tilt ? 40 : 0, minRotation: tilt ? 40 : 0,
+          callback: function (v) { return shortLabel(this.getLabelForValue(v), maxLabelLen); }
+        } },
+        y: { beginAtZero: true, grace: '10%', position: 'left', title: axisTitle('Scrap Qty (pcs)'), grid: { color: 'rgba(15,39,71,0.08)' }, ticks: { precision: 0, font: { family: "'JetBrains Mono', monospace", size: 10 } } },
+        y1: { beginAtZero: true, min: 0, max: 100, position: 'right', title: axisTitle('Cumulative %'), grid: { display: false }, ticks: { font: { family: "'JetBrains Mono', monospace", size: 10 }, callback: v => v + '%' } }
       }
     };
 
@@ -580,7 +667,7 @@
       return;
     }
     if (paretoChart) { paretoChart.data = chartData; paretoChart.options = options; paretoChart.update(); }
-    else paretoChart = new Chart($('paretoChart'), { type: 'bar', data: chartData, options });
+    else paretoChart = new Chart($('paretoChart'), { type: 'bar', data: chartData, options, plugins: [valueLabelsPlugin] });
   }
 
   // Compact Top 3–5 defect list alongside the Pareto chart — reuses the
@@ -596,22 +683,25 @@
     const list = $('topDefectsList');
     const tableWrap = $('topDefectsTableWrap');
     const chartHolder = $('paretoChartHolder');
-    const layout = $('paretoLayout');
     const data = QualityAdapter.buildParetoDefects(scrapRecords);
 
-    const existingEmpty = layout.querySelector('.qd-dashboard-pareto-empty');
-    if (existingEmpty) existingEmpty.remove();
+    // Top 5 and Pareto are two separate cards now, each with its own empty state.
+    ['topDefectsCard', 'paretoCard'].forEach(id => {
+      const old = $(id).querySelector('.qd-dashboard-pareto-empty');
+      if (old) old.remove();
+    });
 
     if (data.length === 0) {
       tableWrap.style.display = 'none';
       chartHolder.style.display = 'none';
       list.innerHTML = '';
-      const empty = document.createElement('div');
-      empty.className = 'qd-dashboard-pareto-empty';
-      empty.innerHTML = `
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
-        <span>No defects recorded in this scope.</span>`;
-      layout.appendChild(empty);
+      const emptyIcon = `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>`;
+      ['topDefectsCard', 'paretoCard'].forEach(id => {
+        const empty = document.createElement('div');
+        empty.className = 'qd-dashboard-pareto-empty';
+        empty.innerHTML = `${emptyIcon}<span>No defects recorded in this scope.</span>`;
+        $(id).appendChild(empty);
+      });
       return;
     }
 
@@ -619,13 +709,17 @@
     chartHolder.style.display = '';
     const totalQty = data.reduce((s, d) => s + d.qty, 0);
     const top = data.slice(0, 5);
-    list.innerHTML = top.map((d, i) => `
+    list.innerHTML = top.map((d, i) => {
+      const share = totalQty > 0 ? (d.qty / totalQty) * 100 : null;   // same share the % column shows
+      return `
       <div class="qd-dashboard-top-defect-row">
         <span>${i + 1}</span>
-        <span>${escapeHtml(d.defectType)}</span>
-        <span>${fmt(d.qty)} pcs</span>
-        <span>${totalQty > 0 ? ((d.qty / totalQty) * 100).toFixed(0) + '%' : '–'}</span>
-      </div>`).join('');
+        <span class="qd-dashboard-top-defect-name"><span class="t" title="${escapeHtml(d.defectType)}">${escapeHtml(d.defectType)}</span></span>
+        <span>${fmt(d.qty)}</span>
+        <span>${share === null ? '–' : share.toFixed(0) + '%'}</span>
+        <span class="qd-dashboard-top-defect-bar"><i style="width:${share === null ? 0 : share.toFixed(1)}%"></i></span>
+      </div>`;
+    }).join('');
   }
 
   // ---- Trends ---------------------------------------------------------
@@ -690,7 +784,7 @@
     // bare day number when a longer range stays inside one month, 'MM-DD'
     // when it crosses months — and, for long ranges, labels (never data
     // points) are auto-skipped so they cannot overlap.
-    const longRange = points.length > 7;
+    const longRange = points.length > 16;   // up to ~2 weeks keeps a label on every day
     const sameMonth = points.every(p => p.date.slice(0, 7) === points[0].date.slice(0, 7));
     const labels = points.map(p => p.date);
     const scrapQty = points.map(p => p.scrap);
@@ -699,29 +793,45 @@
     const chartData = {
       labels,
       datasets: [
-        { type: 'bar', label: 'Scrap (pcs)', data: scrapQty, backgroundColor: '#14B8A6', borderColor: '#14B8A6', borderRadius: 4, order: 2, yAxisID: 'y' },
-        { type: 'line', label: 'Scrap Rate %', data: rate, borderColor: '#2563EB', backgroundColor: '#2563EB', borderWidth: 2, pointRadius: 3, pointBackgroundColor: '#2563EB', fill: false, order: 1, yAxisID: 'y1', spanGaps: true }
+        { type: 'bar', label: 'Scrap Qty (pcs)', data: scrapQty, backgroundColor: '#14B8A6', borderColor: '#14B8A6', borderRadius: 4, order: 2, yAxisID: 'y' },
+        { type: 'line', label: 'Scrap Rate (%)', data: rate, borderColor: '#2563EB', backgroundColor: '#2563EB', borderWidth: 2, pointRadius: 3, pointBackgroundColor: '#2563EB', fill: false, order: 1, yAxisID: 'y1', spanGaps: true }
       ]
     };
     const options = {
       responsive: true, maintainAspectRatio: false,
+      layout: { padding: { top: 16 } },
       interaction: { mode: 'index', intersect: false },
-      plugins: { legend: { display: true, labels: { boxWidth: 10, usePointStyle: true, font: { family: "'Inter', sans-serif", size: 11 } } } },
+      plugins: {
+        legend: { display: true, align: 'end', labels: { boxWidth: 10, usePointStyle: true, font: { family: "'Inter', sans-serif", size: 11 } } },
+        valueLabels: { enabled: points.length <= 16 },
+        tooltip: compactTooltip({
+          title: items => items.length ? String(items[0].label) : '',          // exact date
+          label: ctx => ctx.dataset.yAxisID === 'y1'
+            ? ' Scrap Rate: ' + Number(ctx.parsed.y).toFixed(2) + '%'
+            : ' Scrap: ' + fmt(ctx.parsed.y) + ' pcs',
+          // A day with no production has no rate (gap in the line) — say so
+          // instead of silently showing nothing, so it is never read as 0%.
+          afterBody: items => (items.length && (rate[items[0].dataIndex] === null || rate[items[0].dataIndex] === undefined))
+            ? [' Scrap Rate: N/A (no production recorded)'] : []
+        })
+      },
       scales: {
         x: { grid: { display: false }, ticks: Object.assign({
           font: { family: "'JetBrains Mono', monospace", size: 10 },
           callback: function (value) {
             const d = String(this.getLabelForValue(value));
-            return (longRange && sameMonth) ? d.slice(-2).replace(/^0/, '') : d.slice(5);
+            // up to ~2 weeks: "1 Oct" on every day (like the reference); longer ranges: bare day number inside one month
+            return (longRange && sameMonth) ? d.slice(-2).replace(/^0/, '')
+              : `${parseInt(d.slice(8), 10)} ${MONTH_ABBR[parseInt(d.slice(5, 7), 10) - 1]}`;
           }
         }, longRange ? { autoSkip: true, maxRotation: 0, autoSkipPadding: 8 } : {}) },
-        y: { beginAtZero: true, position: 'left', grid: { color: 'rgba(15,39,71,0.08)' }, ticks: { font: { family: "'JetBrains Mono', monospace", size: 10 } } },
-        y1: { beginAtZero: true, position: 'right', grid: { display: false }, ticks: { font: { family: "'JetBrains Mono', monospace", size: 10 }, callback: v => v + '%' } }
+        y: { beginAtZero: true, grace: '10%', position: 'left', title: axisTitle('Scrap Qty (pcs)'), grid: { color: 'rgba(15,39,71,0.08)' }, ticks: { precision: 0, font: { family: "'JetBrains Mono', monospace", size: 10 } } },
+        y1: { beginAtZero: true, position: 'right', title: axisTitle('Scrap Rate %'), grid: { display: false }, ticks: { font: { family: "'JetBrains Mono', monospace", size: 10 }, callback: v => v + '%' } }
       }
     };
 
     if (scrapTrendChart) { scrapTrendChart.data = chartData; scrapTrendChart.options = options; scrapTrendChart.update(); }
-    else scrapTrendChart = new Chart($('scrapTrendChart'), { type: 'bar', data: chartData, options });
+    else scrapTrendChart = new Chart($('scrapTrendChart'), { type: 'bar', data: chartData, options, plugins: [valueLabelsPlugin] });
   }
 
   function baseLineOptions(tooltipFmt) {
@@ -888,6 +998,12 @@
   }
   $('dateFrom').addEventListener('change', onDateRangeChange);
   $('dateTo').addEventListener('change', onDateRangeChange);
+  (function wirePerfDetailButton() {
+    const d = document.querySelector('#targetPerfRange details');
+    $('targetPerfDetailBtn').addEventListener('click', () => { d.open = !d.open; });
+    d.addEventListener('toggle', syncPerfDetailButton);
+    syncPerfDetailButton();
+  })();
 
   $('shiftFilter').addEventListener('click', (e) => {
     const btn = e.target.closest('button');
