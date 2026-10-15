@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plan &amp; Tracking · Quality System</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css?v=20261015-4">
+<link rel="stylesheet" href="css/plan-review.css?v=20261015-4">
+<link rel="stylesheet" href="css/qs-theme.css?v=20261015-5">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.0/chart.umd.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+</head>
+<body class="qs pr-page">
+<div class="qs-shell">
+  <div id="navRoot"></div>
+  <main class="qs-main">
+<div class="wrap">
+  <script>window.CURRENT_PAGE = 'plan-tracking';</script>
+
+  <div class="qd-page-header">
+    <h1>Scrap Plan &amp; Tracking</h1>
+    <p>Door A + B + C, Day and Night combined. Daily target ≤ <span id="hdrDailyTarget">50</span> pcs. Door In Door is not counted.</p>
+  </div>
+
+  <div class="qd-filterbar">
+    <div class="qd-filter-field">
+      <label for="fMonth">Plan month</label>
+      <input type="month" id="fMonth">
+    </div>
+    <div class="qd-filter-field">
+      <label for="fAsOf">Data as of</label>
+      <input type="date" id="fAsOf">
+    </div>
+    <button type="button" id="btnLatest" title="Use the latest day that has scrap data">Latest data</button>
+    <span class="pr-asof-hint" id="asOfHint"></span>
+  </div>
+
+  <div id="connectionBanner" class="qd-banner" style="display:none;"></div>
+
+  <div class="pr-targets" id="targetStrip">Loading…</div>
+
+  <div class="qd-kpis">
+    <div class="qd-kpi" id="kpiMtd"><div class="qd-kpi-bar"></div>
+      <div class="qd-kpi-label">Month-to-date scrap</div>
+      <div class="qd-kpi-value" id="kpiMtdVal">–</div>
+      <div class="qd-kpi-unit">pcs</div>
+      <div class="qd-kpi-note" id="kpiMtdNote"></div>
+    </div>
+    <div class="qd-kpi is-info"><div class="qd-kpi-bar"></div>
+      <div class="qd-kpi-label">Plan to date</div>
+      <div class="qd-kpi-value" id="kpiPlanVal">–</div>
+      <div class="qd-kpi-unit">pcs</div>
+      <div class="qd-kpi-note" id="kpiPlanNote"></div>
+    </div>
+    <div class="qd-kpi" id="kpiGap"><div class="qd-kpi-bar"></div>
+      <div class="qd-kpi-label">Gap to plan</div>
+      <div class="qd-kpi-value" id="kpiGapVal">–</div>
+      <div class="qd-kpi-unit">pcs</div>
+      <div class="qd-kpi-note" id="kpiGapNote"></div>
+    </div>
+    <div class="qd-kpi" id="kpiRed"><div class="qd-kpi-bar"></div>
+      <div class="qd-kpi-label">Change vs last month</div>
+      <div class="qd-kpi-value" id="kpiRedVal">–</div>
+      <div class="qd-kpi-unit" id="kpiRedUnit">goal −50%</div>
+      <div class="qd-kpi-note" id="kpiRedNote"></div>
+    </div>
+    <div class="qd-kpi" id="kpiProj"><div class="qd-kpi-bar"></div>
+      <div class="qd-kpi-label">Projected month end</div>
+      <div class="qd-kpi-value" id="kpiProjVal">–</div>
+      <div class="qd-kpi-unit">pcs</div>
+      <div class="qd-kpi-note" id="kpiProjNote"></div>
+    </div>
+  </div>
+
+  <section class="qd-panel">
+    <h2>Daily scrap vs target</h2>
+    <div class="qd-panel-note">Each day is Door A + B + C, Day + Night. Click a week to open its review.</div>
+    <div class="pr-cal" id="calendar"></div>
+    <div class="pr-legend">
+      <span><i style="background:var(--green-dim);border:1px solid #BFE8CF"></i>Within target</span>
+      <span><i style="background:var(--red-dim);border:1px solid #F6C7C7"></i>Over target</span>
+      <span><i style="background:var(--red)"></i>Over 2× target</span>
+      <span><i style="border:2px solid var(--navy)"></i>Data as of</span>
+    </div>
+  </section>
+
+  <div class="pr-row">
+    <section class="qd-panel">
+      <h2>Cumulative scrap vs plan</h2>
+      <div class="qd-panel-note">Actual running total against the plan line built from the weekly plans below.</div>
+      <div class="pr-chart-box"><canvas id="cumChart"></canvas></div>
+    </section>
+    <section class="qd-panel">
+      <h2>By line (month to date)</h2>
+      <div class="qd-panel-note" id="linesNote"></div>
+      <table class="pr-lines" id="linesTable"></table>
+    </section>
+  </div>
+
+  <section class="qd-panel">
+    <h2>Weekly scrap control</h2>
+    <div class="qd-panel-note">Weeks run Monday–Sunday. Leave the plan blank to use target × days; type a number to set your own plan for that week. Plan to date is pro-rated for the week in progress.</div>
+    <div class="qd-table-scroll">
+      <table class="qd-datatable" id="weeksTable">
+        <thead><tr>
+          <th>Week</th><th>Dates</th><th class="num">Days</th><th class="num">Default plan</th>
+          <th class="num">Your plan</th><th class="num">Weekly plan</th><th class="num">Actual</th>
+          <th class="num">Plan to date</th><th class="num">Gap</th><th>Status</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+</div>
+
+  </main>
+</div>
+
+<script src="js/config.js?v=20261015-4"></script>
+<script src="js/firebase-init.js?v=20261015-4"></script>
+<script src="js/scrap-adapter.js?v=20261015-4"></script>
+<script src="js/scrap-plan-adapter.js?v=20261015-4"></script>
+<script src="js/scrap-plan-calc.js?v=20261015-4"></script>
+<script src="js/plan-common.js?v=20261015-4"></script>
+<script src="js/plan-tracking-page.js?v=20261015-4"></script>
+<script src="js/nav.js?v=20261015-5"></script>
+</body>
+</html>

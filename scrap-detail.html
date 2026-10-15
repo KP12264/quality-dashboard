@@ -6,31 +6,28 @@
 <title>Scrap Detail · Quality System</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=20261015-6">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="css/qs-theme.css?v=20261015-5">
 
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
 </head>
-<body class="qd-detail-page">
-<div class="wrap">
-
+<body class="qs">
+<div class="qs-shell">
   <div id="navRoot"></div>
+  <main class="qs-main">
+<div class="wrap">
   <script>window.CURRENT_PAGE = 'scrap-detail';</script>
 
   <div class="qd-page-header">
-    <div class="qd-page-eyebrow">Quality analysis</div>
     <h1>Scrap Detail</h1>
-    <p>Explore every recorded scrap item, filter the production scope and drill into recurring quality problems.</p>
+    <p>Every recorded scrap entry, filterable and drillable. Recurring problems are flagged automatically.</p>
   </div>
 
   <div id="connectionBanner" class="qd-banner" style="display:none;"></div>
 
   <div class="qd-filterbar">
-    <div class="qd-detail-filter-heading">
-      <span>Filters</span>
-      <strong>Find scrap records</strong>
-    </div>
     <div class="qd-filter-field">
       <label for="fStartDate">From</label>
       <input type="date" id="fStartDate">
@@ -55,28 +52,16 @@
       <label for="fDefect">Defect</label>
       <select id="fDefect"><option value="all">All</option></select>
     </div>
-    <button type="button" class="mini-add-btn" id="applyFilters">Apply filters</button>
+    <button type="button" class="mini-add-btn" id="applyFilters">Apply</button>
   </div>
 
-  <section class="qd-panel qd-detail-top-section">
-    <div class="qd-detail-section-head">
-      <div>
-        <div class="qd-detail-section-kicker">Priority view</div>
-        <h2>Top Defects</h2>
-      </div>
-      <span>Ranked by scrap quantity</span>
-    </div>
+  <section class="qd-panel">
+    <h2>Top Defect</h2>
     <div id="topDefectRow" class="qd-top-defect-row"></div>
   </section>
 
-  <section class="qd-panel qd-detail-records-section">
-    <div class="qd-detail-section-head">
-      <div>
-        <div class="qd-detail-section-kicker">Record explorer</div>
-        <h2>Scrap Records</h2>
-      </div>
-      <span>Click any row for details</span>
-    </div>
+  <section class="qd-panel">
+    <h2>Scrap Records</h2>
     <div class="qd-panel-note">Click a row to drill down. A <span class="qd-badge recurring" style="vertical-align:middle;">RECURRING</span> badge means this Line + Model + Defect has appeared on 3+ different days in the current filter range.</div>
     <div class="qd-table-scroll">
       <table class="qd-datatable" id="scrapDetailTable">
@@ -87,10 +72,6 @@
       </table>
     </div>
   </section>
-
-  <footer class="qd-footer">
-    <span>Source: <code>scrapLogs</code> &middot; Recurring flag is evaluated within the selected filter range.</span>
-  </footer>
 
 </div>
 
@@ -141,6 +122,9 @@
   </div>
 </div>
 
+  </main>
+</div>
+
 <script src="js/config.js"></script>
 <script src="js/firebase-init.js"></script>
 <script src="js/data-adapter.js"></script>
@@ -148,6 +132,6 @@
 <script src="js/improvement-adapter.js"></script>
 <script src="js/quality-adapter.js"></script>
 <script src="js/scrap-detail-page.js"></script>
-<script src="js/nav.js?v=20261015-9"></script>
+<script src="js/nav.js?v=20261015-5"></script>
 </body>
 </html>

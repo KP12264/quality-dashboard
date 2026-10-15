@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Weekly Review · Quality System</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css?v=20261015-4">
+<link rel="stylesheet" href="css/plan-review.css?v=20261015-4">
+<link rel="stylesheet" href="css/qs-theme.css?v=20261015-5">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.0/chart.umd.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+</head>
+<body class="qs pr-page">
+<div class="qs-shell">
+  <div id="navRoot"></div>
+  <main class="qs-main">
+<div class="wrap">
+  <script>window.CURRENT_PAGE = 'weekly-review';</script>
+
+  <div class="qd-page-header">
+    <h1>Weekly Scrap Review</h1>
+    <p id="hdrSub">Door A + B + C, Day and Night combined. Review the week, find the top problems, record what was decided.</p>
+  </div>
+
+  <div class="qd-filterbar">
+    <div class="qd-filter-field">
+      <label for="fMonth">Month</label>
+      <input type="month" id="fMonth">
+    </div>
+    <div class="qd-filter-field">
+      <label for="fWeek">Review week</label>
+      <select id="fWeek"></select>
+    </div>
+    <div class="qd-filter-field">
+      <label for="fAsOf">Data as of</label>
+      <input type="date" id="fAsOf">
+    </div>
+    <button type="button" id="btnLatest">Latest data</button>
+    <span class="pr-asof-hint" id="asOfHint"></span>
+  </div>
+
+  <div id="connectionBanner" class="qd-banner" style="display:none;"></div>
+
+  <div class="qd-kpis">
+    <div class="qd-kpi" id="kpiAct"><div class="qd-kpi-bar"></div>
+      <div class="qd-kpi-label">Weekly scrap</div>
+      <div class="qd-kpi-value" id="kpiActVal">–</div>
+      <div class="qd-kpi-unit" id="kpiActUnit">pcs</div>
+      <div class="qd-kpi-note" id="kpiActNote"></div>
+    </div>
+    <div class="qd-kpi is-info"><div class="qd-kpi-bar"></div>
+      <div class="qd-kpi-label">Plan to date</div>
+      <div class="qd-kpi-value" id="kpiPtdVal">–</div>
+      <div class="qd-kpi-unit">pcs</div>
+      <div class="qd-kpi-note" id="kpiPtdNote"></div>
+    </div>
+    <div class="qd-kpi" id="kpiGap"><div class="qd-kpi-bar"></div>
+      <div class="qd-kpi-label">Gap to plan</div>
+      <div class="qd-kpi-value" id="kpiGapVal">–</div>
+      <div class="qd-kpi-unit">pcs</div>
+      <div class="qd-kpi-note" id="kpiGapNote"></div>
+    </div>
+    <div class="qd-kpi" id="kpiChg"><div class="qd-kpi-bar"></div>
+      <div class="qd-kpi-label">vs previous 7 days</div>
+      <div class="qd-kpi-value" id="kpiChgVal">–</div>
+      <div class="qd-kpi-unit">change in pcs/day</div>
+      <div class="qd-kpi-note" id="kpiChgNote"></div>
+    </div>
+    <div class="qd-kpi" id="kpiStatus"><div class="qd-kpi-bar"></div>
+      <div class="qd-kpi-label">Status</div>
+      <div style="margin-top:12px" id="kpiStatusVal">–</div>
+      <div class="qd-kpi-note" id="kpiStatusNote" style="margin-top:10px"></div>
+    </div>
+  </div>
+
+  <div class="pr-row">
+    <section class="qd-panel">
+      <h2>Top problems this week</h2>
+      <div class="qd-panel-note" id="paretoNote"></div>
+      <div class="pr-chart-box"><canvas id="paretoChart"></canvas></div>
+    </section>
+    <section class="qd-panel">
+      <h2>By line this week</h2>
+      <div class="qd-panel-note" id="linesNote"></div>
+      <table class="pr-lines" id="linesTable"></table>
+    </section>
+  </div>
+
+  <section class="qd-panel">
+    <h2>Problem × line, top 10</h2>
+    <div class="qd-panel-note">Δ pcs/day compares this week's daily average with the 7 days before it. Cause comes from the imported Cause column; manual entries have none.</div>
+    <div class="qd-table-scroll">
+      <table class="qd-datatable" id="paretoTable">
+        <thead><tr>
+          <th class="num">#</th><th>Problem</th><th>Line</th><th class="num">Scrap</th><th class="num">Share</th>
+          <th class="num">Cum.</th><th class="num">Prev 7 days</th><th class="num">Δ pcs/day</th>
+          <th>Main model</th><th>Top cause</th><th></th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="qd-panel">
+    <h2>Week by week</h2>
+    <div class="qd-panel-note">Write the review decision for each week. Notes save when you leave the box.</div>
+    <div class="qd-table-scroll">
+      <table class="qd-datatable" id="weeksTable">
+        <thead><tr>
+          <th>Week</th><th>Dates</th><th class="num">Plan</th><th class="num">Actual</th><th class="num">Plan to date</th>
+          <th class="num">Gap</th><th class="num">vs prev</th><th class="num">A</th><th class="num">B</th><th class="num">C</th>
+          <th>Status</th><th style="min-width:220px">Review note</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+</div>
+
+  </main>
+</div>
+
+<script src="js/config.js?v=20261015-4"></script>
+<script src="js/firebase-init.js?v=20261015-4"></script>
+<script src="js/scrap-adapter.js?v=20261015-4"></script>
+<script src="js/scrap-plan-adapter.js?v=20261015-4"></script>
+<script src="js/scrap-plan-calc.js?v=20261015-4"></script>
+<script src="js/plan-common.js?v=20261015-4"></script>
+<script src="js/weekly-review-page.js?v=20261015-4"></script>
+<script src="js/nav.js?v=20261015-5"></script>
+</body>
+</html>

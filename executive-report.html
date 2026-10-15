@@ -6,22 +6,23 @@
 <title>Executive Report · Quality System</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=20261015-8">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="css/qs-theme.css?v=20261015-5">
 
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
 </head>
-<body class="qd-detail-page qd-report-page">
-<div class="wrap">
-
+<body class="qs">
+<div class="qs-shell">
   <div id="navRoot"></div>
+  <main class="qs-main">
+<div class="wrap">
   <script>window.CURRENT_PAGE = 'executive-report';</script>
 
   <div class="qd-page-header">
-    <div class="qd-page-eyebrow">Management summary</div>
-    <h1>Executive Quality Report</h1>
-    <p>Production, scrap, target compliance and improvement performance summarized for management review.</p>
+    <h1>Executive Report</h1>
+    <p>Production, Scrap, Target and Improvement performance summarized by period.</p>
   </div>
 
   <div id="connectionBanner" class="qd-banner" style="display:none;"></div>
@@ -33,26 +34,21 @@
   </div>
 
   <div class="qd-filterbar">
-    <div class="qd-report-filter-heading">
-      <span>Report date</span>
-      <strong>Select period ending</strong>
-    </div>
     <div class="qd-filter-field">
       <label for="rEndDate">As of</label>
       <input type="date" id="rEndDate">
     </div>
-    <button type="button" class="mini-add-btn" id="refreshReport">Refresh report</button>
-    <div class="qd-report-actions">
-      <button type="button" class="mini-add-btn" id="exportCsv">Export CSV</button>
-      <button type="button" class="mini-add-btn" id="printReport">Print / Save PDF</button>
-    </div>
+    <button type="button" class="mini-add-btn" id="refreshReport">Refresh</button>
+    <div style="flex:1;"></div>
+    <button type="button" class="mini-add-btn" id="exportCsv">Export CSV</button>
+    <button type="button" class="mini-add-btn" id="printReport">Print / Save as PDF</button>
   </div>
 
   <section class="qd-kpis" id="reportKpis" style="grid-template-columns:repeat(4,1fr);">
-    <div class="qd-kpi" data-report-kpi="production"><div class="qd-kpi-bar"></div><div class="qd-kpi-label">Production</div><div class="qd-kpi-value" id="rProduction">–</div><div class="qd-kpi-unit">pcs</div></div>
-    <div class="qd-kpi" data-report-kpi="scrap"><div class="qd-kpi-bar"></div><div class="qd-kpi-label">Scrap</div><div class="qd-kpi-value" id="rScrap">–</div><div class="qd-kpi-unit">pcs</div></div>
-    <div class="qd-kpi" data-report-kpi="rate"><div class="qd-kpi-bar"></div><div class="qd-kpi-label">Scrap Rate</div><div class="qd-kpi-value" id="rScrapRate">–</div></div>
-    <div class="qd-kpi" data-report-kpi="target"><div class="qd-kpi-bar"></div><div class="qd-kpi-label">Target</div><div class="qd-kpi-value" id="rTarget">–</div><div class="qd-kpi-unit" id="rTargetUnit">pcs scrap</div></div>
+    <div class="qd-kpi"><div class="qd-kpi-bar"></div><div class="qd-kpi-label">Production</div><div class="qd-kpi-value" id="rProduction">–</div><div class="qd-kpi-unit">pcs</div></div>
+    <div class="qd-kpi"><div class="qd-kpi-bar"></div><div class="qd-kpi-label">Scrap</div><div class="qd-kpi-value" id="rScrap">–</div><div class="qd-kpi-unit">pcs</div></div>
+    <div class="qd-kpi"><div class="qd-kpi-bar"></div><div class="qd-kpi-label">Scrap Rate</div><div class="qd-kpi-value" id="rScrapRate">–</div></div>
+    <div class="qd-kpi"><div class="qd-kpi-bar"></div><div class="qd-kpi-label">Target</div><div class="qd-kpi-value" id="rTarget">–</div><div class="qd-kpi-unit" id="rTargetUnit">pcs scrap</div></div>
   </section>
 
   <section class="qd-panels-row">
@@ -92,10 +88,9 @@
     </section>
   </section>
 
-  <footer class="qd-footer">
-    <span>Management report generated from Production V2, Scrap Logs, Target rules and Improvement records.</span>
-  </footer>
+</div>
 
+  </main>
 </div>
 
 <script src="js/config.js?v=20261015-3"></script>
@@ -107,6 +102,6 @@
 <script src="js/target-evaluator.js?v=20261015-3"></script>
 <script src="js/improvement-adapter.js?v=20261015-3"></script>
 <script src="js/executive-report-page.js?v=20261015-3"></script>
-<script src="js/nav.js?v=20261015-8"></script>
+<script src="js/nav.js?v=20261015-5"></script>
 </body>
 </html>

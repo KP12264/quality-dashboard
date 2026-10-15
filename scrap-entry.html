@@ -6,38 +6,35 @@
 <title>Scrap Entry · Quality System</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=20261015-5">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="css/qs-theme.css?v=20261015-5">
 
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
-<body class="qd-entry-page">
-<div class="wrap">
-
+<body class="qs">
+<div class="qs-shell">
   <div id="navRoot"></div>
+  <main class="qs-main">
+<div class="wrap">
   <script>window.CURRENT_PAGE = 'scrap-entry';</script>
 
   <div class="qd-page-header">
-    <div class="qd-page-eyebrow">Quality record</div>
     <h1>Scrap Entry</h1>
-    <p>Record scrap by Model and Defect for Door A / B / C. Production quantity is read directly from Production V2 and is never edited here.</p>
+    <p>For Leaders — record scrap by Model + Defect, split across Door A / B / C. No defect time needed. Production Qty is never entered here — it always comes from the read-only production system.</p>
   </div>
 
   <div id="connectionBanner" class="qd-banner" style="display:none;"></div>
 
   <div class="qd-tabbar" id="entryTabs">
     <button data-tab="manual" class="active">Manual Entry</button>
-    <button data-tab="import">Import from Excel</button>
+    <button data-tab="import">Import Excel</button>
   </div>
 
   <section class="qd-panel qd-entry-tab-section" id="tab-manual">
     <div class="qd-entry-context">
-      <div class="qd-entry-context-heading">
-        <span>Entry context</span>
-        <strong>Applied to all rows</strong>
-      </div>
       <div class="qd-form-field">
         <label for="ctxDate">Date</label>
         <input type="date" id="ctxDate">
@@ -49,7 +46,7 @@
           <option value="NIGHT">Night</option>
         </select>
       </div>
-      <div class="qd-entry-context-note">Choose the production date and shift once, then add one row for each Model + Defect combination.</div>
+      <div class="qd-entry-context-note">Date + Shift apply to every row below. Add one row per Model + Defect combination.</div>
     </div>
 
     <div class="qd-table-scroll">
@@ -71,8 +68,8 @@
     </div>
 
     <div class="qd-entry-footer">
-      <button type="button" class="mini-add-btn" id="addRowBtn">+ Add scrap row</button>
-      <div class="qd-entry-grand-total"><span>Grand Total</span><b id="grandTotal">0</b><small>pcs</small></div>
+      <button type="button" class="mini-add-btn" id="addRowBtn">+ Add Row</button>
+      <div class="qd-entry-grand-total">Grand Total: <b id="grandTotal">0</b> pcs</div>
     </div>
 
     <button type="button" class="qd-submit-btn" id="reviewBtn">Review &amp; Save</button>
@@ -174,6 +171,9 @@
   </div>
 </div>
 
+  </main>
+</div>
+
 <script src="js/config.js"></script>
 <script src="js/firebase-init.js"></script>
 <script src="js/data-adapter.js"></script>
@@ -181,7 +181,7 @@
 <script src="js/scrap-model-mapping-adapter.js"></script>
 <script src="js/scrap-entry-page.js"></script>
 <script src="js/scrap-import.js"></script>
-<script src="js/nav.js?v=20261015-9"></script>
+<script src="js/nav.js?v=20261015-5"></script>
 <script>
   document.getElementById('entryTabs').addEventListener('click', function (e) {
     var btn = e.target.closest('button');

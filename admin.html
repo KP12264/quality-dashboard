@@ -6,32 +6,27 @@
 <title>Admin / Master Data · Quality System</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=20261015-9">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="css/qs-theme.css?v=20261015-5">
 
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
 </head>
-<body class="qd-detail-page qd-admin-page">
-<div class="wrap">
-
+<body class="qs">
+<div class="qs-shell">
   <div id="navRoot"></div>
+  <main class="qs-main">
+<div class="wrap">
   <script>window.CURRENT_PAGE = 'admin';</script>
 
   <div class="qd-page-header">
-    <div class="qd-page-eyebrow">System configuration</div>
-    <h1>Admin &amp; Master Data</h1>
-    <p>Manage quality targets and review the master-data structure used across the Door Line Quality System.</p>
+    <h1>Admin / Master Data</h1>
+    <p>System configuration. Editing here is currently open to any visitor — PIN/permission protection is a later phase (see Permission tab).</p>
   </div>
 
   <div id="connectionBanner" class="qd-banner" style="display:none;"></div>
 
-  <div class="qd-admin-security-note">
-    <span aria-hidden="true">!</span>
-    <div><strong>Editing is currently open</strong><small>PIN and permission protection is planned for a later phase. Review the Permission / PIN section before wider rollout.</small></div>
-  </div>
-
-  <div class="qd-admin-workspace">
   <div class="qd-tabbar" id="adminTabs">
     <button data-tab="target" class="active">Target Management</button>
     <button data-tab="line">Line Master</button>
@@ -45,13 +40,7 @@
 
   <!-- Target Management: FUNCTIONAL -->
   <section class="qd-panel qd-admin-section" id="tab-target">
-    <div class="qd-detail-section-head">
-      <div>
-        <div class="qd-detail-section-kicker">Legacy configuration</div>
-        <h2>Target Management</h2>
-      </div>
-      <span class="qd-admin-rule-badge">Before 01 Oct 2026</span>
-    </div>
+    <h2>Target Management</h2>
     <div class="qd-panel-note">Legacy per-shift scrap targets. These apply ONLY to production dates before 2026-10-01 (≤30 pcs/shift, Day and Night judged separately). From 2026-10-01 the rule is ≤50 pcs/day (Day + Night combined), set in js/config.js — records on this page are not used for those dates. Existing history is never rewritten; a new target only applies from its Effective Date forward.</div>
     <form id="targetForm" class="qd-form-grid" style="margin-bottom:16px;">
       <div class="qd-form-field">
@@ -73,12 +62,10 @@
       <button type="submit" class="mini-add-btn" style="align-self:end;">+ Add Target</button>
     </form>
     <div id="targetMessage" class="qd-form-message" style="display:none;"></div>
-    <div class="qd-table-scroll">
-      <table class="qd-datatable" id="targetTable">
-        <thead><tr><th>Shift</th><th>Target Qty</th><th>Effective Date</th><th>Note</th></tr></thead>
-        <tbody id="targetTableBody"></tbody>
-      </table>
-    </div>
+    <table class="qd-datatable" id="targetTable">
+      <thead><tr><th>Shift</th><th>Target Qty</th><th>Effective Date</th><th>Note</th></tr></thead>
+      <tbody id="targetTableBody"></tbody>
+    </table>
   </section>
 
   <!-- Placeholder sections: shells for a later phase -->
@@ -118,18 +105,16 @@
     <h2>Permission / PIN Settings</h2>
     <div class="qd-placeholder"><strong>Coming in a later phase</strong>All pages are currently open to view AND edit for any visitor, as agreed for this phase. PIN-protected editing is a later phase — nothing here restricts writes yet.</div>
   </section>
-  </div>
 
-  <footer class="qd-footer">
-    <span>Configuration changes affect future evaluations only; existing quality history remains unchanged.</span>
-  </footer>
+</div>
 
+  </main>
 </div>
 
 <script src="js/config.js"></script>
 <script src="js/firebase-init.js"></script>
 <script src="js/target-adapter.js"></script>
 <script src="js/admin-page.js"></script>
-<script src="js/nav.js?v=20261015-9"></script>
+<script src="js/nav.js?v=20261015-5"></script>
 </body>
 </html>
