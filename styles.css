@@ -2297,3 +2297,20 @@ button.qd-link-btn{font-size:12px;}
   .qd-dashboard-top-defect-header{padding:7px 6px;column-gap:6px;}
   .qd-dashboard-top-defect-header > span{font-size:8.5px;letter-spacing:0;white-space:normal;line-height:1.15;}
 }
+
+/* Target rule change (≤50/day from 2026-10-01): INCOMPLETE status, 5-up summary tiles, reasons */
+.qd-status-pill.warn{background:var(--amber-dim);color:#B45309;}
+.qd-dashboard-range-stat.warn{background:var(--amber-dim);}
+.qd-dashboard-range-stat.warn .num{color:#B45309;}
+.qd-dashboard-range-stat.warn .sub{color:#B45309;}
+.qd-dashboard-range-summary{grid-template-columns:repeat(5, minmax(0, 1fr));}
+.qd-dashboard-range-stat .sub{line-height:1.25;}
+.qd-reason{display:block;margin-top:3px;font-family:var(--font-body);font-size:10.5px;color:var(--muted);white-space:normal;}
+.qd-sub{display:block;font-family:var(--font-body);font-size:10px;font-weight:400;color:var(--muted);}
+@media (max-width:760px){
+  .qd-dashboard-range-summary{grid-template-columns:repeat(2, minmax(0, 1fr));}
+  .qd-dashboard-range-stat:last-child{grid-column:1 / -1;}
+}
+#targetPerfDetailBody td:first-child{white-space:nowrap;}
+#rTargetNote{margin:8px 0 0;}
+#rTargetNote:empty{display:none;}

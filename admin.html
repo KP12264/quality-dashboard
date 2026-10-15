@@ -39,7 +39,7 @@
   <!-- Target Management: FUNCTIONAL -->
   <section class="qd-panel qd-admin-section" id="tab-target">
     <h2>Target Management</h2>
-    <div class="qd-panel-note">Add a new effective-dated scrap target per shift. Existing history is never rewritten — a new target only applies from its Effective Date forward; earlier records keep using whatever target was in effect at the time.</div>
+    <div class="qd-panel-note">Legacy per-shift scrap targets. These apply ONLY to production dates before 2026-10-01 (≤30 pcs/shift, Day and Night judged separately). From 2026-10-01 the rule is ≤50 pcs/day (Day + Night combined), set in js/config.js — records on this page are not used for those dates. Existing history is never rewritten; a new target only applies from its Effective Date forward.</div>
     <form id="targetForm" class="qd-form-grid" style="margin-bottom:16px;">
       <div class="qd-form-field">
         <label for="tShift">Shift</label>

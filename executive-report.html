@@ -46,7 +46,7 @@
     <div class="qd-kpi"><div class="qd-kpi-bar"></div><div class="qd-kpi-label">Production</div><div class="qd-kpi-value" id="rProduction">–</div><div class="qd-kpi-unit">pcs</div></div>
     <div class="qd-kpi"><div class="qd-kpi-bar"></div><div class="qd-kpi-label">Scrap</div><div class="qd-kpi-value" id="rScrap">–</div><div class="qd-kpi-unit">pcs</div></div>
     <div class="qd-kpi"><div class="qd-kpi-bar"></div><div class="qd-kpi-label">Scrap Rate</div><div class="qd-kpi-value" id="rScrapRate">–</div></div>
-    <div class="qd-kpi"><div class="qd-kpi-bar"></div><div class="qd-kpi-label">Target</div><div class="qd-kpi-value" id="rTarget">–</div><div class="qd-kpi-unit">pcs / shift</div></div>
+    <div class="qd-kpi"><div class="qd-kpi-bar"></div><div class="qd-kpi-label">Target</div><div class="qd-kpi-value" id="rTarget">–</div><div class="qd-kpi-unit" id="rTargetUnit">pcs scrap</div></div>
   </section>
 
   <section class="qd-panels-row">
@@ -56,8 +56,18 @@
     </section>
     <section class="qd-panel">
       <h2>Shift Performance</h2>
-      <table class="qd-datatable" id="rShiftTable"><thead><tr><th>Shift</th><th>Production</th><th>Scrap</th><th>Target</th><th>Status</th></tr></thead><tbody id="rShiftTableBody"></tbody></table>
+      <table class="qd-datatable" id="rShiftTable"><thead><tr><th>Shift</th><th>Production</th><th>Scrap</th></tr></thead><tbody id="rShiftTableBody"></tbody></table>
     </section>
+  </section>
+
+  <section class="qd-panel" id="rTargetPanel">
+    <h2>Target Performance</h2>
+    <table class="qd-datatable" id="rTargetTable"><thead><tr><th>Rule</th><th>Target</th><th>Unit</th><th>Evaluated</th><th>Within</th><th>Over</th><th>Incomplete</th><th>No Data</th></tr></thead><tbody id="rTargetTableBody"></tbody></table>
+    <div class="qd-panel-note" id="rTargetNote"></div>
+    <details style="margin-top:10px;">
+      <summary style="cursor:pointer;font-weight:600;">Per-day / per-shift detail</summary>
+      <table class="qd-datatable" id="rDailyTable"><thead><tr><th>Date</th><th>Scope</th><th>Scrap</th><th>Target</th><th>Gap</th><th>Status</th><th>Notes</th></tr></thead><tbody id="rDailyTableBody"></tbody></table>
+    </details>
   </section>
 
   <section class="qd-panel">
@@ -84,6 +94,7 @@
 <script src="js/scrap-adapter.js"></script>
 <script src="js/target-adapter.js"></script>
 <script src="js/quality-adapter.js"></script>
+<script src="js/target-evaluator.js"></script>
 <script src="js/improvement-adapter.js"></script>
 <script src="js/executive-report-page.js"></script>
 <script src="js/nav.js"></script>

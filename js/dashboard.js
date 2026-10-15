@@ -11,15 +11,20 @@
  * Design decision (documented, not hidden in code comments only):
  * Production / Scrap / Scrap Rate in the top KPI row follow the Line
  * filter (All = Door A+B+C combined, or a single line's own numbers).
- * Target is ALWAYS ≤30 pcs PER SHIFT (combined across Door A+B+C) —
- * never per line, and never summed across shifts (Day + Night is never
- * "60"). Each shift is evaluated independently against its own target;
- * when more than one shift is in view, the combined Status pill shows
- * OVER TARGET if ANY shift went over its own target, and a per-shift
- * breakdown line spells out which one. Target Status also always uses
- * the combined A+B+C scrap for each shift, even when a single Line is
- * selected — the UI shows notes explaining both of these so neither is
- * a silent mismatch with the numbers shown elsewhere on the page.
+ * TARGET has TWO rules, chosen per production date (config.js
+ * TARGET_DAILY_RULE_EFFECTIVE_DATE = 2026-10-01) and judged ONLY by
+ * js/target-evaluator.js, which the Executive Report uses too:
+ *   before 2026-10-01: ≤30 pcs PER SHIFT (Door A+B+C combined), Day and
+ *                      Night judged separately, per-shift target from targetMaster.
+ *   from   2026-10-01: ≤50 pcs PER DAY (Door A+B+C AND Day+Night combined),
+ *                      one judgement per production date.
+ * Each date is judged on its own (a Date Range is never one big total), and
+ * the daily judgement ignores the Shift filter: both shifts are always
+ * loaded for those dates. Production / Scrap / Scrap Rate in the KPI row
+ * still follow the Line and Shift filters. Status is OVER if any unit is
+ * over, INCOMPLETE if nothing is over but something cannot be confirmed
+ * (missing shift, failed read, no scrap log), else WITHIN. A failed read is
+ * never shown as "scrap = 0" or WITHIN. The UI notes explain all of this.
  * ------------------------------------------------------------------
  */
 
@@ -41,8 +46,8 @@
     shift: 'all',   // 'all' | 'DAY' | 'NIGHT'
     line: 'all'     // 'all' | 'A' | 'B' | 'C'
   };
-  let renderSeq = 0;
-  let scrapLoadFailed = false;   // display only: lets the KPI helper text avoid claiming "no scrap" when the read failed   // lets a newer render() discard the results of an older, slower one
+  let renderSeq = 0;   // lets a newer render() discard the results of an older, slower one
+  let scrapLoadFailed = false;   // a failed scrap read must never look like "scrap = 0" or WITHIN
 
   let trendChart = null;
   let scrapTrendChart = null;
@@ -99,74 +104,7 @@
   }
   function hideBanner() { $('connectionBanner').style.display = 'none'; }
 
-  // ---- Target lookup: ALWAYS per-shift (30 pcs/shift), NEVER summed across shifts ----
-
-  /**
-   * getRangeShiftEvaluations(dates, shiftCodes, allLinesProduction, allLinesScrap)
-   * Evaluates EVERY Date + Shift as its own independent unit, each against
-   * its OWN per-shift target (default 30 pcs, or whatever targetMaster says
-   * is effective on THAT date), using the combined Door A+B+C scrap for that
-   * Date + Shift. There is deliberately NO range-wide target: 7 days is
-   * never "7 x 30 = 210" and Day + Night is never "60" — a range just
-   * produces more independent Date + Shift results, which are then counted
-   * (and combined by OVER > WITHIN > NO DATA priority) elsewhere.
-   *
-   * A single date is simply a range of one, so the old Day/Night result is
-   * produced by the same code path.
-   *
-   * Targets are effective-dated, so each shift's targetMaster history is
-   * read ONCE (TargetAdapter.getTargetHistory, 1 query per shift for the
-   * whole range) and the per-date target is resolved here with the exact
-   * rule TargetAdapter.getTargetForShift uses: the newest record whose
-   * effectiveDate <= that date, else DEFAULT_TARGET_PER_SHIFT_PCS.
-   */
-  async function getRangeShiftEvaluations(dates, shiftCodes, allLinesProduction, allLinesScrap) {
-    const histories = {};
-    await Promise.all(shiftCodes.map(async (shiftCode) => {
-      try {
-        histories[shiftCode] = await TargetAdapter.getTargetHistory(window.qdDb, shiftCode);
-      } catch (e) {
-        console.error('Quality Dashboard: failed to read targetMaster for shift', shiftCode, e);
-        histories[shiftCode] = null;   // same fallback TargetAdapter uses: the default target
-      }
-    }));
-    const targetFor = (shiftCode, dateStr) => {
-      const history = histories[shiftCode];
-      const applicable = history && history.find(r => r.effectiveDate && r.effectiveDate <= dateStr);
-      return applicable ? applicable.targetQty : (DEFAULT_TARGET_PER_SHIFT_PCS[shiftCode] || 0);
-    };
-    const bucket = (records) => {
-      const m = new Map();
-      records.forEach(r => {
-        const k = `${r.date}|${r.shift}`;
-        if (!m.has(k)) m.set(k, []);
-        m.get(k).push(r);
-      });
-      return m;
-    };
-    const productionBy = bucket(allLinesProduction);
-    const scrapBy = bucket(allLinesScrap);
-
-    const evals = [];
-    dates.forEach(dateStr => {
-      shiftCodes.forEach(shiftCode => {
-        const key = `${dateStr}|${shiftCode}`;
-        const shiftProduction = productionBy.get(key) || [];
-        const shiftScrap = scrapBy.get(key) || [];
-        const summary = QualityAdapter.buildOverallSummary(shiftProduction, shiftScrap, targetFor(shiftCode, dateStr));
-        const hasData = shiftProduction.length > 0;
-        // QualityAdapter.buildOverallSummary() only checks that a target
-        // number exists, never that this shift has production data — so
-        // "no production, no scrap" and "production exists, scrap=0" both
-        // came back WITHIN TARGET. Corrected here (QualityAdapter itself
-        // untouched): no production for this Date + Shift is NO DATA,
-        // regardless of the raw scrap-vs-target comparison.
-        const status = hasData ? summary.status : 'NO DATA';
-        evals.push({ date: dateStr, shiftCode, label: shiftLabel(shiftCode), hasData, ...summary, status });
-      });
-    });
-    return evals;
-  }
+  // ---- Target evaluation lives in js/target-evaluator.js (shared with the Executive Report) ----
 
   function shiftLabel(code) {
     const s = SHIFTS.find(x => x.code === code);
@@ -209,14 +147,23 @@
     // query. All lines are loaded (Target Status needs combined A+B+C per
     // Date + Shift); the Line filter is applied client-side afterwards.
     const dates = ProductionDataAdapter.dateRange(state.dateTo, check.days);
+    // Dates on the daily (≤50/day) rule need BOTH shifts whatever the Shift
+    // filter says, so a single-shift filter reads more production documents
+    // for those dates (documented); legacy dates read only the active shifts.
+    const fetchPlan = TargetEvaluator.productionFetchPlan(dates, activeShifts());
     let productionResult, scrapResult;
     try {
-      [productionResult, scrapResult] = await Promise.all([
-        ProductionDataAdapter.getProductionData(window.qdDb, {
-          dates, lines: ALL_LINE_CODES, shifts: activeShifts()
-        }),
+      const results = await Promise.all([
+        ...fetchPlan.map(g => ProductionDataAdapter.getProductionData(window.qdDb, { dates: g.dates, lines: ALL_LINE_CODES, shifts: g.shifts })),
         ScrapDataAdapter.getScrapData(window.qdDb, { startDate: state.dateFrom, endDate: state.dateTo })
       ]);
+      scrapResult = results[results.length - 1];
+      const groups = results.slice(0, -1);
+      productionResult = {
+        records: groups.flatMap(g => g.records),
+        missing: groups.flatMap(g => g.missing),
+        errors: groups.flatMap(g => g.errors)
+      };
     } catch (e) {
       console.error('Quality Dashboard: failed to load dashboard data:', e);
       if (seq !== renderSeq) return;
@@ -229,24 +176,31 @@
     if (productionResult.errors.length > 0) {
       showBanner('warn', `⚠ ${productionResult.errors.length} production read${productionResult.errors.length > 1 ? 's' : ''} failed for this ${scopeWord} — figures below may be incomplete. Try refreshing.`);
     } else if (scrapResult.error) {
-      showBanner('warn', `⚠ Could not read scrap data for this ${scopeWord} — scrap figures may be incomplete. Try refreshing.`);
+      showBanner('warn', `⚠ Could not read scrap data for this ${scopeWord} — scrap figures are not shown and Status cannot be confirmed. Try refreshing.`);
     } else {
       hideBanner();
     }
 
     scrapLoadFailed = !!scrapResult.error;
+    // Display scope: the Shift filter applies to what is SHOWN (Production/Scrap/Rate, Door Line,
+    // Pareto, Trend). The target judgement below always gets every loaded record.
+    const productionInScope = productionResult.records.filter(r => activeShifts().includes(r.shift));
     const scrapInScope = scrapResult.records.filter(r => activeShifts().includes(r.shift));
 
-    // Evaluate each Date + Shift on its own against its OWN target
-    // (never summed across shifts, never across days).
-    const shiftEvals = await getRangeShiftEvaluations(dates, activeShifts(), productionResult.records, scrapInScope);
+    // Judge every date (daily rule) / date+shift (legacy rule) on its own, using ONLY Door A/B/C.
+    const shiftTargets = await TargetEvaluator.loadShiftTargetContext(window.qdDb, dates, activeShifts());
     if (seq !== renderSeq) return;
+    const shiftEvals = TargetEvaluator.evaluate({
+      dates, activeShiftCodes: activeShifts(),
+      production: productionResult.records, scrap: scrapResult.records,
+      scrapReadFailed: scrapLoadFailed, productionErrors: productionResult.errors, shiftTargets
+    });
 
     // ---- Top KPI row: Production/Scrap/Rate follow the Line filter,
     // Target Status is the worst-case across every Date + Shift
     // evaluation (OVER > WITHIN > NO DATA).
     const linesInScope = activeLines();
-    const lineFilteredProduction = productionResult.records.filter(r => linesInScope.includes(r.line));
+    const lineFilteredProduction = productionInScope.filter(r => linesInScope.includes(r.line));
     const lineFilteredScrap = scrapInScope.filter(r => linesInScope.includes(r.line));
     renderKpis(lineFilteredProduction, lineFilteredScrap, shiftEvals);
 
@@ -256,14 +210,17 @@
 
     // ---- Door Line Comparison: ALWAYS all 3 lines, aggregated over the
     // range; never subject to the per-shift target individually. ----
-    renderDoorLineComparison(productionResult.records, scrapInScope);
+    renderDoorLineComparison(productionInScope, scrapInScope);
 
     // ---- Pareto + Top Defects: respect Line filter, same range ----
     renderPareto(lineFilteredScrap);
     renderTopDefectsList(lineFilteredScrap);
 
     // ---- Scrap Trend: one daily point per date in the range (no extra fetch) ----
-    renderScrapTrend(QualityAdapter.buildDailyTrend(dates, lineFilteredProduction, lineFilteredScrap));
+    let trendPoints = QualityAdapter.buildDailyTrend(dates, lineFilteredProduction, lineFilteredScrap);
+    // A failed scrap read must not draw zero-height "no scrap" bars.
+    if (scrapLoadFailed) trendPoints = trendPoints.map(p => ({ ...p, scrap: null, scrapRatePct: null }));
+    renderScrapTrend(trendPoints, trendTargetLine(dates));
 
     // ---- Attention Required: re-runs on every render() so it follows the range ----
     renderAttentionRequired(scrapResult);
@@ -275,15 +232,30 @@
       + `${String(refreshedAt.getDate()).padStart(2, '0')} ${MONTH_ABBR[refreshedAt.getMonth()]} ${refreshedAt.getFullYear()}`;
   }
 
+  // Target ≤50/day reference for the Scrap Trend. Valid ONLY for All Lines + All Shifts
+  // (the target is for Door A+B+C, Day+Night) and ONLY on dates under the daily rule, so it is
+  // drawn from the first daily-rule date on and never presented as one target for a whole
+  // range that also contains pre-cutover (per-shift) dates.
+  function trendTargetLine(dates) {
+    if (state.shift !== 'all' || state.line !== 'all') return null;
+    const idx = dates.map((d, i) => TargetEvaluator.ruleFor(d) === 'DAY' ? i : -1).filter(i => i >= 0);
+    if (idx.length === 0) return null;
+    const partial = idx.length < dates.length;
+    return {
+      value: DAILY_TARGET_PCS, startIndex: idx[0], endIndex: idx[idx.length - 1],
+      label: partial ? `Target ≤${fmt(DAILY_TARGET_PCS)}/day (from ${TargetEvaluator.formatCutoverDate()})` : `Target ≤${fmt(DAILY_TARGET_PCS)}/day`
+    };
+  }
+
   function renderEmpty() {
     renderKpis(null, [], []);
     $('targetPerfSingle').hidden = true;
     $('targetPerfRange').hidden = false;
-    $('targetPerfRangeSummary').innerHTML = ['Shifts Within', 'Shifts Over', 'No Data', 'Total Evaluated'].map((l, i) =>
-      `<div class="qd-dashboard-range-stat ${['good', 'bad', 'neutral', 'total'][i]}"><div class="num">–</div><div class="lbl">${l}</div></div>`).join('');
+    $('targetPerfRangeSummary').innerHTML = ['Within', 'Over', 'Incomplete', 'No Data', 'Total Evaluated'].map((l, i) =>
+      `<div class="qd-dashboard-range-stat ${['good', 'bad', 'warn', 'neutral', 'total'][i]}"><div class="num">–</div><div class="lbl">${l}</div></div>`).join('');
     $('targetPerfDetailBody').innerHTML = '';
     $('doorLineComparison').innerHTML = '';
-    renderScrapTrend([]);
+    renderScrapTrend([], null);
     renderPareto([]);
     renderTopDefectsList([]);
   }
@@ -295,28 +267,41 @@
     kpiEl.style.setProperty('--kpi-status', color);
   }
 
-  // Target display text: "≤30 pcs / Shift" when every active shift shares
-  // the same target; otherwise spells out each shift's own target rather
-  // than ever adding them together.
-  function formatTargetLabel(shiftEvals) {
-    const targets = shiftEvals.map(e => e.target).filter(t => Number.isFinite(t) && t > 0);
-    if (targets.length === 0) return '–';
-    const unique = Array.from(new Set(targets));
-    if (unique.length === 1) return `≤${fmt(unique[0])}`;
-    // (a range has one eval per Date + Shift — list each distinct shift/target pair once)
-    const seen = new Set();
-    return shiftEvals
-      .filter(e => { const k = `${e.label}|${e.target}`; if (seen.has(k)) return false; seen.add(k); return true; })
-      .map(e => `${e.label} ≤${fmt(e.target)}`).join(' · ');
+  // ---- Target wording (all of it comes from the shared evaluator's description) ----
+
+  // Which rule(s) the SELECTED range uses, even before any data is loaded.
+  function rangeRuleUnits() {
+    const mk = d => TargetEvaluator.ruleFor(d) === 'DAY' ? { unit: 'DAY' } : { unit: 'SHIFT', label: 'Day', target: 30 };
+    return [mk(state.dateFrom), mk(state.dateTo)];
   }
 
   // Short Target rule shown in the Scrap Target & Performance header.
-  // Same rule in both modes; the range wording just makes clear that every
-  // Date + Shift is judged on its own (never against a range-wide target).
   function targetRuleHtml() {
-    const base = '<strong>&le;30 pcs/shift</strong> &middot; A+B+C combined &middot; ';
-    if (state.line === 'all') return base + (isMultiDay() ? 'each Date + Shift separate' : 'Day/Night separate');
-    return base + (isMultiDay() ? 'each Date + Shift separate &middot; ' : '') + 'Status still uses all lines';
+    const base = TargetEvaluator.describeTarget(rangeRuleUnits(), fmt).ruleText;
+    return base + (isMultiDay() ? ' &middot; each date judged separately' : '')
+      + (state.line === 'all' ? '' : ' &middot; Status still uses all lines');
+  }
+
+  // Status pill / tile colour class for a status string.
+  function statusClassOf(status) {
+    return status === 'WITHIN TARGET' ? 'good' : status === 'OVER TARGET' ? 'bad' : status === 'INCOMPLETE' ? 'warn' : 'neutral';
+  }
+
+  // Helper under the Status pill: counts of the SAME evaluations that drive the status,
+  // kept separate for days and shifts.
+  function statusHelperText(units) {
+    const sum = TargetEvaluator.summarize(units);
+    const unitWord = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
+    const overParts = [];
+    if (sum.days.over) overParts.push(unitWord(sum.days.over, 'day'));
+    if (sum.shifts.over) overParts.push(unitWord(sum.shifts.over, 'shift'));
+    if (overParts.length) return `${overParts.join(' · ')} over target`;
+    const incParts = [];
+    if (sum.days.incomplete) incParts.push(unitWord(sum.days.incomplete, 'day'));
+    if (sum.shifts.incomplete) incParts.push(unitWord(sum.shifts.incomplete, 'shift'));
+    if (incParts.length) return `${incParts.join(' · ')} incomplete — cannot confirm`;
+    const what = sum.mixed ? 'days/shifts' : (sum.hasDays ? 'days' : 'shifts');
+    return (sum.days.within + sum.shifts.within) > 0 ? `All evaluated ${what} within target` : `No evaluated ${what}`;
   }
 
   function renderKpis(displayProductionRecords, displayScrapRecords, shiftEvals) {
@@ -333,6 +318,7 @@
       scrapEl.textContent = '–';
       scrapRateEl.textContent = '–';
       targetEl.textContent = '–';
+      $('kpiTargetUnitText').textContent = 'pcs scrap';
       statusEl.textContent = '–';
       statusEl.className = 'qd-status-pill neutral';
       noteEl.textContent = '';
@@ -346,147 +332,125 @@
       return;
     }
 
-    // Displayed Production/Scrap/Rate respect the Line filter (target arg
+    // Displayed Production/Scrap/Rate respect the Line and Shift filters (target arg
     // is irrelevant here — we don't use this summary's .status).
     const displaySummary = QualityAdapter.buildOverallSummary(displayProductionRecords, displayScrapRecords, NaN);
-    // Target Status: worst-case across each shift judged against ITS OWN
-    // target (never a summed target across shifts) — see business rule.
-    const combinedStatus = QualityAdapter.combineShiftStatuses(shiftEvals);
+    // Target Status: judged by the shared evaluator, one unit per date (daily rule) or per
+    // date+shift (legacy rule); OVER > INCOMPLETE > WITHIN > NO DATA. Never a summed target.
+    const combinedStatus = TargetEvaluator.combineStatuses(shiftEvals);
+    const targetDesc = TargetEvaluator.describeTarget(shiftEvals, fmt);
 
     productionEl.textContent = fmt(displaySummary.totalProduction);
-    scrapEl.textContent = fmt(displaySummary.totalScrap);
-    scrapEl.classList.remove('na');
-    scrapRateEl.textContent = fmtPct(displaySummary.scrapRatePct);
-    scrapRateEl.classList.remove('na');
+    if (scrapLoadFailed) {
+      // A failed read must never look like "scrap = 0".
+      scrapEl.textContent = 'N/A'; scrapEl.classList.add('na');
+      scrapRateEl.textContent = 'N/A'; scrapRateEl.classList.add('na');
+    } else {
+      scrapEl.textContent = fmt(displaySummary.totalScrap);
+      scrapEl.classList.remove('na');
+      scrapRateEl.textContent = fmtPct(displaySummary.scrapRatePct);
+      scrapRateEl.classList.remove('na');
+    }
     // Helper text under Scrap / Scrap Rate: describes what was actually loaded
-    // (it used to be a fixed "No scrap data source yet" that contradicted real numbers).
     $('kpiScrapUnit').textContent = scrapLoadFailed ? 'Scrap data could not be read'
       : displayScrapRecords.length > 0 ? 'pcs' : 'No scrap recorded in this scope';
-    $('kpiScrapRateUnit').textContent = Number.isFinite(displaySummary.scrapRatePct)
-      ? 'Scrap ÷ Production' : 'No production in this scope';
-    targetEl.textContent = formatTargetLabel(shiftEvals);
+    $('kpiScrapRateUnit').textContent = scrapLoadFailed ? 'Scrap data could not be read'
+      : Number.isFinite(displaySummary.scrapRatePct) ? 'Scrap ÷ Production' : 'No production in this scope';
+    targetEl.textContent = targetDesc.label;
+    $('kpiTargetUnitText').textContent = targetDesc.unitText;
 
     statusEl.textContent = combinedStatus;
-    statusEl.className = 'qd-status-pill ' + (combinedStatus === 'WITHIN TARGET' ? 'good' : combinedStatus === 'OVER TARGET' ? 'bad' : 'neutral');
+    statusEl.className = 'qd-status-pill ' + statusClassOf(combinedStatus);
 
-    if (state.line === 'all') {
-      noteEl.textContent = '';
-    } else {
-      const combinedScrap = shiftEvals.reduce((s, e) => s + e.totalScrap, 0);
+    // Notes under the KPI row: Line filter (existing), Shift filter (new — the daily
+    // judgement ignores it) and the multi-day reminder.
+    const notes = [];
+    if (state.line !== 'all' && !scrapLoadFailed) {
+      const combinedScrap = shiftEvals.reduce((s, e) => s + (e.totalScrap || 0), 0);
       const lineLabel = (LINES.find(l => l.code === state.line) || {}).label || state.line;
-      noteEl.textContent = `Target Status uses combined Scrap (Door A+B+C) = ${fmt(combinedScrap)} pcs — not just ${lineLabel}'s ${fmt(displaySummary.totalScrap)} pcs shown above.`
-        + (isMultiDay() ? ' Each Date + Shift is judged against its own target.' : '');
+      notes.push(`Target Status uses combined Scrap (Door A+B+C) = ${fmt(combinedScrap)} pcs — not just ${lineLabel}'s ${fmt(displaySummary.totalScrap)} pcs shown above.`
+        + (isMultiDay() ? (shiftEvals.some(e => e.unit === 'DAY') ? ' Each date is judged against its own target.' : ' Each Date + Shift is judged against its own target.') : ''));
     }
+    if (state.shift !== 'all' && shiftEvals.some(e => e.unit === 'DAY')) {
+      const shiftName = (SHIFTS.find(x => x.code === state.shift) || {}).label || state.shift;
+      notes.push(`From ${TargetEvaluator.formatCutoverDate()}, Status is judged on Day + Night combined (≤${fmt(DAILY_TARGET_PCS)} pcs/day) even though only ${shiftName} is shown above.`);
+    }
+    noteEl.textContent = notes.join(' ');
 
-    // Short Target strip text — presentation only, same underlying rule
-    // as the long version it replaced, just two compact sentences
-    // depending on whether a single Line is selected.
     $('targetStripText').innerHTML = targetRuleHtml();
 
-    // Helper under the Status pill: how many of the ALREADY-evaluated Date + Shift
-    // results are over target (a count of the same evaluations that drive the status).
-    const overCount = shiftEvals.filter(e => e.status === 'OVER TARGET').length;
-    const evaluatedCount = shiftEvals.filter(e => e.status === 'OVER TARGET' || e.status === 'WITHIN TARGET').length;
     breakdownEl.hidden = false;
-    breakdownEl.textContent = overCount > 0 ? `${overCount} shift${overCount > 1 ? 's' : ''} over target`
-      : evaluatedCount > 0 ? 'All evaluated shifts within target' : 'No evaluated shifts';
+    breakdownEl.textContent = statusHelperText(shiftEvals);
 
     setKpiStatus($('kpiSection').querySelector('[data-kpi="production"]'), 'neutral');
-    setKpiStatus($('kpiSection').querySelector('[data-kpi="scrap"]'), combinedStatus === 'OVER TARGET' ? 'bad' : 'good');
+    setKpiStatus($('kpiSection').querySelector('[data-kpi="scrap"]'), scrapLoadFailed ? 'neutral' : combinedStatus === 'OVER TARGET' ? 'bad' : combinedStatus === 'INCOMPLETE' ? 'warn' : 'good');
     setKpiStatus($('kpiSection').querySelector('[data-kpi="scrapRate"]'), 'neutral');
     setKpiStatus($('kpiSection').querySelector('[data-kpi="target"]'), 'neutral');
-    setKpiStatus($('kpiSection').querySelector('[data-kpi="status"]'), combinedStatus === 'WITHIN TARGET' ? 'good' : combinedStatus === 'OVER TARGET' ? 'bad' : 'neutral');
+    setKpiStatus($('kpiSection').querySelector('[data-kpi="status"]'), statusClassOf(combinedStatus));
   }
 
   // ---- Scrap Target & Performance -----------------------------------------
-  // Pure presentation of shiftEvals, already computed by getRangeShiftEvaluations
-  // above (same per-shift target evaluation used everywhere else on this
-  // page) — no new target calculation here, just a clearer table view:
-  // Shift | Actual Scrap | Target | Gap | Status.
+  // Pure presentation of the units produced by js/target-evaluator.js (the same
+  // units the Executive Report uses): one unit per date on the daily rule,
+  // one per date + shift on the legacy rule. Nothing is re-judged here.
 
-  function renderShiftTargetTable(shiftEvals) {
-    const tbody = $('targetPerfTableBody');
-    if (!shiftEvals || shiftEvals.length === 0) {
-      tbody.innerHTML = '<tr class="empty-row"><td colspan="5">No data.</td></tr>';
-      return;
-    }
-    tbody.innerHTML = shiftEvals.map(e => {
-      const statusClass = e.status === 'WITHIN TARGET' ? 'good' : e.status === 'OVER TARGET' ? 'bad' : 'neutral';
-      const statusPill = `<span class="qd-status-pill ${statusClass} qd-status-pill-sm">${escapeHtml(e.status)}</span>`;
-      if (!e.hasData) {
-        return `<tr><td>${escapeHtml(e.label)}</td><td class="num">–</td><td class="num">≤${fmt(e.target)}</td><td class="num">–</td><td>${statusPill}</td></tr>`;
-      }
-      const gap = e.totalScrap - e.target;
-      const gapText = (gap > 0 ? '+' : '') + fmt(gap);
-      const gapColor = gap > 0 ? 'var(--red)' : 'var(--green)';
-      return `<tr>
-        <td>${escapeHtml(e.label)}</td>
-        <td class="num">${fmt(e.totalScrap)}</td>
-        <td class="num">≤${fmt(e.target)}</td>
-        <td class="num" style="color:${gapColor};font-weight:700;">${gapText}</td>
-        <td>${statusPill}</td>
-      </tr>`;
-    }).join('');
-  }
-
-  // Multi-day: replace the 2-row Day/Night table with a COUNT of the
-  // independent Date + Shift results, plus a drill-down listing each one.
-  // Nothing here is a range target — every row keeps its own ≤30 target.
   const MONTH_ABBR = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-  let lastPerfMode = null;
+  let lastPerfMode = null;   // lets the detail panel open itself once per mode change, then respect the user's toggle
   // "View Daily / Shift Detail →" in the card header toggles the existing <details> panel.
   function syncPerfDetailButton() {
     const d = document.querySelector('#targetPerfRange details'), b = $('targetPerfDetailBtn');
     if (!d || !b) return;
     b.textContent = d.open ? 'Hide Daily / Shift Detail' : 'View Daily / Shift Detail →';
     b.setAttribute('aria-expanded', d.open ? 'true' : 'false');
-  }   // lets the detail panel open itself once per mode change, then respect the user's toggle
-  function renderTargetPerformance(shiftEvals, dates) {
-    // V4: the four summary cards (Within / Over / No Data / Total Evaluated) are
-    // shown for a single date AND for a range; the per-Date + Shift rows
-    // (incl. the old Day / Night rows) live in the expandable detail below them.
-    // Evaluation itself is unchanged: every Date + Shift is judged on its own.
+  }
+  function renderTargetPerformance(units, dates) {
     $('targetPerfSingle').hidden = true;
     $('targetPerfRange').hidden = false;
     const perfMode = isMultiDay() ? 'range' : 'single';
     const detailsEl = document.querySelector('#targetPerfRange details');
-    if (detailsEl && perfMode !== lastPerfMode) { detailsEl.open = perfMode === 'single'; syncPerfDetailButton(); }   // one date = only 2 rows, so show them
+    if (detailsEl && perfMode !== lastPerfMode) { detailsEl.open = perfMode === 'single'; syncPerfDetailButton(); }   // one date = only a couple of rows, so show them
     lastPerfMode = perfMode;
 
-    const count = status => shiftEvals.filter(e => e.status === status).length;
-    const within = count('WITHIN TARGET');
-    const over = count('OVER TARGET');
-    const noData = count('NO DATA');
-    const evaluated = within + over;   // valid shifts = those with production data
-
-    // Share of the EVALUATED shifts (Within + Over) — plain arithmetic on the counts above.
-    const pctOfEval = n => evaluated > 0 ? Math.round(n / evaluated * 100) + '%' : '–';
-    $('targetPerfRangeSummary').innerHTML = `
-      <div class="qd-dashboard-range-stat good"><div class="num">${fmt(within)}</div><div class="lbl">Shifts Within</div><div class="sub">${pctOfEval(within)}</div></div>
-      <div class="qd-dashboard-range-stat bad"><div class="num">${fmt(over)}</div><div class="lbl">Shifts Over</div><div class="sub">${pctOfEval(over)}</div></div>
-      <div class="qd-dashboard-range-stat neutral"><div class="num">${fmt(noData)}</div><div class="lbl">No Data</div><div class="sub">–</div></div>
-      <div class="qd-dashboard-range-stat total"><div class="num">${fmt(evaluated)}</div><div class="lbl">Total Evaluated</div><div class="sub">of ${fmt(within + over + noData)} shifts</div></div>`;
+    // Counts stay SEPARATE for days (≤50/day rule) and shifts (≤30/shift rule). When a range spans
+    // the rule change, the tiles show the day/shift split instead of one combined percentage.
+    const sum = TargetEvaluator.summarize(units);
+    const W = sum.days.within + sum.shifts.within, O = sum.days.over + sum.shifts.over;
+    const I = sum.days.incomplete + sum.shifts.incomplete, N = sum.days.noData + sum.shifts.noData;
+    const evaluated = W + O;   // judged units: within + over
+    const word = sum.mixed ? '' : (sum.hasDays ? 'Days ' : 'Shifts ');
+    const unitName = sum.mixed ? 'units' : (sum.hasDays ? 'days' : 'shifts');
+    const split = (d, s) => `${fmt(d)} day${d === 1 ? '' : 's'} · ${fmt(s)} shift${s === 1 ? '' : 's'}`;
+    const pctOfEval = n => (!sum.mixed && evaluated > 0) ? Math.round(n / evaluated * 100) + '%' : '–';
+    const tile = (cls, num, label, sub) => `<div class="qd-dashboard-range-stat ${cls}"><div class="num">${fmt(num)}</div><div class="lbl">${label}</div><div class="sub">${sub}</div></div>`;
+    $('targetPerfRangeSummary').innerHTML =
+      tile('good', W, `${word}Within`, sum.mixed ? split(sum.days.within, sum.shifts.within) : pctOfEval(W))
+      + tile('bad', O, `${word}Over`, sum.mixed ? split(sum.days.over, sum.shifts.over) : pctOfEval(O))
+      + tile('warn', I, 'Incomplete', sum.mixed ? split(sum.days.incomplete, sum.shifts.incomplete) : (I > 0 ? 'not confirmed' : '–'))
+      + tile('neutral', N, 'No Data', sum.mixed ? split(sum.days.noData, sum.shifts.noData) : '–')
+      + tile('total', evaluated, 'Total Evaluated', sum.mixed ? split(sum.days.within + sum.days.over, sum.shifts.within + sum.shifts.over) : `of ${fmt(W + O + I + N)} ${unitName}`);
 
     const spansYears = dates[0].slice(0, 4) !== dates[dates.length - 1].slice(0, 4);
     const fmtDay = d => `${d.slice(8)} ${MONTH_ABBR[parseInt(d.slice(5, 7), 10) - 1]}${spansYears ? ' ' + d.slice(0, 4) : ''}`;
-    $('targetPerfDetailBody').innerHTML = shiftEvals.map(e => {
-      const statusClass = e.status === 'WITHIN TARGET' ? 'good' : e.status === 'OVER TARGET' ? 'bad' : 'neutral';
-      const pill = `<span class="qd-status-pill ${statusClass} qd-status-pill-sm">${escapeHtml(e.status)}</span>`;
-      if (!e.hasData) {
-        return `<tr><td>${fmtDay(e.date)}</td><td>${escapeHtml(e.label)}</td><td class="num">—</td><td class="num">≤${fmt(e.target)}</td><td class="num">—</td><td>${pill}</td></tr>`;
-      }
-      const gap = e.totalScrap - e.target;
-      return `<tr><td>${fmtDay(e.date)}</td><td>${escapeHtml(e.label)}</td><td class="num">${fmt(e.totalScrap)}</td><td class="num">≤${fmt(e.target)}</td><td class="num" style="color:${gap > 0 ? 'var(--red)' : 'var(--green)'};font-weight:700;">${(gap > 0 ? '+' : '') + fmt(gap)}</td><td>${pill}</td></tr>`;
+    $('targetPerfDetailBody').innerHTML = units.map(u => {
+      const pill = `<span class="qd-status-pill ${statusClassOf(u.status)} qd-status-pill-sm">${escapeHtml(u.status)}</span>`;
+      const reasons = u.reasons.length ? `<span class="qd-reason">${u.reasons.map(c => escapeHtml(TargetEvaluator.reasonText(c))).join(' · ')}</span>` : '';
+      const targetText = `≤${fmt(u.target)}/${u.unit === 'DAY' ? 'day' : 'shift'}`;
+      const judged = u.totalScrap !== null && u.scrapKnown !== false && u.status !== 'NO DATA' && (u.unit === 'DAY' || u.hasData);
+      const split = (judged && u.unit === 'DAY') ? `<span class="qd-sub">Day ${fmt(u.shiftScrap.DAY)} · Night ${fmt(u.shiftScrap.NIGHT)}</span>` : '';
+      const scrapCell = judged ? `${fmt(u.totalScrap)}${split}` : '—';
+      const gapCell = judged
+        ? `<span style="color:${u.gap > 0 ? 'var(--red)' : 'var(--green)'};font-weight:700;">${(u.gap > 0 ? '+' : '') + fmt(u.gap)}</span>` : '—';
+      return `<tr><td>${fmtDay(u.date)}</td><td>${escapeHtml(u.label)}</td><td class="num">${scrapCell}</td><td class="num">${targetText}</td><td class="num">${gapCell}</td><td>${pill}${reasons}</td></tr>`;
     }).join('');
   }
 
   // ---- Door Line Comparison -------------------------------------------
   // Informational only — always compares all 3 lines regardless of the
   // top Line filter (comparison is meaningless with only one line shown).
-  // The ≤30pcs/shift target is NEVER applied per-line here, only the
-  // combined A+B+C total (enforced elsewhere, in getRangeShiftEvaluations /
-  // renderKpis / renderShiftTargetTable) — this section adds Scrap Rate
+  // The scrap target (≤30/shift before the cutover, ≤50/day after it) is NEVER
+  // applied per-line here, only to the combined A+B+C total (enforced in
+  // js/target-evaluator.js) — this section adds Scrap Rate
   // and % contribution to total scrap on top of the same Production/
   // Scrap numbers the old Line Performance cards already showed.
 
@@ -517,9 +481,9 @@
         <tr class="${isHighest ? 'is-highest' : ''}"${isHighest ? ' title="Highest share of total scrap"' : ''}>
           <td><span class="qd-line-badge line-${p.line.code}">${p.line.code}</span><span class="qd-dashboard-doortable-name">${p.line.label}</span></td>
           <td class="num"><b>${p.hasAnyDoc ? fmt(p.production) : '–'}</b><span class="u">pcs</span></td>
-          <td class="num scrap${p.scrap === 0 ? ' zero' : ''}"><b>${fmt(p.scrap)}</b><span class="u">pcs</span></td>
-          <td class="num rate"><b>${p.rate === null ? 'N/A' : fmtPct(p.rate)}</b></td>
-          <td><div class="qd-dashboard-doortable-share"><span class="pct">${contribution === null ? '–' : contribution.toFixed(0) + '%'}</span><span class="bar" title="Share of total scrap"><i style="width:${contribution === null ? 0 : contribution.toFixed(1)}%"></i></span></div></td>
+          <td class="num scrap${p.scrap === 0 && !scrapLoadFailed ? ' zero' : ''}"><b>${scrapLoadFailed ? '–' : fmt(p.scrap)}</b>${scrapLoadFailed ? '' : '<span class="u">pcs</span>'}</td>
+          <td class="num rate"><b>${scrapLoadFailed || p.rate === null ? 'N/A' : fmtPct(p.rate)}</b></td>
+          <td><div class="qd-dashboard-doortable-share"><span class="pct">${scrapLoadFailed || contribution === null ? '–' : contribution.toFixed(0) + '%'}</span><span class="bar" title="Share of total scrap"><i style="width:${scrapLoadFailed || contribution === null ? 0 : contribution.toFixed(1)}%"></i></span></div></td>
         </tr>`;
     }).join('');
     container.innerHTML = `
@@ -614,6 +578,25 @@
       c.restore();
     }
   };
+  // Dashed Target reference (presentation only, opt-in via options.plugins.targetLine).
+  const targetLinePlugin = {
+    id: 'targetLine',
+    afterDatasetsDraw(chart, args, opts) {
+      if (!opts) return;
+      const y = chart.scales.y, x = chart.scales.x, a = chart.chartArea;
+      if (!y || !x) return;
+      const py = y.getPixelForValue(opts.value);
+      if (py < a.top || py > a.bottom) return;
+      const n = chart.data.labels.length, slot = a.width / n;
+      const x0 = a.left + opts.startIndex * slot, x1 = a.left + (opts.endIndex + 1) * slot;
+      const c = chart.ctx;
+      c.save(); c.setLineDash([6, 4]); c.lineWidth = 1.5; c.strokeStyle = '#F59E0B';
+      c.beginPath(); c.moveTo(x0, py); c.lineTo(x1, py); c.stroke(); c.setLineDash([]);
+      c.fillStyle = '#B45309'; c.font = "600 10px 'Inter', sans-serif"; c.textAlign = 'right'; c.textBaseline = 'bottom';
+      c.fillText(opts.label, x1 - 4, py - 3);
+      c.restore();
+    }
+  };
   const axisTitle = text => ({ display: true, text, color: '#64748B', font: { family: "'Inter', sans-serif", size: 10, weight: '500' }, padding: { top: 0, bottom: 2 } });
 
   function renderPareto(scrapRecords) {
@@ -699,7 +682,7 @@
       ['topDefectsCard', 'paretoCard'].forEach(id => {
         const empty = document.createElement('div');
         empty.className = 'qd-dashboard-pareto-empty';
-        empty.innerHTML = `${emptyIcon}<span>No defects recorded in this scope.</span>`;
+        empty.innerHTML = `${emptyIcon}<span>${scrapLoadFailed ? 'Scrap data could not be read.' : 'No defects recorded in this scope.'}</span>`;
         $(id).appendChild(empty);
       });
       return;
@@ -758,7 +741,7 @@
   // production or scrap — a day with production>0/scrap=0, or
   // production=0/scrap>0, still counts as meaningful and shows the real
   // chart. Does not touch the underlying daily-trend calculation at all.
-  function renderScrapTrend(points) {
+  function renderScrapTrend(points, targetLine) {
     const holder = $('scrapTrendChartHolder');
     const existingEmpty = holder.parentElement.querySelector('.qd-dashboard-pareto-empty');
     if (existingEmpty) existingEmpty.remove();
@@ -804,6 +787,7 @@
       plugins: {
         legend: { display: true, align: 'end', labels: { boxWidth: 10, usePointStyle: true, font: { family: "'Inter', sans-serif", size: 11 } } },
         valueLabels: { enabled: points.length <= 16 },
+        targetLine: targetLine || false,
         tooltip: compactTooltip({
           title: items => items.length ? String(items[0].label) : '',          // exact date
           label: ctx => ctx.dataset.yAxisID === 'y1'
@@ -825,13 +809,13 @@
               : `${parseInt(d.slice(8), 10)} ${MONTH_ABBR[parseInt(d.slice(5, 7), 10) - 1]}`;
           }
         }, longRange ? { autoSkip: true, maxRotation: 0, autoSkipPadding: 8 } : {}) },
-        y: { beginAtZero: true, grace: '10%', position: 'left', title: axisTitle('Scrap Qty (pcs)'), grid: { color: 'rgba(15,39,71,0.08)' }, ticks: { precision: 0, font: { family: "'JetBrains Mono', monospace", size: 10 } } },
+        y: { beginAtZero: true, grace: '10%', position: 'left', suggestedMax: targetLine ? Math.ceil(targetLine.value * 1.2) : undefined, title: axisTitle('Scrap Qty (pcs)'), grid: { color: 'rgba(15,39,71,0.08)' }, ticks: { precision: 0, font: { family: "'JetBrains Mono', monospace", size: 10 } } },
         y1: { beginAtZero: true, position: 'right', title: axisTitle('Scrap Rate %'), grid: { display: false }, ticks: { font: { family: "'JetBrains Mono', monospace", size: 10 }, callback: v => v + '%' } }
       }
     };
 
     if (scrapTrendChart) { scrapTrendChart.data = chartData; scrapTrendChart.options = options; scrapTrendChart.update(); }
-    else scrapTrendChart = new Chart($('scrapTrendChart'), { type: 'bar', data: chartData, options, plugins: [valueLabelsPlugin] });
+    else scrapTrendChart = new Chart($('scrapTrendChart'), { type: 'bar', data: chartData, options, plugins: [valueLabelsPlugin, targetLinePlugin] });
   }
 
   function baseLineOptions(tooltipFmt) {

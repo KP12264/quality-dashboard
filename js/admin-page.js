@@ -50,7 +50,7 @@
       const all = day.map(r => ({ ...r })).concat(night.map(r => ({ ...r })));
       all.sort((a, b) => (b.effectiveDate || '') < (a.effectiveDate || '') ? -1 : 1);
       if (all.length === 0) {
-        tbody.innerHTML = `<tr class="empty-row"><td colspan="4">No target history yet — using the default of ${DEFAULT_TARGET_PER_SHIFT_PCS['DAY']} pcs/shift for both shifts until a target is added below.</td></tr>`;
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="4">No target history yet — dates before ${TARGET_DAILY_RULE_EFFECTIVE_DATE} use the default of ${DEFAULT_TARGET_PER_SHIFT_PCS['DAY']} pcs/shift; from that date the daily target (≤${DAILY_TARGET_PCS} pcs/day) applies instead.</td></tr>`;
         return;
       }
       tbody.innerHTML = all.map(r => `

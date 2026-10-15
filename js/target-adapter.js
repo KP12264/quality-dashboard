@@ -7,6 +7,11 @@
  * newer target record with a later effectiveDate supersedes it.
  * Historical dates keep using whatever target was effective back then.
  *
+ * LEGACY PER-SHIFT TARGETS ONLY: these records apply to production dates
+ * BEFORE 2026-10-01 (js/target-evaluator.js). From that date the ≤50 pcs/day
+ * target comes from config.js and targetMaster is not consulted. Records are
+ * never modified or deleted by that change.
+ *
  * The Target is a TOTAL across all 3 lines combined for that shift —
  * never per line. This file is the single place that business rule is
  * encoded; nothing else in the dashboard should multiply a target by

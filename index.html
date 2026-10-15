@@ -145,7 +145,7 @@
         </div>
         <div class="qd-dashboard-kpi-label">Target</div>
         <div class="qd-dashboard-kpi-value" id="kpiTarget">&ndash;</div>
-        <div class="qd-dashboard-kpi-unit">pcs scrap / shift <span class="qd-info" title="Door A+B+C combined; Day and Night are evaluated independently" aria-label="Door A+B+C combined; Day and Night evaluated independently">&#9432;</span></div>
+        <div class="qd-dashboard-kpi-unit"><span id="kpiTargetUnitText">pcs scrap</span> <span class="qd-info" id="kpiTargetInfo" title="Door A+B+C combined. From 01 Oct 2026: Day + Night combined per production date (≤50/day). Before that: each shift judged separately (≤30/shift)." aria-label="Door A+B+C combined; daily target from 01 Oct 2026, per-shift target before">&#9432;</span></div>
       </div>
       <div class="qd-dashboard-kpi" data-kpi="status">
         <div class="qd-dashboard-kpi-icon green">
@@ -189,7 +189,7 @@
               <summary>Daily / shift detail</summary>
               <div class="qd-table-scroll qd-dashboard-range-scroll">
                 <table class="qd-datatable qd-dashboard-table qd-dashboard-table-compact" id="targetPerfDetailTable">
-                  <thead><tr><th>Date</th><th>Shift</th><th>Actual Scrap</th><th>Target</th><th>Gap</th><th>Status</th></tr></thead>
+                  <thead><tr><th>Date</th><th>Scope</th><th>Actual Scrap</th><th>Target</th><th>Gap</th><th>Status</th></tr></thead>
                   <tbody id="targetPerfDetailBody"></tbody>
                 </table>
               </div>
@@ -272,6 +272,7 @@
 <script src="js/scrap-adapter.js"></script>
 <script src="js/target-adapter.js"></script>
 <script src="js/quality-adapter.js"></script>
+<script src="js/target-evaluator.js"></script>
 <script src="js/improvement-adapter.js"></script>
 <script src="js/dashboard.js"></script>
 </body>

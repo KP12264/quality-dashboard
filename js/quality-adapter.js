@@ -31,7 +31,7 @@
    * buildOverallSummary(productionRecords, scrapRecords, targetQty)
    * productionRecords: normalized records from getProductionData() (model:null level is fine — this only needs totals)
    * scrapRecords: normalized records from getScrapData() (already date/shift/line filtered by caller)
-   * targetQty: TOTAL target across all lines for the shift(s)/scope in view (from TargetAdapter, summed by caller if scope spans multiple shifts)
+   * targetQty: the target the caller already resolved for ONE unit (a shift before 2026-10-01, a day from it) — never a sum of several units' targets
    */
   function buildOverallSummary(productionRecords, scrapRecords, targetQty) {
     const totalProduction = productionRecords.reduce((s, r) => s + r.productionQty, 0);
@@ -134,19 +134,13 @@
     });
   }
 
-  // ---- Per-shift target evaluation (target is ALWAYS per-shift, never summed across shifts) ----
+  // ---- Combining unit statuses (LEGACY helper) -----------------------------
+  // The Dashboard and Executive Report now judge targets in js/target-evaluator.js
+  // (≤30/shift before 2026-10-01, ≤50/day from it) and combine statuses there
+  // (OVER > INCOMPLETE > WITHIN > NO DATA). This older helper — OVER if any item is
+  // over, else WITHIN if any has data, else NO DATA — has no INCOMPLETE state and is
+  // no longer called by either page; it is kept unchanged for compatibility.
 
-  /**
-   * combineShiftStatuses(shiftEvals)
-   * shiftEvals: [{ shiftCode, status, ... }, ...] — one entry per shift in
-   * scope, each already evaluated against ITS OWN target via
-   * buildOverallSummary(shiftProduction, shiftScrap, shiftTarget). This
-   * function never adds shift totals or targets together — a 30 pcs/shift
-   * target must never become "60 for two shifts". It only decides what
-   * the single combined Status pill should say when more than one shift
-   * is in view: OVER TARGET if ANY shift is over its own target, else
-   * WITHIN TARGET if at least one shift has data, else NO DATA.
-   */
   function combineShiftStatuses(shiftEvals) {
     if (!shiftEvals || shiftEvals.length === 0) return "NO DATA";
     if (shiftEvals.some(e => e.status === "OVER TARGET")) return "OVER TARGET";

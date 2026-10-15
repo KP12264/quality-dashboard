@@ -94,18 +94,33 @@ const SHIFTS = [
 ];
 
 /**
- * Fallback scrap target, in pieces per shift — used ONLY when no
- * targetMaster document exists yet for a given shift/date (e.g. brand
- * new install, before anyone has set a target). This is a TOTAL across
- * all 3 lines combined for that shift, per the business rule — never
- * multiplied by line count.
+ * SCRAP TARGET RULES (two rules, switched by production date).
  *
- * This constant is never read directly by dashboard/business logic —
- * everything goes through js/target-adapter.js's getTargetForShift(),
- * which checks targetMaster (with effective-dating) first and only
- * falls back to this default if no record applies yet. That keeps this
- * number from being "hard-coded into the business logic" as required:
- * it's a documented fallback default in one isolated place.
+ *  - BEFORE TARGET_DAILY_RULE_EFFECTIVE_DATE: <= 30 pcs PER SHIFT, Door
+ *    A+B+C combined, Day and Night evaluated separately. The per-shift value
+ *    still comes from targetMaster (with its own effective dates) via
+ *    js/target-evaluator.js; DEFAULT_TARGET_PER_SHIFT_PCS below is only the
+ *    fallback when no targetMaster record applies. targetMaster is never
+ *    modified or deleted.
+ *
+ *  - FROM TARGET_DAILY_RULE_EFFECTIVE_DATE: <= DAILY_TARGET_PCS PER DAY,
+ *    Door A+B+C combined AND Day+Night combined (one evaluation per
+ *    production date). This value is read ONLY from here; targetMaster is
+ *    not consulted for these dates.
+ *
+ * "Day" always means the production date stored in the `date` field — a
+ * Night shift that runs past midnight stays on its original production date.
+ * Door In Door is NOT part of either rule yet (only LINES A/B/C count).
+ */
+const TARGET_DAILY_RULE_EFFECTIVE_DATE = "2026-10-01";
+const DAILY_TARGET_PCS = 50;
+
+/**
+ * LEGACY fallback scrap target in pieces per shift — used ONLY for dates
+ * BEFORE TARGET_DAILY_RULE_EFFECTIVE_DATE, and only when no targetMaster
+ * document applies to that shift/date. A TOTAL across all 3 lines for the
+ * shift — never multiplied by line count. Read through
+ * js/target-evaluator.js (and js/target-adapter.js).
  */
 const DEFAULT_TARGET_PER_SHIFT_PCS = {
   DAY: 30,
