@@ -1,0 +1,6 @@
+(()=>{const exp={"config.js": 26703, "firebase-init.js": 1239, "data-adapter.js": 15434, "scrap-adapter.js": 12446, "target-adapter.js": 4616, "quality-adapter.js": 8801, "target-evaluator.js": 15073, "improvement-adapter.js": 5724, "dashboard.js": 56749, "executive-report-page.js": 16783, "nav.js": 1944};
+const r=performance.getEntriesByType('resource').filter(e=>/\/js\//.test(e.name)).map(e=>{const f=e.name.split('/').pop().split('?')[0];return {file:f,query:e.name.split('?')[1]||'(NONE)',bytes:e.decodedBodySize,expected:exp[f]??'-',match:e.decodedBodySize===exp[f],fromCache:e.transferSize===0&&e.decodedBodySize>0}});
+console.table(r);
+console.log('all JS match deployed a420b70:',r.every(x=>x.match),'| all have ?v=:',r.every(x=>x.query!=='(NONE)'));
+console.log('TargetEvaluator:',typeof TargetEvaluator,'| cutover:',typeof TARGET_DAILY_RULE_EFFECTIVE_DATE!=='undefined'?TARGET_DAILY_RULE_EFFECTIVE_DATE:'undefined','| daily target:',typeof DAILY_TARGET_PCS!=='undefined'?DAILY_TARGET_PCS:'undefined');
+})();
