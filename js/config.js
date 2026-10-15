@@ -450,3 +450,22 @@ const IMPROVEMENT_STATUSES = ["Monitoring", "Controlled", "Not Effective", "Recu
 // lives, so it can be tuned without touching the detection logic in
 // js/quality-adapter.js.
 const RECURRING_THRESHOLD_DISTINCT_DATES = 3;
+
+/**
+ * PLAN & TRACKING / WEEKLY REVIEW (pages added 2026-10-15)
+ * ------------------------------------------------------------------
+ * Mirrors the "Scrap Plan & Tracking" and "Weekly Scrap Review" sheets of
+ * the Scrap Door Line workbook. Scope is the same as the daily target rule
+ * above: LINES A/B/C only, Day + Night combined, Door In Door excluded.
+ *
+ * MONTHLY_REDUCTION_GOAL : management goal vs the previous month's total
+ *                          (0.5 = cut scrap by half). Display only — the
+ *                          monthly target itself is DAILY_TARGET_PCS x days.
+ * SCRAP_WEEKLY_PLAN_COLLECTION : owned by this app. One doc per month+week
+ *                          (id "YYYY-MM_W3") holding the optional weekly plan
+ *                          override and the weekly review note. Needs its own
+ *                          entry in Firestore Security Rules (same pattern as
+ *                          scrapLogs / improvements) before saves succeed.
+ */
+const MONTHLY_REDUCTION_GOAL = 0.5;
+const SCRAP_WEEKLY_PLAN_COLLECTION = "scrapWeeklyPlans";

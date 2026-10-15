@@ -1,0 +1,126 @@
+/* ==================================================================
+   plan-review.css — scoped to plan-tracking.html and weekly-review.html
+   (body.pr-page). Builds on the tokens and components in styles.css;
+   does not change any shared rule.
+   ================================================================== */
+
+.pr-page .qd-kpis{margin-top:0;margin-bottom:14px;}
+.pr-page .qd-kpi-value{font-size:30px;}
+.pr-page .qd-kpi.is-bad{--kpi-status:var(--red);}
+.pr-page .qd-kpi.is-good{--kpi-status:var(--green);}
+.pr-page .qd-kpi.is-neutral{--kpi-status:var(--slate);}
+.pr-page .qd-kpi.is-info{--kpi-status:var(--blue);}
+.pr-kpi-value-bad{color:var(--red) !important;}
+.pr-kpi-value-good{color:var(--green) !important;}
+
+.pr-page .qd-filterbar button{
+  border:1px solid var(--border);background:#fff;border-radius:8px;padding:8px 14px;
+  font:600 13px var(--font-body);color:var(--text);cursor:pointer;
+}
+.pr-page .qd-filterbar button:hover{border-color:var(--blue);color:var(--blue);}
+.pr-page .qd-filterbar button:focus-visible,
+.pr-page .qd-datatable input:focus-visible,
+.pr-page .qd-datatable textarea:focus-visible{outline:2px solid var(--blue);outline-offset:1px;}
+.pr-asof-hint{font-size:11px;color:var(--muted-soft);align-self:center;}
+
+/* status chip */
+.pr-chip{display:inline-block;padding:3px 9px;border-radius:999px;font:700 11.5px var(--font-body);white-space:nowrap;}
+.pr-chip.good{background:var(--green-dim);color:var(--green);}
+.pr-chip.bad{background:var(--red-dim);color:var(--red);}
+.pr-chip.neutral{background:var(--slate-dim);color:var(--muted);}
+
+/* target strip: the "rules of the month" in one quiet line */
+.pr-targets{
+  display:flex;flex-wrap:wrap;gap:6px 22px;align-items:baseline;
+  background:var(--card);border:1px solid var(--border);border-radius:12px;
+  padding:12px 16px;margin-bottom:14px;font-size:13px;color:var(--muted);
+}
+.pr-targets b{font-family:var(--font-mono);color:var(--text);font-weight:700;font-variant-numeric:tabular-nums;}
+
+/* ---------- Month calendar: the centre-piece of Plan & Tracking ---------- */
+.pr-cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr)) minmax(120px,1.35fr);gap:6px;}
+.pr-cal-head{font-size:11px;font-weight:600;color:var(--muted);padding:0 4px 2px;}
+.pr-cal-head.week{padding-left:12px;}
+.pr-day{
+  position:relative;min-height:62px;border-radius:9px;padding:6px 8px;
+  background:var(--card-2);border:1px solid var(--border-soft);
+  display:flex;flex-direction:column;justify-content:space-between;
+}
+.pr-day .d{font-size:11px;color:var(--muted);}
+.pr-day .q{font-family:var(--font-mono);font-weight:700;font-size:19px;font-variant-numeric:tabular-nums;color:var(--text);text-align:right;}
+.pr-day.out{background:transparent;border:none;}
+.pr-day.future{background:transparent;border:1px dashed var(--border);}
+.pr-day.future .q{color:var(--muted-soft);font-size:13px;font-weight:500;}
+.pr-day.ok{background:var(--green-dim);border-color:#BFE8CF;}
+.pr-day.ok .q{color:var(--green);}
+.pr-day.over{background:var(--red-dim);border-color:#F6C7C7;}
+.pr-day.over .q{color:var(--red);}
+.pr-day.hot{background:var(--red);border-color:var(--red);}
+.pr-day.hot .q,.pr-day.hot .d{color:#fff;}
+.pr-day.asof::after{
+  content:"";position:absolute;inset:-3px;border:2px solid var(--navy);border-radius:11px;pointer-events:none;
+}
+.pr-week{
+  border-radius:9px;padding:7px 12px;background:var(--navy);color:#fff;
+  display:flex;flex-direction:column;justify-content:center;gap:2px;min-height:62px;
+}
+.pr-week .k{font-size:11px;color:#B9CBE3;}
+.pr-week .v{font-family:var(--font-mono);font-weight:700;font-size:16px;font-variant-numeric:tabular-nums;}
+.pr-week .v small{font-size:11px;color:#B9CBE3;font-weight:500;}
+.pr-week.bad{box-shadow:inset 4px 0 0 var(--red);}
+.pr-week.good{box-shadow:inset 4px 0 0 var(--green);}
+.pr-week.neutral{background:var(--slate-dim);color:var(--muted);}
+.pr-week.neutral .k,.pr-week.neutral .v small{color:var(--muted-soft);}
+.pr-legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:10px;font-size:11.5px;color:var(--muted);}
+.pr-legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px;}
+
+/* two-up row */
+.pr-row{display:grid;grid-template-columns:1.6fr 1fr;gap:14px;}
+.pr-row > .qd-panel{margin:0;}
+.pr-chart-box{position:relative;height:260px;}
+
+/* tables */
+.pr-page .qd-datatable td.num,.pr-page .qd-datatable th.num{text-align:right;}
+.pr-page .qd-datatable tr.pr-total td{font-weight:700;background:var(--slate-dim);border-top:2px solid var(--border);}
+.pr-page .qd-datatable tr.pr-selected td{background:var(--blue-dim);}
+.pr-plan-input{
+  width:86px;text-align:right;font:500 13px var(--font-mono);padding:5px 7px;
+  border:1px solid var(--border);border-radius:7px;background:#fff;color:var(--text);
+}
+.pr-plan-input::placeholder{color:var(--muted-soft);}
+.pr-note{
+  width:100%;min-width:180px;min-height:34px;resize:vertical;font:13px var(--font-body);
+  border:1px solid var(--border);border-radius:7px;padding:6px 8px;color:var(--text);background:#fff;
+}
+.pr-save-state{display:block;font-size:11px;margin-top:3px;color:var(--muted-soft);}
+.pr-save-state:empty{display:none;}
+.pr-save-state.err{color:var(--red);}
+.pr-save-state.ok{color:var(--green);}
+
+.pr-share{display:flex;align-items:center;gap:8px;justify-content:flex-end;}
+.pr-share span.bar{display:inline-block;height:7px;border-radius:4px;background:var(--blue);opacity:.8;}
+.pr-up,.pr-page .qd-datatable td.pr-up{color:var(--red);font-weight:600;}
+.pr-down,.pr-page .qd-datatable td.pr-down{color:var(--green);font-weight:600;}
+.pr-muted{color:var(--muted-soft);}
+.pr-cause{font-size:12px;color:var(--muted);}
+.pr-week-link{color:var(--blue);text-decoration:none;font-weight:600;}
+.pr-week-link:hover{text-decoration:underline;}
+
+.pr-lines{width:100%;border-collapse:collapse;}
+.pr-lines td{padding:9px 4px;border-bottom:1px solid var(--border-soft);font-size:13px;}
+.pr-lines td.num{text-align:right;font-family:var(--font-mono);font-variant-numeric:tabular-nums;}
+.pr-lines .bar{height:8px;border-radius:4px;background:var(--navy-2);}
+
+@media (max-width:1023px){
+  .pr-row{grid-template-columns:1fr;}
+}
+@media (max-width:760px){
+  .pr-cal{grid-template-columns:repeat(7,minmax(0,1fr));}
+  .pr-cal-head.week{display:none;}
+  .pr-week{grid-column:1/-1;min-height:0;flex-direction:row;justify-content:space-between;align-items:center;}
+  .pr-day{min-height:48px;padding:4px 5px;}
+  .pr-day .q{font-size:14px;}
+}
+@media print{
+  .pr-page .qd-filterbar,.pr-plan-input,.pr-note{display:none;}
+}

@@ -1,0 +1,160 @@
+/* ==================================================================
+   qs-theme.css — Quality System redesign (Oct 2026)
+   Loaded LAST on every page that has <body class="qs">.
+   1. Tokens: redefines the variables styles.css already uses, so every
+      existing component picks up the new palette and type without edits.
+   2. Shell: left sidebar (js/nav.js) + main column.
+   3. New components (qs-*) used by the redesigned pages.
+   4. Restyle of existing qd-* components, presentation only.
+   ================================================================== */
+
+/* ---------- 1. Tokens ---------- */
+:root{
+  --bg:#EEF1F4;
+  --card:#FFFFFF;
+  --card-2:#F7F9FA;
+  --border:#D9DFE6;
+  --border-soft:#EDF0F3;
+  --navy:#142231;
+  --navy-2:#1D3048;
+  --text:#142231;
+  --text-2:#3D4A57;
+  --muted:#556270;
+  --muted-soft:#6B7785;
+  --blue:#1E5BC6;
+  --blue-dim:#EAF0FA;
+  --green:#1B6B3F;
+  --green-dim:#E3F2E9;
+  --amber:#B45309;
+  --amber-dim:#FCEBD2;
+  --red:#B42318;
+  --red-dim:#FBE4E1;
+  --slate:#AAB5C1;
+  --slate-dim:#EDF0F3;
+  --line-a:#9BB8E3;
+  --line-b:#4A7FCF;
+  --line-c:#1D3F73;
+  --font-display:'IBM Plex Sans Thai','IBM Plex Sans',system-ui,sans-serif;
+  --font-body:'IBM Plex Sans Thai','IBM Plex Sans',system-ui,sans-serif;
+  --font-mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+
+body.qs{
+  margin:0;background:var(--bg);color:var(--text);
+  font-family:var(--font-body);font-size:14px;line-height:1.45;
+}
+body.qs a{color:var(--blue);}
+body.qs a:hover{color:#16479C;}
+body.qs :focus-visible{outline:2px solid var(--blue);outline-offset:2px;}
+
+/* ---------- 2. Shell ---------- */
+.qs-shell{display:flex;min-height:100vh;}
+.qs-shell > #navRoot{flex:0 0 232px;background:var(--navy);}
+.qs-main{flex:1 1 auto;min-width:0;}
+body.qs .wrap{max-width:1360px;margin:0;padding:28px 32px 48px;}
+
+.qs-side{
+  position:sticky;top:0;height:100vh;box-sizing:border-box;overflow-y:auto;
+  background:var(--navy);color:#C9D3DE;padding:22px 14px;
+  display:flex;flex-direction:column;gap:2px;
+}
+.qs-brand{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 10px 18px;margin-bottom:10px;border-bottom:1px solid #2A3E55;}
+.qs-brand b{display:block;color:#fff;font-size:15px;font-weight:600;}
+.qs-brand span{display:block;font-size:12px;color:#9FB0C2;}
+.qs-side-toggle{display:none;background:transparent;border:1px solid #3A5069;color:#fff;border-radius:6px;min-width:44px;min-height:40px;font-size:18px;cursor:pointer;}
+.qs-links{display:flex;flex-direction:column;gap:2px;}
+.qs-link{display:flex;align-items:center;gap:10px;padding:0 12px;min-height:42px;border-radius:6px;color:#C9D3DE !important;text-decoration:none;font-size:14px;}
+.qs-link:hover{background:#1D3048;color:#fff !important;}
+.qs-link.on{background:#253C57;color:#fff !important;font-weight:600;}
+.qs-link svg{flex:none;opacity:.8;}
+.qs-rule{margin-top:auto;padding:14px 10px 0;border-top:1px solid #2A3E55;font-size:12px;color:#9FB0C2;display:flex;flex-direction:column;gap:2px;}
+.qs-rule b{color:#E4EAF1;font-weight:600;}
+
+@media (max-width:900px){
+  .qs-shell{flex-direction:column;}
+  .qs-shell > #navRoot{flex:none;}
+  .qs-side{position:static;height:auto;padding:12px 14px;}
+  .qs-brand{padding:0;margin:0;border:0;}
+  .qs-side-toggle{display:inline-block;}
+  .qs-links{display:none;margin-top:10px;}
+  .qs-links.open{display:flex;}
+  .qs-rule{display:none;}
+  body.qs .wrap{padding:20px 16px 40px;}
+}
+
+/* ---------- 3. Components ---------- */
+.qs-top{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:flex-end;justify-content:space-between;margin-bottom:18px;}
+.qs-top h1{margin:0;font-size:26px;font-weight:600;letter-spacing:-.01em;}
+.qs-meta{font-size:13px;color:var(--muted);margin-top:2px;}
+.qs-stack{display:flex;flex-direction:column;gap:18px;}
+.qs-grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:18px;}
+@media (max-width:480px){.qs-grid2{grid-template-columns:1fr;}}
+.qs-sheet{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:20px 22px;box-sizing:border-box;min-width:0;}
+.qs-sheet h2{margin:0;font-size:16px;font-weight:600;}
+.qs-sub{font-size:12.5px;color:var(--muted);margin-top:2px;}
+.qs-head{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;}
+.qs-n{font-family:var(--font-mono);font-variant-numeric:tabular-nums;}
+.qs-mute{color:var(--muted);}
+.qs-red{color:var(--red);} .qs-green{color:var(--green);}
+.qs-scroll{overflow-x:auto;}
+
+table.qs-t{width:100%;border-collapse:collapse;font-size:13.5px;}
+table.qs-t th{text-align:left;font-weight:500;color:var(--muted);font-size:12px;padding:8px 10px;border-bottom:1px solid var(--border);white-space:nowrap;}
+table.qs-t td{padding:9px 10px;border-bottom:1px solid var(--border-soft);vertical-align:top;}
+table.qs-t .r{text-align:right;}
+table.qs-t tr.tot td{border-bottom:none;border-top:1px solid var(--border);font-weight:600;}
+table.qs-t .empty td{text-align:center;color:var(--muted);padding:18px;}
+
+.qs-chip{display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:600;white-space:nowrap;}
+.qs-chip.over{background:var(--red-dim);color:#A3200F;}
+.qs-chip.ok{background:var(--green-dim);color:#17633A;}
+.qs-chip.idle{background:var(--slate-dim);color:#4A5663;}
+.qs-chip.warn{background:var(--amber-dim);color:#7F4205;}
+
+.qs-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:40px;padding:0 16px;border-radius:6px;font:600 14px var(--font-body);border:1px solid #C5CED8;background:#fff;color:var(--text);text-decoration:none;cursor:pointer;box-sizing:border-box;}
+.qs-btn:hover{border-color:var(--blue);color:var(--blue);}
+.qs-btn.primary{background:var(--blue);border-color:var(--blue);color:#fff;}
+
+.qs-fld{display:flex;flex-direction:column;gap:4px;}
+.qs-fld label{font-size:12px;color:var(--muted);}
+.qs-fld input,.qs-fld select{height:40px;border:1px solid #C5CED8;border-radius:6px;padding:0 10px;font:14px var(--font-body);color:var(--text);background:#fff;box-sizing:border-box;}
+
+.qs-key{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px;}
+.qs-la{background:var(--line-a);} .qs-lb{background:var(--line-b);} .qs-lc{background:var(--line-c);}
+.qs-bar{height:8px;border-radius:2px;background:#E6EAEF;overflow:hidden;}
+.qs-bar i{display:block;height:100%;background:var(--line-b);}
+
+.qs-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-top:1px solid #E3E8ED;margin-top:22px;}
+.qs-stats > div{padding:16px 18px 0;border-left:1px solid #E3E8ED;min-width:0;}
+.qs-stats > div:first-child{padding-left:0;border-left:0;}
+.qs-stats .k{font-size:12.5px;color:var(--muted);}
+.qs-stats .v{font-family:var(--font-mono);font-size:24px;font-weight:600;font-variant-numeric:tabular-nums;}
+.qs-stats .s{font-size:12px;color:var(--muted);}
+@media (max-width:760px){
+  .qs-stats{grid-template-columns:repeat(2,minmax(0,1fr));}
+  .qs-stats > div{border-left:0;padding-left:0;}
+}
+
+/* ---------- 4. Restyle of existing components ---------- */
+body.qs .qd-page-header{background:none;box-shadow:none;color:var(--text);padding:0;border-radius:0;margin-bottom:18px;}
+body.qs .qd-page-header h1{font-family:var(--font-display);font-size:26px;font-weight:600;letter-spacing:-.01em;color:var(--text);}
+body.qs .qd-page-header p{color:var(--muted);font-size:13px;}
+body.qs .qd-panel{border-radius:8px;box-shadow:none;border:1px solid var(--border);}
+body.qs .qd-panel h2{font-family:var(--font-body);font-size:16px;font-weight:600;}
+body.qs .qd-panel h2::before{display:none;}
+body.qs .qd-filterbar{border-radius:8px;}
+body.qs .qd-filterbar label,body.qs .qd-form-field label{font-family:var(--font-body);text-transform:none;letter-spacing:0;font-size:12px;}
+body.qs .qd-datatable thead th{background:#F3F5F7;color:var(--muted);font-family:var(--font-body);text-transform:none;letter-spacing:0;font-size:12px;font-weight:500;border-bottom:1px solid var(--border);}
+body.qs .qd-datatable tbody tr:nth-child(even){background:transparent;}
+body.qs .qd-datatable tbody tr:hover{background:var(--card-2);}
+body.qs .qd-kpi{border-radius:8px;box-shadow:none;}
+body.qs .qd-kpi-bar{height:3px;}
+body.qs .qd-kpi-label{font-family:var(--font-body);text-transform:none;letter-spacing:0;font-size:12.5px;font-weight:500;}
+body.qs .qd-tabbar{border-radius:6px;}
+body.qs .qd-tabbar button{font-family:var(--font-body);}
+body.qs .qd-submit-btn{border-radius:6px;font-family:var(--font-body);}
+body.qs .qd-banner{border-radius:6px;}
+@media print{
+  .qs-shell > #navRoot{display:none;}
+  body.qs .wrap{padding:0;}
+}

@@ -1,0 +1,39 @@
+/* overview.css — scoped to the Overview page (index.html). Uses qs-theme tokens. */
+.ov-hero{padding:26px 28px;}
+.ov-verdict{margin:0;font-size:27px;line-height:1.3;font-weight:600;max-width:920px;}
+.ov-verdict-2{margin:8px 0 0;font-size:16px;line-height:1.5;color:var(--text-2);max-width:920px;}
+.ov-days{display:grid;grid-template-columns:repeat(16,minmax(0,1fr));gap:4px;margin-top:22px;}
+.ov-day{border-radius:4px;min-height:54px;padding:4px 6px;display:flex;flex-direction:column;justify-content:space-between;box-sizing:border-box;}
+.ov-day .d{font-size:11px;}
+.ov-day .q{font-family:var(--font-mono);font-size:16px;font-weight:600;text-align:right;font-variant-numeric:tabular-nums;}
+.ov-day.ok{background:var(--green-dim);color:#17633A;}
+.ov-day.over{background:var(--red-dim);color:#A3200F;}
+.ov-day.hot{background:var(--red);color:#fff;}
+.ov-day.none{background:#F3F5F7;color:var(--muted);}
+.ov-day.none .q{font:500 11px var(--font-body);}
+.ov-day.future{border:1px dashed #D2D9E1;color:#7A8794;}
+.ov-day.asof{box-shadow:0 0 0 2px var(--navy);}
+.ov-legend,.ov-keys{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12px;color:var(--muted);}
+.ov-legend{margin-top:10px;}
+.ov-keys{color:var(--text-2);align-items:center;}
+.ov-note{margin:14px 0 0;font-size:13px;color:var(--text-2);}
+
+.ov-chart{margin-top:16px;}
+.ov-plot{position:relative;height:190px;display:flex;gap:6px;align-items:flex-end;border-bottom:1px solid var(--border);}
+.ov-col{flex:1;min-width:0;max-width:30px;margin:0 auto;display:flex;flex-direction:column;justify-content:flex-end;}
+.ov-col .t{font-family:var(--font-mono);font-size:10.5px;text-align:center;color:var(--text-2);margin-bottom:2px;}
+.ov-col .gap{text-align:center;color:#7A8794;font-size:11px;}
+.ov-xrow{display:flex;gap:6px;margin-top:6px;}
+.ov-xrow .x{flex:1;min-width:0;max-width:30px;margin:0 auto;text-align:center;font-family:var(--font-mono);font-size:11px;color:var(--muted);}
+.ov-target{position:absolute;left:0;right:0;border-top:1.5px dashed var(--red);pointer-events:none;z-index:1;}
+.ov-empty{color:var(--muted);font-size:13px;padding:30px 0;text-align:center;}
+
+@media (max-width:760px){
+  .ov-verdict{font-size:21px;}
+  .ov-hero{padding:20px 16px;}
+  .ov-days{grid-template-columns:repeat(8,minmax(0,1fr));gap:3px;}
+  .ov-day{min-height:46px;padding:3px 4px;}
+  .ov-day .q{font-size:12.5px;}
+  .ov-day.none .q{font-size:0;}
+  .ov-col .t{display:none;}
+}
