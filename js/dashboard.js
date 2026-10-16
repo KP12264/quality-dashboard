@@ -29,6 +29,9 @@
  */
 
 (function () {
+  // V5: charts use the page font (IBM Plex Sans Thai Looped), never a monospace face.
+  const V5_CHART_FONT = "'IBM Plex Sans Thai Looped','IBM Plex Sans Thai','Noto Sans Thai','Leelawadee UI','Tahoma',sans-serif";
+
   const $ = id => document.getElementById(id);
   const fmt = n => Number.isFinite(n) ? Math.round(n).toLocaleString('en-US') : '–';
   const fmtPct = n => Number.isFinite(n) ? n.toFixed(2) + '%' : 'N/A';
@@ -603,8 +606,8 @@
     return {
       backgroundColor: '#0B2540', titleColor: '#fff', bodyColor: '#EAF1FE',
       padding: 8, cornerRadius: 6, caretSize: 5, bodySpacing: 3, titleMarginBottom: 4,
-      titleFont: { family: "'Inter', sans-serif", size: 11, weight: '600' },
-      bodyFont: { family: "'Inter', sans-serif", size: 11 },
+      titleFont: { family: V5_CHART_FONT, size: 11, weight: '600' },
+      bodyFont: { family: V5_CHART_FONT, size: 11 },
       usePointStyle: true, boxWidth: 7, boxHeight: 7, boxPadding: 3,
       callbacks
     };
@@ -615,7 +618,7 @@
     afterDatasetsDraw(chart, args, opts) {
       if (!opts || !opts.enabled) return;
       const c = chart.ctx;
-      c.save(); c.font = "600 11px 'Inter', sans-serif"; c.fillStyle = '#0B2340'; c.textAlign = 'center'; c.textBaseline = 'bottom';
+      c.save(); c.font = '600 11px ' + V5_CHART_FONT; c.fillStyle = '#0B2340'; c.textAlign = 'center'; c.textBaseline = 'bottom';
       chart.data.datasets.forEach((ds, i) => {
         if (ds.type !== 'bar') return;
         chart.getDatasetMeta(i).data.forEach((bar, idx) => {
@@ -644,12 +647,12 @@
       const c = chart.ctx;
       c.save(); c.setLineDash([6, 4]); c.lineWidth = 1.5; c.strokeStyle = '#F59E0B';
       c.beginPath(); c.moveTo(x0, py); c.lineTo(x1, py); c.stroke(); c.setLineDash([]);
-      c.fillStyle = '#B45309'; c.font = "600 10px 'Inter', sans-serif"; c.textAlign = 'right'; c.textBaseline = 'bottom';
+      c.fillStyle = '#B45309'; c.font = '600 10px ' + V5_CHART_FONT; c.textAlign = 'right'; c.textBaseline = 'bottom';
       c.fillText(opts.label, x1 - 4, py - 3);
       c.restore();
     }
   };
-  const axisTitle = text => ({ display: true, text, color: '#64748B', font: { family: "'Inter', sans-serif", size: 10, weight: '500' }, padding: { top: 0, bottom: 2 } });
+  const axisTitle = text => ({ display: true, text, color: '#64748B', font: { family: V5_CHART_FONT, size: 10, weight: '500' }, padding: { top: 0, bottom: 2 } });
 
   function renderPareto(scrapRecords) {
     if (typeof Chart === 'undefined') return;
@@ -677,7 +680,7 @@
       layout: { padding: { top: 16 } },
       interaction: { mode: 'index', intersect: false },
       plugins: {
-        legend: { display: true, align: 'end', labels: { boxWidth: 10, usePointStyle: true, font: { family: "'Inter', sans-serif", size: 11 } } },
+        legend: { display: true, align: 'end', labels: { boxWidth: 10, usePointStyle: true, font: { family: V5_CHART_FONT, size: 11 } } },
         valueLabels: { enabled: labels.length <= 16 },
         tooltip: compactTooltip({
           title: items => items.length ? labels[items[0].dataIndex] : '',   // full defect name
@@ -688,12 +691,12 @@
       },
       scales: {
         x: { grid: { display: false }, ticks: {
-          font: { family: "'Inter', sans-serif", size: 10 }, autoSkip: false,
+          font: { family: V5_CHART_FONT, size: 10 }, autoSkip: false,
           maxRotation: tilt ? 40 : 0, minRotation: tilt ? 40 : 0,
           callback: function (v) { return shortLabel(this.getLabelForValue(v), maxLabelLen); }
         } },
-        y: { beginAtZero: true, grace: '10%', position: 'left', title: axisTitle('Scrap Qty (pcs)'), grid: { color: 'rgba(15,39,71,0.08)' }, ticks: { precision: 0, font: { family: "'JetBrains Mono', monospace", size: 10 } } },
-        y1: { beginAtZero: true, min: 0, max: 100, position: 'right', title: axisTitle('Cumulative %'), grid: { display: false }, ticks: { font: { family: "'JetBrains Mono', monospace", size: 10 }, callback: v => v + '%' } }
+        y: { beginAtZero: true, grace: '10%', position: 'left', title: axisTitle('Scrap Qty (pcs)'), grid: { color: 'rgba(15,39,71,0.08)' }, ticks: { precision: 0, font: { family: V5_CHART_FONT, size: 10 } } },
+        y1: { beginAtZero: true, min: 0, max: 100, position: 'right', title: axisTitle('Cumulative %'), grid: { display: false }, ticks: { font: { family: V5_CHART_FONT, size: 10 }, callback: v => v + '%' } }
       }
     };
 
@@ -837,7 +840,7 @@
       layout: { padding: { top: 16 } },
       interaction: { mode: 'index', intersect: false },
       plugins: {
-        legend: { display: true, align: 'end', labels: { boxWidth: 10, usePointStyle: true, font: { family: "'Inter', sans-serif", size: 11 } } },
+        legend: { display: true, align: 'end', labels: { boxWidth: 10, usePointStyle: true, font: { family: V5_CHART_FONT, size: 11 } } },
         valueLabels: { enabled: points.length <= 16 },
         targetLine: targetLine || false,
         tooltip: compactTooltip({
@@ -853,7 +856,7 @@
       },
       scales: {
         x: { grid: { display: false }, ticks: Object.assign({
-          font: { family: "'JetBrains Mono', monospace", size: 10 },
+          font: { family: V5_CHART_FONT, size: 10 },
           callback: function (value) {
             const d = String(this.getLabelForValue(value));
             // up to ~2 weeks: "1 Oct" on every day (like the reference); longer ranges: bare day number inside one month
@@ -861,8 +864,8 @@
               : `${parseInt(d.slice(8), 10)} ${MONTH_ABBR[parseInt(d.slice(5, 7), 10) - 1]}`;
           }
         }, longRange ? { autoSkip: true, maxRotation: 0, autoSkipPadding: 8 } : {}) },
-        y: { beginAtZero: true, grace: '10%', position: 'left', suggestedMax: targetLine ? Math.ceil(targetLine.value * 1.2) : undefined, title: axisTitle('Scrap Qty (pcs)'), grid: { color: 'rgba(15,39,71,0.08)' }, ticks: { precision: 0, font: { family: "'JetBrains Mono', monospace", size: 10 } } },
-        y1: { beginAtZero: true, position: 'right', title: axisTitle('Scrap Rate %'), grid: { display: false }, ticks: { font: { family: "'JetBrains Mono', monospace", size: 10 }, callback: v => v + '%' } }
+        y: { beginAtZero: true, grace: '10%', position: 'left', suggestedMax: targetLine ? Math.ceil(targetLine.value * 1.2) : undefined, title: axisTitle('Scrap Qty (pcs)'), grid: { color: 'rgba(15,39,71,0.08)' }, ticks: { precision: 0, font: { family: V5_CHART_FONT, size: 10 } } },
+        y1: { beginAtZero: true, position: 'right', title: axisTitle('Scrap Rate %'), grid: { display: false }, ticks: { font: { family: V5_CHART_FONT, size: 10 }, callback: v => v + '%' } }
       }
     };
 
@@ -883,8 +886,8 @@
         }
       },
       scales: {
-        x: { grid: { display: false }, ticks: { color: '#64748B', font: { family: "'JetBrains Mono', monospace", size: 10 } } },
-        y: { beginAtZero: true, grid: { color: 'rgba(15,39,71,0.08)' }, ticks: { color: '#64748B', font: { family: "'JetBrains Mono', monospace", size: 10 } } }
+        x: { grid: { display: false }, ticks: { color: '#64748B', font: { family: V5_CHART_FONT, size: 10 } } },
+        y: { beginAtZero: true, grid: { color: 'rgba(15,39,71,0.08)' }, ticks: { color: '#64748B', font: { family: V5_CHART_FONT, size: 10 } } }
       }
     };
   }
