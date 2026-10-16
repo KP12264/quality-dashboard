@@ -262,10 +262,13 @@
 
   // ---- KPI cards --------------------------------------------------------
 
+  // V5: the level is a data attribute the scoped CSS reads (red only for 'bad').
+  // Null-safe so a missing card can never break render().
   function setKpiStatus(kpiEl, level) {
-    const color = level === 'good' ? 'var(--green)' : level === 'warn' ? 'var(--amber)' : level === 'bad' ? 'var(--red)' : 'var(--slate)';
-    kpiEl.style.setProperty('--kpi-status', color);
+    if (!kpiEl) return;
+    kpiEl.dataset.level = level || 'neutral';
   }
+  const kpiCard = key => { const sec = $('kpiSection'); return sec ? sec.querySelector(`[data-kpi="${key}"]`) : null; };
 
   // ---- Target wording (all of it comes from the shared evaluator's description) ----
 
@@ -304,31 +307,54 @@
     return (sum.days.within + sum.shifts.within) > 0 ? `All evaluated ${what} within target` : `No evaluated ${what}`;
   }
 
+  // Scrap Cost: only the cost stored on each scrap record (Amt. from the Excel
+  // import). Never estimated. If some records in scope have no cost, the sum is
+  // shown as incomplete; if none have one, N/A.
+  function scrapCostSummary(records) {
+    let total = 0, withCost = 0;
+    records.forEach(r => {
+      const c = r.scrapCost === null || r.scrapCost === undefined || r.scrapCost === '' ? NaN : Number(r.scrapCost);
+      if (Number.isFinite(c)) { total += c; withCost++; }
+    });
+    return { total, withCost, count: records.length };
+  }
+  const fmtBaht = n => '฿' + Math.round(n).toLocaleString('en-US');
+  // Big totals are shortened on the card (฿1.33M); the exact amount is in the sub line.
+  const fmtBahtShort = n => Math.abs(n) >= 1e6 ? '฿' + (n / 1e6).toFixed(2) + 'M' : fmtBaht(n);
+
+  // Counts strip under Target Performance: same units as the status (shared evaluator).
+  function targetCountsHtml(units) {
+    const sum = TargetEvaluator.summarize(units);
+    const W = sum.days.within + sum.shifts.within, O = sum.days.over + sum.shifts.over;
+    const I = sum.days.incomplete + sum.shifts.incomplete, N = sum.days.noData + sum.shifts.noData;
+    const unit = sum.mixed ? 'days/shifts' : (sum.hasDays ? 'days' : 'shifts');
+    const c = (cls, n, label) => `<span class="v5-count ${cls}"><b>${fmt(n)}</b> ${label}</span>`;
+    return `<span class="v5-counts-unit">${unit}:</span>` + c('good', W, 'Within') + c('bad', O, 'Over') + c('warn', I, 'Incomplete') + c('neutral', N, 'No Data');
+  }
+
   function renderKpis(displayProductionRecords, displayScrapRecords, shiftEvals) {
-    const productionEl = $('kpiProduction');
     const targetEl = $('kpiTarget');
     const scrapEl = $('kpiScrap');
     const scrapRateEl = $('kpiScrapRate');
+    const costEl = $('kpiScrapCost');
     const statusEl = $('kpiStatus');
     const noteEl = $('kpiStatusNote');
-    const breakdownEl = $('kpiShiftBreakdown');
 
     if (!displayProductionRecords) {
-      productionEl.textContent = '–';
       scrapEl.textContent = '–';
       scrapRateEl.textContent = '–';
+      costEl.textContent = '–';
       targetEl.textContent = '–';
       $('kpiTargetUnitText').textContent = 'pcs scrap';
+      $('kpiTargetCounts').innerHTML = '';
       statusEl.textContent = '–';
       statusEl.className = 'qd-status-pill neutral';
       noteEl.textContent = '';
-      breakdownEl.textContent = '';
-      breakdownEl.hidden = true;
       $('targetStripText').innerHTML = targetRuleHtml();
       $('kpiScrapUnit').textContent = '–';
       $('kpiScrapRateUnit').textContent = '–';
-      ['production', 'scrap', 'scrapRate', 'target', 'status'].forEach(k =>
-        setKpiStatus($(`kpiSection`).querySelector(`[data-kpi="${k}"]`), 'neutral'));
+      $('kpiScrapCostSub').textContent = '–';
+      ['scrap', 'scrapRate', 'cost', 'status'].forEach(k => setKpiStatus(kpiCard(k), 'neutral'));
       return;
     }
 
@@ -340,7 +366,7 @@
     const combinedStatus = TargetEvaluator.combineStatuses(shiftEvals);
     const targetDesc = TargetEvaluator.describeTarget(shiftEvals, fmt);
 
-    productionEl.textContent = fmt(displaySummary.totalProduction);
+    // Card 1 — Scrap Total
     if (scrapLoadFailed) {
       // A failed read must never look like "scrap = 0".
       scrapEl.textContent = 'N/A'; scrapEl.classList.add('na');
@@ -349,21 +375,48 @@
       scrapEl.textContent = fmt(displaySummary.totalScrap);
       scrapEl.classList.remove('na');
       scrapRateEl.textContent = fmtPct(displaySummary.scrapRatePct);
-      scrapRateEl.classList.remove('na');
+      scrapRateEl.classList.toggle('na', !Number.isFinite(displaySummary.scrapRatePct));
     }
-    // Helper text under Scrap / Scrap Rate: describes what was actually loaded
     $('kpiScrapUnit').textContent = scrapLoadFailed ? 'Scrap data could not be read'
-      : displayScrapRecords.length > 0 ? 'pcs' : 'No scrap recorded in this scope';
-    $('kpiScrapRateUnit').textContent = scrapLoadFailed ? 'Scrap data could not be read'
-      : Number.isFinite(displaySummary.scrapRatePct) ? 'Scrap ÷ Production' : 'No production in this scope';
+      : displayScrapRecords.length > 0 ? `${fmt(displayScrapRecords.length)} scrap record${displayScrapRecords.length === 1 ? '' : 's'}` : 'No scrap recorded in this scope';
+
+    // Card 2 — Scrap Rate, with Production as the secondary line
+    $('kpiScrapRateUnit').innerHTML = scrapLoadFailed ? 'Scrap data could not be read'
+      : `Production <b>${fmt(displaySummary.totalProduction)}</b> pcs`
+        + (Number.isFinite(displaySummary.scrapRatePct) ? '' : ' · no production in this scope');
+
+    // Card 3 — Scrap Cost (stored values only)
+    const cost = scrapCostSummary(displayScrapRecords);
+    let costLevel = 'neutral';
+    if (scrapLoadFailed) {
+      costEl.textContent = 'N/A'; costEl.classList.add('na');
+      $('kpiScrapCostSub').textContent = 'Scrap data could not be read';
+    } else if (cost.count === 0) {
+      costEl.textContent = '–'; costEl.classList.add('na');
+      $('kpiScrapCostSub').textContent = 'No scrap recorded in this scope';
+    } else if (cost.withCost === 0) {
+      costEl.textContent = 'N/A'; costEl.classList.add('na');
+      $('kpiScrapCostSub').textContent = 'No cost on these records (manual entries carry no cost)';
+    } else {
+      costEl.textContent = fmtBahtShort(cost.total); costEl.classList.remove('na');
+      costEl.title = fmtBaht(cost.total);
+      if (cost.withCost < cost.count) {
+        costLevel = 'warn';
+        $('kpiScrapCostSub').textContent = `Incomplete: ${fmt(cost.count - cost.withCost)} of ${fmt(cost.count)} records have no cost`;
+      } else {
+        $('kpiScrapCostSub').textContent = `${fmtBaht(cost.total)} · ${fmt(cost.count)} record${cost.count === 1 ? '' : 's'}`;
+      }
+    }
+
+    // Card 4 — Target Performance
     targetEl.textContent = targetDesc.label;
     $('kpiTargetUnitText').textContent = targetDesc.unitText;
-
     statusEl.textContent = combinedStatus;
     statusEl.className = 'qd-status-pill ' + statusClassOf(combinedStatus);
+    $('kpiTargetCounts').innerHTML = shiftEvals.length ? targetCountsHtml(shiftEvals) : '';
 
-    // Notes under the KPI row: Line filter (existing), Shift filter (new — the daily
-    // judgement ignores it) and the multi-day reminder.
+    // Notes under the KPI row: Line filter, Shift filter (the daily judgement
+    // ignores it) and the multi-day reminder.
     const notes = [];
     if (state.line !== 'all' && !scrapLoadFailed) {
       const combinedScrap = shiftEvals.reduce((s, e) => s + (e.totalScrap || 0), 0);
@@ -375,18 +428,17 @@
       const shiftName = (SHIFTS.find(x => x.code === state.shift) || {}).label || state.shift;
       notes.push(`From ${TargetEvaluator.formatCutoverDate()}, Status is judged on Day + Night combined (≤${fmt(DAILY_TARGET_PCS)} pcs/day) even though only ${shiftName} is shown above.`);
     }
+    if (targetDesc.mode === 'MIXED') {
+      notes.push(`This range uses two target rules: ≤30 pcs/shift before ${TargetEvaluator.formatCutoverDate()}, ≤${fmt(DAILY_TARGET_PCS)} pcs/day from then on.`);
+    }
     noteEl.textContent = notes.join(' ');
 
     $('targetStripText').innerHTML = targetRuleHtml();
 
-    breakdownEl.hidden = false;
-    breakdownEl.textContent = statusHelperText(shiftEvals);
-
-    setKpiStatus($('kpiSection').querySelector('[data-kpi="production"]'), 'neutral');
-    setKpiStatus($('kpiSection').querySelector('[data-kpi="scrap"]'), scrapLoadFailed ? 'neutral' : combinedStatus === 'OVER TARGET' ? 'bad' : combinedStatus === 'INCOMPLETE' ? 'warn' : 'good');
-    setKpiStatus($('kpiSection').querySelector('[data-kpi="scrapRate"]'), 'neutral');
-    setKpiStatus($('kpiSection').querySelector('[data-kpi="target"]'), 'neutral');
-    setKpiStatus($('kpiSection').querySelector('[data-kpi="status"]'), statusClassOf(combinedStatus));
+    setKpiStatus(kpiCard('scrap'), scrapLoadFailed ? 'neutral' : combinedStatus === 'OVER TARGET' ? 'bad' : 'neutral');
+    setKpiStatus(kpiCard('scrapRate'), 'neutral');
+    setKpiStatus(kpiCard('cost'), costLevel);
+    setKpiStatus(kpiCard('status'), statusClassOf(combinedStatus));
   }
 
   // ---- Scrap Target & Performance -----------------------------------------
