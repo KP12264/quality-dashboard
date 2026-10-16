@@ -7,12 +7,12 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<!-- One family for Thai, English and numbers on this page: IBM Plex Sans Thai 400/500/600/700. -->
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!-- Page text: IBM Plex Sans Thai 400–700. Page header: IBM Plex Sans Thai Looped 400/700, the Dashboard header face. -->
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=IBM+Plex+Sans+Thai+Looped:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 <!-- V5 look: shared shell/sidebar (dashboard-v5.css) + this page (scrap-entry-v5.css). Both scoped to body.qd-v5. -->
 <link rel="stylesheet" href="css/dashboard-v5.css?v=20261016-f1">
-<link rel="stylesheet" href="css/scrap-entry-v5.css?v=20261016-h1">
+<link rel="stylesheet" href="css/scrap-entry-v5.css?v=20261016-k1">
 
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
@@ -70,10 +70,13 @@
 
   <main class="qd-dashboard-main se-main">
 
-    <header class="se-head">
-      <div>
+    <!-- Page header: SAME classes as index.html (.qd-dashboard-header / -header-left / h1 / -subtitle),
+         so styles.css + dashboard-v5.css give it exactly the Dashboard's typography,
+         spacing and responsive rules. Breadcrumb sits where the Dashboard has its refresh button. -->
+    <header class="qd-dashboard-header">
+      <div class="qd-dashboard-header-left">
         <h1>Scrap Entry</h1>
-        <p class="se-subtitle">บันทึกของเสียจากการผลิต</p>
+        <span class="qd-dashboard-subtitle">บันทึกของเสียจากการผลิต</span>
       </div>
       <nav class="se-crumbs" aria-label="Breadcrumb"><a href="index.html">Home</a><span aria-hidden="true">›</span><span aria-current="page">Scrap Entry</span></nav>
     </header>
