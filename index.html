@@ -3,17 +3,19 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Daily Production &amp; Quality Dashboard</title>
+<title>Scrap Dashboard · Quality System</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
+<!-- Dashboard V5 look. Scoped to body.qd-v5, loaded only by this page. -->
+<link rel="stylesheet" href="css/dashboard-v5.css?v=20261016-a1">
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.0/chart.umd.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
 </head>
-<body>
+<body class="qd-v5">
 
 <div class="qd-dashboard-shell">
 
@@ -27,7 +29,7 @@
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="3" y="12" width="4" height="9" rx="1" fill="currentColor"/><rect x="10" y="7" width="4" height="14" rx="1" fill="currentColor"/><rect x="17" y="3" width="4" height="18" rx="1" fill="currentColor"/></svg>
       </span>
       <div>
-        <div class="qd-dashboard-sidebar-title">QUALITY<br>SYSTEM</div>
+        <div class="qd-dashboard-sidebar-title">QUALITY SYSTEM</div>
         <div class="qd-dashboard-sidebar-subtitle">Production &amp; Scrap Management</div>
       </div>
     </div>
@@ -69,19 +71,21 @@
 
     <header class="qd-dashboard-header">
       <div class="qd-dashboard-header-left">
-        <h1>DAILY PRODUCTION &amp; QUALITY</h1>
-        <span class="qd-dashboard-subtitle">Production: read-only from existing system &nbsp;&middot;&nbsp; Scrap: recorded via Scrap Entry</span>
+        <h1>Scrap Dashboard</h1>
+        <span class="qd-dashboard-subtitle">Production &amp; Scrap Quality Overview</span>
       </div>
       <button type="button" class="qd-dashboard-refresh" id="refreshBtn" title="Refresh now">
-        <span class="qd-dashboard-refresh-ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></span>
+        <span class="qd-dashboard-refresh-ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></span>
         <span id="lastUpdated">Loading&hellip;</span>
       </button>
     </header>
 
+    <!-- One filter row (wraps on narrow screens). Same ids and buttons as before:
+         dashboard.js wires #dateFrom/#dateTo/#shiftFilter/#lineFilter unchanged. -->
     <div class="qd-dashboard-filters">
       <div class="qd-dashboard-filter-card">
         <label for="dateFrom">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
           Date Range
         </label>
         <div class="qd-dashboard-daterange">
@@ -91,16 +95,16 @@
         </div>
       </div>
       <div class="qd-dashboard-filter-card">
-        <label>Shift</label>
-        <div class="qd-segmented" id="shiftFilter">
+        <label id="shiftFilterLabel">Shift</label>
+        <div class="qd-segmented" id="shiftFilter" role="group" aria-labelledby="shiftFilterLabel">
           <button data-shift="all" class="active">All</button>
           <button data-shift="DAY">Day</button>
           <button data-shift="NIGHT">Night</button>
         </div>
       </div>
       <div class="qd-dashboard-filter-card">
-        <label>Line</label>
-        <div class="qd-segmented" id="lineFilter">
+        <label id="lineFilterLabel">Line</label>
+        <div class="qd-segmented" id="lineFilter" role="group" aria-labelledby="lineFilterLabel">
           <button data-line="all" class="active">All</button>
           <button data-line="A">Door A</button>
           <button data-line="B">Door B</button>
@@ -113,49 +117,45 @@
 
     <div id="connectionBanner" class="qd-banner" style="display:none;"></div>
 
-    <!-- Executive KPI Summary -->
-    <section class="qd-dashboard-kpi-row" id="kpiSection">
-      <div class="qd-dashboard-kpi" data-kpi="production">
-        <div class="qd-dashboard-kpi-icon blue">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+    <!-- V5 KPI cards: Scrap Total · Scrap Rate · Scrap Cost · Target Performance.
+         Values are written by renderKpis() in js/dashboard.js; target judgement
+         comes from js/target-evaluator.js (unchanged). -->
+    <section class="v5-kpis" id="kpiSection" aria-label="Key figures">
+      <article class="v5-kpi" data-kpi="scrap">
+        <div class="v5-kpi-ico rose"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></div>
+        <div class="v5-kpi-body">
+          <h3 class="v5-kpi-label">Scrap Total</h3>
+          <div class="v5-kpi-value"><span class="na" id="kpiScrap">N/A</span> <small>pcs</small></div>
+          <div class="v5-kpi-sub" id="kpiScrapUnit">&ndash;</div>
         </div>
-        <div class="qd-dashboard-kpi-label">Production</div>
-        <div class="qd-dashboard-kpi-value" id="kpiProduction">&ndash;</div>
-        <div class="qd-dashboard-kpi-unit">pcs</div>
-      </div>
-      <div class="qd-dashboard-kpi" data-kpi="scrap">
-        <div class="qd-dashboard-kpi-icon red">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+      </article>
+      <article class="v5-kpi" data-kpi="scrapRate">
+        <div class="v5-kpi-ico blue"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg></div>
+        <div class="v5-kpi-body">
+          <h3 class="v5-kpi-label">Scrap Rate</h3>
+          <div class="v5-kpi-value"><span class="na" id="kpiScrapRate">N/A</span></div>
+          <div class="v5-kpi-sub" id="kpiScrapRateUnit">&ndash;</div>
         </div>
-        <div class="qd-dashboard-kpi-label">Scrap</div>
-        <div class="qd-dashboard-kpi-value na" id="kpiScrap">N/A</div>
-        <div class="qd-dashboard-kpi-unit" id="kpiScrapUnit">&ndash;</div>
-      </div>
-      <div class="qd-dashboard-kpi" data-kpi="scrapRate">
-        <div class="qd-dashboard-kpi-icon blue">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>
+      </article>
+      <article class="v5-kpi" data-kpi="cost">
+        <div class="v5-kpi-ico teal"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l9 4.5-9 4.5-9-4.5z"/><path d="M3 12l9 4.5 9-4.5"/><path d="M3 16.5L12 21l9-4.5"/></svg></div>
+        <div class="v5-kpi-body">
+          <h3 class="v5-kpi-label">Scrap Cost</h3>
+          <div class="v5-kpi-value"><span class="na" id="kpiScrapCost">N/A</span></div>
+          <div class="v5-kpi-sub" id="kpiScrapCostSub">&ndash;</div>
         </div>
-        <div class="qd-dashboard-kpi-label">Scrap Rate</div>
-        <div class="qd-dashboard-kpi-value na" id="kpiScrapRate">N/A</div>
-        <div class="qd-dashboard-kpi-unit" id="kpiScrapRateUnit">&ndash;</div>
-      </div>
-      <div class="qd-dashboard-kpi" data-kpi="target">
-        <div class="qd-dashboard-kpi-icon amber">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+      </article>
+      <article class="v5-kpi" data-kpi="status">
+        <div class="v5-kpi-ico amber"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></svg></div>
+        <div class="v5-kpi-body">
+          <h3 class="v5-kpi-label">Target Performance</h3>
+          <div class="v5-kpi-value v5-kpi-status"><span class="qd-status-pill neutral" id="kpiStatus">&ndash;</span></div>
+          <div class="v5-kpi-sub">
+            <span class="v5-target-line">Target <b id="kpiTarget">&ndash;</b> <span id="kpiTargetUnitText">pcs scrap</span> <span class="qd-info" id="kpiTargetInfo" tabindex="0" title="Door A+B+C combined. From 01 Oct 2026: Day + Night combined per production date (≤50/day). Before that: each shift judged separately (≤30/shift)." aria-label="Door A+B+C combined; daily target from 01 Oct 2026, per-shift target before">&#9432;</span></span>
+            <span class="v5-counts" id="kpiTargetCounts"></span>
+          </div>
         </div>
-        <div class="qd-dashboard-kpi-label">Target</div>
-        <div class="qd-dashboard-kpi-value" id="kpiTarget">&ndash;</div>
-        <div class="qd-dashboard-kpi-unit"><span id="kpiTargetUnitText">pcs scrap</span> <span class="qd-info" id="kpiTargetInfo" title="Door A+B+C combined. From 01 Oct 2026: Day + Night combined per production date (≤50/day). Before that: each shift judged separately (≤30/shift)." aria-label="Door A+B+C combined; daily target from 01 Oct 2026, per-shift target before">&#9432;</span></div>
-      </div>
-      <div class="qd-dashboard-kpi" data-kpi="status">
-        <div class="qd-dashboard-kpi-icon green">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-        </div>
-        <div class="qd-dashboard-kpi-label">Status</div>
-        <div class="qd-status-pill" id="kpiStatus">&ndash;</div>
-        <!-- Day/Night detail intentionally hidden: Scrap Target & Performance already shows it. Element kept (not removed) because renderKpis() still writes to it. -->
-        <div class="qd-dashboard-kpi-unit" id="kpiShiftBreakdown" hidden></div>
-      </div>
+      </article>
     </section>
 
     <div class="qd-dashboard-target-note" id="kpiStatusNote"></div>
@@ -274,6 +274,6 @@
 <script src="js/quality-adapter.js?v=20261015-3"></script>
 <script src="js/target-evaluator.js?v=20261015-3"></script>
 <script src="js/improvement-adapter.js?v=20261015-3"></script>
-<script src="js/dashboard.js?v=20261015-3"></script>
+<script src="js/dashboard.js?v=20261016-a1"></script>
 </body>
 </html>
