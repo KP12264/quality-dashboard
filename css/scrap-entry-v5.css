@@ -1,0 +1,110 @@
+/* ==================================================================
+   scrap-entry-v5.css — Scrap Entry V5 (scrap-entry.html only)
+   Scoped to body.se-v5. Shell, sidebar and tokens come from
+   css/dashboard-v5.css (body.qd-v5). styles.css is untouched.
+   ================================================================== */
+
+body.se-v5 .se-main{max-width:1280px;}
+
+/* ---------------- Header ---------------- */
+body.se-v5 .se-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:12px;margin-bottom:18px;}
+body.se-v5 .se-head h1{margin:0;font-size:32px;line-height:1.15;font-weight:700;letter-spacing:-.01em;color:var(--v5-text);font-family:var(--font-display);}
+body.se-v5 .se-subtitle{margin:4px 0 0;font-size:15px;color:var(--v5-muted);}
+body.se-v5 .se-crumbs{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--v5-muted);}
+body.se-v5 .se-crumbs a{color:var(--v5-muted);text-decoration:none;}
+body.se-v5 .se-crumbs a:hover{color:var(--v5-blue);text-decoration:underline;}
+body.se-v5 .se-crumbs [aria-current]{color:var(--v5-text-2);font-weight:500;}
+
+/* ---------------- Tabs ---------------- */
+body.se-v5 .se-tabs{display:inline-flex;gap:2px;background:#E9EEF5;border:0;border-radius:10px;padding:3px;margin-bottom:14px;}
+body.se-v5 .se-tabs button{min-height:38px;padding:0 16px;border:0;border-radius:8px;background:transparent;font:500 14px var(--font-body);color:var(--v5-text-2);cursor:pointer;}
+body.se-v5 .se-tabs button:hover{background:#DFE6F0;}
+body.se-v5 .se-tabs button.active{background:#fff;color:var(--v5-blue);font-weight:600;box-shadow:0 1px 2px rgba(22,33,46,.08);}
+
+/* ---------------- Card ---------------- */
+body.se-v5 .se-card{background:var(--v5-card);border:1px solid var(--v5-line);border-radius:var(--v5-radius);box-shadow:var(--v5-shadow);padding:22px 24px 22px;margin-bottom:18px;}
+body.se-v5 .se-card-head{display:flex;align-items:center;gap:10px;margin-bottom:18px;}
+body.se-v5 .se-card-head h2{margin:0;font-size:19px;font-weight:700;color:var(--v5-text);font-family:var(--font-display);}
+body.se-v5 .se-card-ico{width:34px;height:34px;border-radius:9px;background:var(--v5-blue-soft);color:var(--v5-blue);display:grid;place-items:center;}
+
+/* the Import Excel panel keeps its content, just gets the V5 card look */
+body.se-v5 .qd-import-panel{border-radius:var(--v5-radius);border:1px solid var(--v5-line);box-shadow:var(--v5-shadow);}
+
+/* ---------------- Form grid ---------------- */
+body.se-v5 .se-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px 20px;}
+body.se-v5 .se-span2{grid-column:span 2;}
+body.se-v5 .se-span3{grid-column:span 3;}
+body.se-v5 .se-span4{grid-column:1 / -1;}
+body.se-v5 .se-field{min-width:0;margin:0;padding:0;border:0;display:flex;flex-direction:column;gap:6px;}
+body.se-v5 .se-field > label,body.se-v5 .se-field > legend{font-size:14px;font-weight:600;color:var(--v5-text-2);padding:0;margin:0;line-height:1.4;}
+body.se-v5 fieldset.se-field > legend{float:left;width:100%;margin-bottom:6px;}
+body.se-v5 fieldset.se-field > legend + *{clear:both;}
+body.se-v5 .se-field > label{margin-bottom:0;}
+body.se-v5 .se-req{color:#C42B40;margin-left:2px;}
+body.se-v5 .se-field input[type="date"],
+body.se-v5 .se-field input[type="text"],
+body.se-v5 .se-field input[type="number"],
+body.se-v5 .se-field select{
+  width:100%;box-sizing:border-box;min-height:44px;padding:0 12px;
+  border:1px solid #CBD5E1;border-radius:10px;background:#fff;
+  font:15px var(--font-body);color:var(--v5-text);
+}
+body.se-v5 .se-field select:disabled{background:#F4F6F9;color:var(--v5-muted);}
+body.se-v5 .se-field input:focus,body.se-v5 .se-field select:focus{outline:none;border-color:var(--v5-blue);box-shadow:0 0 0 3px rgba(31,98,214,.15);}
+body.se-v5 .se-field [aria-invalid="true"]{border-color:#C42B40;}
+body.se-v5 .se-hint{font-size:12px;color:var(--v5-muted);}
+body.se-v5 .se-err{font-size:12.5px;color:#B42335;min-height:0;}
+body.se-v5 .se-err:empty{display:none;}
+
+body.se-v5 .se-qty{position:relative;}
+body.se-v5 .se-qty input{padding-right:48px !important;font-variant-numeric:tabular-nums;}
+body.se-v5 .se-qty span{position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:14px;color:var(--v5-muted);pointer-events:none;}
+
+/* segmented radio groups (Shift / Line) */
+body.se-v5 .se-seg{display:flex;max-width:420px;background:#F1F4F8;border-radius:10px;padding:3px;gap:2px;border:1px solid transparent;}
+body.se-v5 .se-seg.invalid{border-color:#C42B40;}
+body.se-v5 .se-seg label{flex:1;position:relative;margin:0;cursor:pointer;}
+body.se-v5 .se-seg input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer;}
+body.se-v5 .se-seg span{display:flex;align-items:center;justify-content:center;min-height:38px;padding:0 10px;border-radius:8px;font-size:14px;font-weight:500;color:var(--v5-text-2);white-space:nowrap;}
+body.se-v5 .se-seg label:hover span{background:#E6ECF4;}
+body.se-v5 .se-seg input:checked + span{background:var(--v5-blue);color:#fff;box-shadow:0 1px 3px rgba(31,98,214,.35);}
+body.se-v5 .se-seg input:focus-visible + span{outline:2px solid var(--v5-blue);outline-offset:2px;}
+
+/* ---------------- Messages + actions ---------------- */
+body.se-v5 .se-msg{margin-top:18px;padding:12px 14px;border-radius:10px;font-size:14px;line-height:1.45;}
+body.se-v5 .se-msg.success{background:#E7F5EE;color:#11633D;border:1px solid #BFE5D0;}
+body.se-v5 .se-msg.error{background:#FCECEE;color:#9F1D30;border:1px solid #F3C4CB;}
+
+body.se-v5 .se-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:10px;margin-top:20px;padding-top:18px;border-top:1px solid var(--v5-line);}
+body.se-v5 .se-btn{min-height:44px;padding:0 20px;border-radius:10px;font:600 14.5px var(--font-body);cursor:pointer;border:1px solid transparent;}
+body.se-v5 .se-btn:disabled{opacity:.6;cursor:progress;}
+body.se-v5 .se-btn.ghost{background:#fff;border-color:#CBD5E1;color:var(--v5-text-2);}
+body.se-v5 .se-btn.ghost:hover:not(:disabled){border-color:var(--v5-blue);color:var(--v5-blue);}
+body.se-v5 .se-btn.soft{background:var(--v5-blue-soft);border-color:#C9DAF8;color:var(--v5-blue);}
+body.se-v5 .se-btn.soft:hover:not(:disabled){background:#DCE8FC;}
+body.se-v5 .se-btn.primary{background:var(--v5-blue);color:#fff;box-shadow:0 1px 3px rgba(31,98,214,.35);}
+body.se-v5 .se-btn.primary:hover:not(:disabled){background:#1A55BC;}
+
+body.se-v5 .se-foot{font-size:12px;color:var(--v5-muted);}
+
+/* ---------------- Responsive ---------------- */
+@media (max-width:1100px){
+  body.se-v5 .se-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+  body.se-v5 .se-span3{grid-column:span 2;}
+}
+@media (max-width:600px){
+  body.se-v5 .se-head{flex-direction:column;align-items:flex-start;}
+  body.se-v5 .se-head h1{font-size:26px;}
+  body.se-v5 .se-card{padding:18px 16px;}
+  body.se-v5 .se-grid{grid-template-columns:1fr;}
+  body.se-v5 .se-span2,body.se-v5 .se-span3,body.se-v5 .se-span4{grid-column:auto;}
+  body.se-v5 .se-actions{flex-direction:column-reverse;}
+  body.se-v5 .se-btn{width:100%;min-height:48px;}
+  body.se-v5 .se-tabs{display:flex;}
+  body.se-v5 .se-tabs button{flex:1;}
+}
+
+/* qty: hide browser spin buttons so they never collide with the "pcs" suffix */
+body.se-v5 .se-qty input{-moz-appearance:textfield;appearance:textfield;}
+body.se-v5 .se-qty input::-webkit-outer-spin-button,
+body.se-v5 .se-qty input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
