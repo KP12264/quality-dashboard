@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="th">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,7 +7,7 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<!-- Page text: IBM Plex Sans Thai 400–700. Page header: IBM Plex Sans Thai Looped 400/700, the Dashboard header face. -->
+<!-- Page text: IBM Plex Sans Thai 400–700 (Thai defect names still need Thai glyphs). Page header: IBM Plex Sans Thai Looped 400/700, the Dashboard header face. -->
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=IBM+Plex+Sans+Thai+Looped:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 <!-- V5 look: shared shell/sidebar (dashboard-v5.css) + this page (scrap-entry-v5.css). Both scoped to body.qd-v5. -->
@@ -76,7 +76,7 @@
     <header class="qd-dashboard-header">
       <div class="qd-dashboard-header-left">
         <h1>Scrap Entry</h1>
-        <span class="qd-dashboard-subtitle">บันทึกของเสียจากการผลิต</span>
+        <span class="qd-dashboard-subtitle">Production Scrap Recording</span>
       </div>
       <nav class="se-crumbs" aria-label="Breadcrumb"><a href="index.html">Home</a><span aria-hidden="true">›</span><span aria-current="page">Scrap Entry</span></nav>
     </header>
@@ -84,26 +84,26 @@
     <div id="connectionBanner" class="qd-banner" style="display:none;"></div>
 
     <div class="qd-tabbar se-tabs" id="entryTabs" role="tablist">
-      <button data-tab="manual" class="active" role="tab">บันทึกทีละรายการ</button>
+      <button data-tab="manual" class="active" role="tab">Manual Entry</button>
       <button data-tab="import" role="tab">Import Excel</button>
     </div>
 
     <section class="se-card qd-entry-tab-section" id="tab-manual" aria-labelledby="seFormTitle">
       <div class="se-card-head">
         <span class="se-card-ico" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></span>
-        <h2 id="seFormTitle">บันทึก Scrap ใหม่</h2>
+        <h2 id="seFormTitle">New Scrap Entry</h2>
       </div>
 
       <form id="seForm" class="se-form" novalidate>
         <div class="se-grid">
           <div class="se-field">
-            <label for="ctxDate">วันที่ผลิต <span class="se-req" aria-hidden="true">*</span></label>
+            <label for="ctxDate">Production Date <span class="se-req" aria-hidden="true">*</span></label>
             <input type="date" id="ctxDate" required aria-describedby="err-date">
             <div class="se-err" id="err-date"></div>
           </div>
 
           <fieldset class="se-field">
-            <legend>กะ <span class="se-req" aria-hidden="true">*</span></legend>
+            <legend>Shift <span class="se-req" aria-hidden="true">*</span></legend>
             <div class="se-seg" id="ctxShiftGroup">
               <label><input type="radio" name="ctxShift" value="DAY" checked><span>Day</span></label>
               <label><input type="radio" name="ctxShift" value="NIGHT"><span>Night</span></label>
@@ -122,38 +122,38 @@
 
           <div class="se-field se-span3">
             <label for="fModel">Model <span class="se-req" aria-hidden="true">*</span></label>
-            <select id="fModel" required aria-describedby="fModelHint err-model" disabled><option value="">เลือก Line ก่อน</option></select>
-            <div class="se-hint" id="fModelHint">รายชื่อ Model มาจากแผนผลิตของวัน / กะ / Line ที่เลือก (Production V2)</div>
+            <select id="fModel" required aria-describedby="fModelHint err-model" disabled><option value="">Select a line first</option></select>
+            <div class="se-hint" id="fModelHint">Models are loaded from the selected production date, shift, and line (Production V2)</div>
             <div class="se-err" id="err-model"></div>
           </div>
 
           <div class="se-field">
-            <label for="fQty">จำนวน Scrap <span class="se-req" aria-hidden="true">*</span></label>
+            <label for="fQty">Scrap Quantity (pcs) <span class="se-req" aria-hidden="true">*</span></label>
             <div class="se-qty">
-              <input type="number" id="fQty" min="1" step="1" inputmode="numeric" placeholder="ใส่จำนวน" required aria-describedby="err-qty">
+              <input type="number" id="fQty" min="1" step="1" inputmode="numeric" placeholder="Enter quantity" required aria-describedby="err-qty">
               <span>pcs</span>
             </div>
             <div class="se-err" id="err-qty"></div>
           </div>
 
           <div class="se-field se-span2">
-            <label for="fDefect">ประเภทปัญหา (Defect) <span class="se-req" aria-hidden="true">*</span></label>
-            <select id="fDefect" required aria-describedby="err-defect"></select>
+            <label for="fDefect">Defect Type <span class="se-req" aria-hidden="true">*</span></label>
+            <select id="fDefect" lang="th" required aria-describedby="err-defect"></select>
             <div class="se-err" id="err-defect"></div>
           </div>
 
           <div class="se-field se-span2">
-            <label for="fRemark">หมายเหตุ</label>
-            <input type="text" id="fRemark" maxlength="200" placeholder="ระบุหมายเหตุ (ถ้ามี)">
+            <label for="fRemark">Remarks</label>
+            <input type="text" id="fRemark" maxlength="200" placeholder="Enter remarks (optional)">
           </div>
         </div>
 
         <div id="entryMessage" class="se-msg" role="status" aria-live="polite" hidden></div>
 
         <div class="se-actions">
-          <button type="button" class="se-btn ghost" id="clearBtn">ล้างข้อมูล</button>
-          <button type="button" class="se-btn soft" id="saveAnotherBtn">บันทึกและเพิ่มรายการใหม่</button>
-          <button type="submit" class="se-btn primary" id="saveBtn">บันทึกข้อมูล</button>
+          <button type="button" class="se-btn ghost" id="clearBtn">Clear Form</button>
+          <button type="button" class="se-btn soft" id="saveAnotherBtn">Save &amp; Add Another</button>
+          <button type="submit" class="se-btn primary" id="saveBtn">Save Scrap</button>
         </div>
       </form>
     </section>
@@ -237,7 +237,7 @@
 
 
     <footer class="qd-footer se-foot">
-      <span>บันทึกลง <code>scrapLogs</code> เท่านั้น · ข้อมูล Production V2 (<code>prodV2_actualLogs</code>, <code>prodV2_dailyPlans</code>) อ่านอย่างเดียว · แก้ไข/ลบรายการได้ที่ <a href="scrap-detail.html">Scrap Detail</a></span>
+      <span>Saves to <code>scrapLogs</code> only · Production V2 data (<code>prodV2_actualLogs</code>, <code>prodV2_dailyPlans</code>) is read-only · Edit or delete records in <a href="scrap-detail.html">Scrap Detail</a></span>
     </footer>
 
   </main>
@@ -248,7 +248,7 @@
 <script src="js/data-adapter.js"></script>
 <script src="js/scrap-adapter.js"></script>
 <script src="js/scrap-model-mapping-adapter.js"></script>
-<script src="js/scrap-entry-page.js?v=20261016-se1"></script>
+<script src="js/scrap-entry-page.js?v=20261016-en1"></script>
 <script src="js/scrap-import.js"></script>
 <script src="js/nav.js"></script>
 <script>
