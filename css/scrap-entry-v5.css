@@ -90,7 +90,8 @@ body.se-v5 .se-foot{font-family:var(--font-body);font-size:12.5px;font-weight:40
 
 /* ==================================================================
    Typography (Scrap Entry only)
-   One family — IBM Plex Sans Thai Looped — for Thai, English and numbers.
+   One family — IBM Plex Sans Thai (loopless) — for Thai, English and numbers.
+   The Dashboard keeps IBM Plex Sans Thai Looped; same Latin and digits.
    Overrides the font tokens of styles.css / dashboard-v5.css on this
    page only, so the Import Excel panel (styles.css components that use
    var(--font-mono)) also stops using a monospace face here.
@@ -99,7 +100,8 @@ body.se-v5 .se-foot{font-family:var(--font-body);font-size:12.5px;font-weight:40
    summary KPI 28/600 (used from Phase B).
    ================================================================== */
 body.se-v5{
-  --se-font:'IBM Plex Sans Thai Looped','IBM Plex Sans Thai','Noto Sans Thai','Leelawadee UI','Tahoma',sans-serif;
+  --se-font:'IBM Plex Sans Thai','Noto Sans Thai','Leelawadee UI','Tahoma',sans-serif;
+  --v5-font:var(--se-font);   /* shared shell (dashboard-v5.css) follows this page's font */
   --font-body:var(--se-font);
   --font-display:var(--se-font);
   --font-mono:var(--se-font);
