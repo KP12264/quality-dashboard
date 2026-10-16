@@ -19,8 +19,10 @@ body.qd-v5{
   --v5-blue-soft:#E8F0FD;
   --v5-shadow:0 1px 2px rgba(22,33,46,.05), 0 2px 8px rgba(22,33,46,.04);
   --v5-radius:12px;
-  --font-body:'IBM Plex Sans Thai','Inter',system-ui,sans-serif;
-  --font-display:'IBM Plex Sans Thai','Inter',system-ui,sans-serif;
+  --v5-font:'IBM Plex Sans Thai Looped','IBM Plex Sans Thai','Noto Sans Thai','Leelawadee UI','Tahoma',sans-serif;
+  --font-body:var(--v5-font);
+  --font-display:var(--v5-font);
+  --font-mono:var(--v5-font);   /* no monospace for UI text on V5 pages */
   background:var(--v5-bg);
   color:var(--v5-text);
   font-family:var(--font-body);
@@ -135,6 +137,18 @@ body.qd-v5 .v5-count.neutral b{color:var(--v5-muted);}
 /* note under the KPI row (filter / mixed-rule explanations) */
 body.qd-v5 .qd-dashboard-target-note{font-size:13px;color:var(--v5-text-2);margin:0 0 18px;min-height:0;}
 body.qd-v5 .qd-dashboard-target-note:empty{display:none;}
+
+/* ---------------- Typography (V5) ----------------
+   One family for Thai/English/numbers. styles.css components below the KPI
+   row used --font-mono with UPPERCASE + letter-spacing; on V5 pages they use
+   the same face, natural case, tabular figures. Typography only. */
+body.qd-v5 button,body.qd-v5 input,body.qd-v5 select,body.qd-v5 textarea{font-family:var(--v5-font);}
+body.qd-v5 .qd-datatable thead th,
+body.qd-v5 .qd-dashboard-line-table th,
+body.qd-v5 table th{font-family:var(--v5-font);text-transform:none;letter-spacing:0;font-size:13px;font-weight:600;}
+body.qd-v5 td,body.qd-v5 .v5-kpi-value,body.qd-v5 .qd-dashboard-target-card-value{font-variant-numeric:tabular-nums;}
+body.qd-v5 .qd-dashboard-panel h2,body.qd-v5 .qd-panel h2{font-family:var(--v5-font);font-weight:600;}
+body.qd-v5 code{font-family:var(--v5-font);}
 
 /* ---------------- Responsive ---------------- */
 @media (max-width:1440px){
