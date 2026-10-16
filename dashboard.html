@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scrap Entry · Quality System</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- One family for Thai, English and numbers (V5): IBM Plex Sans Thai Looped 400/500/600/700. -->
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai+Looped:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<!-- V5 look: shared shell/sidebar (dashboard-v5.css) + this page (scrap-entry-v5.css). Both scoped to body.qd-v5. -->
+<link rel="stylesheet" href="css/dashboard-v5.css?v=20261016-f1">
+<link rel="stylesheet" href="css/scrap-entry-v5.css?v=20261016-f1">
+
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body class="qd-v5 se-v5">
+
+<div class="qd-dashboard-shell">
+
+  <!-- Page sidebar (same markup as the Dashboard). This page has no #navRoot,
+       so the shared top nav (js/nav.js) does nothing here; other pages keep it. -->
+  <aside class="qd-dashboard-sidebar" id="dashboardSidebar">
+    <div class="qd-dashboard-sidebar-brand">
+      <span class="qd-dashboard-sidebar-logo">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="3" y="12" width="4" height="9" rx="1" fill="currentColor"/><rect x="10" y="7" width="4" height="14" rx="1" fill="currentColor"/><rect x="17" y="3" width="4" height="18" rx="1" fill="currentColor"/></svg>
+      </span>
+      <div>
+        <div class="qd-dashboard-sidebar-title">QUALITY SYSTEM</div>
+        <div class="qd-dashboard-sidebar-subtitle">Production &amp; Scrap Management</div>
+      </div>
+    </div>
+    <nav class="qd-dashboard-sidebar-nav">
+      <a href="index.html" class="qd-dashboard-sidebar-link">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        Dashboard
+      </a>
+      <a href="scrap-entry.html" class="qd-dashboard-sidebar-link active" aria-current="page">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+        Scrap Entry
+      </a>
+      <a href="scrap-detail.html" class="qd-dashboard-sidebar-link">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="16" x2="13" y2="16"/></svg>
+        Scrap Detail
+      </a>
+      <a href="improvement.html" class="qd-dashboard-sidebar-link">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="14 7 21 7 21 14"/></svg>
+        Improvement
+      </a>
+      <a href="executive-report.html" class="qd-dashboard-sidebar-link">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>
+        Executive Report
+      </a>
+      <a href="admin.html" class="qd-dashboard-sidebar-link">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        Admin
+      </a>
+    </nav>
+  </aside>
+  <button type="button" class="qd-dashboard-mobile-toggle" id="dashboardMobileToggle" aria-label="Toggle menu">☰</button>
+  <div class="qd-dashboard-sidebar-overlay" id="dashboardSidebarOverlay"></div>
+
+
+  <button type="button" class="qd-dashboard-mobile-toggle" id="dashboardMobileToggle" aria-label="Toggle menu" aria-controls="dashboardSidebar" aria-expanded="false">☰</button>
+  <div class="qd-dashboard-sidebar-overlay" id="dashboardSidebarOverlay"></div>
+
+  <main class="qd-dashboard-main se-main">
+
+    <header class="se-head">
+      <div>
+        <h1>Scrap Entry</h1>
+        <p class="se-subtitle">บันทึกของเสียจากการผลิต</p>
+      </div>
+      <nav class="se-crumbs" aria-label="Breadcrumb"><a href="index.html">Home</a><span aria-hidden="true">›</span><span aria-current="page">Scrap Entry</span></nav>
+    </header>
+
+    <div id="connectionBanner" class="qd-banner" style="display:none;"></div>
+
+    <div class="qd-tabbar se-tabs" id="entryTabs" role="tablist">
+      <button data-tab="manual" class="active" role="tab">บันทึกทีละรายการ</button>
+      <button data-tab="import" role="tab">Import Excel</button>
+    </div>
+
+    <section class="se-card qd-entry-tab-section" id="tab-manual" aria-labelledby="seFormTitle">
+      <div class="se-card-head">
+        <span class="se-card-ico" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></span>
+        <h2 id="seFormTitle">บันทึก Scrap ใหม่</h2>
+      </div>
+
+      <form id="seForm" class="se-form" novalidate>
+        <div class="se-grid">
+          <div class="se-field">
+            <label for="ctxDate">วันที่ผลิต <span class="se-req" aria-hidden="true">*</span></label>
+            <input type="date" id="ctxDate" required aria-describedby="err-date">
+            <div class="se-err" id="err-date"></div>
+          </div>
+
+          <fieldset class="se-field">
+            <legend>กะ <span class="se-req" aria-hidden="true">*</span></legend>
+            <div class="se-seg" id="ctxShiftGroup">
+              <label><input type="radio" name="ctxShift" value="DAY" checked><span>Day</span></label>
+              <label><input type="radio" name="ctxShift" value="NIGHT"><span>Night</span></label>
+            </div>
+          </fieldset>
+
+          <fieldset class="se-field se-span2">
+            <legend>Line <span class="se-req" aria-hidden="true">*</span></legend>
+            <div class="se-seg" id="ctxLineGroup" aria-describedby="err-line">
+              <label><input type="radio" name="ctxLine" value="A"><span>Door A</span></label>
+              <label><input type="radio" name="ctxLine" value="B"><span>Door B</span></label>
+              <label><input type="radio" name="ctxLine" value="C"><span>Door C</span></label>
+            </div>
+            <div class="se-err" id="err-line"></div>
+          </fieldset>
+
+          <div class="se-field se-span3">
+            <label for="fModel">Model <span class="se-req" aria-hidden="true">*</span></label>
+            <select id="fModel" required aria-describedby="fModelHint err-model" disabled><option value="">เลือก Line ก่อน</option></select>
+            <div class="se-hint" id="fModelHint">รายชื่อ Model มาจากแผนผลิตของวัน / กะ / Line ที่เลือก (Production V2)</div>
+            <div class="se-err" id="err-model"></div>
+          </div>
+
+          <div class="se-field">
+            <label for="fQty">จำนวน Scrap <span class="se-req" aria-hidden="true">*</span></label>
+            <div class="se-qty">
+              <input type="number" id="fQty" min="1" step="1" inputmode="numeric" placeholder="ใส่จำนวน" required aria-describedby="err-qty">
+              <span>pcs</span>
+            </div>
+            <div class="se-err" id="err-qty"></div>
+          </div>
+
+          <div class="se-field se-span2">
+            <label for="fDefect">ประเภทปัญหา (Defect) <span class="se-req" aria-hidden="true">*</span></label>
+            <select id="fDefect" required aria-describedby="err-defect"></select>
+            <div class="se-err" id="err-defect"></div>
+          </div>
+
+          <div class="se-field se-span2">
+            <label for="fRemark">หมายเหตุ</label>
+            <input type="text" id="fRemark" maxlength="200" placeholder="ระบุหมายเหตุ (ถ้ามี)">
+          </div>
+        </div>
+
+        <div id="entryMessage" class="se-msg" role="status" aria-live="polite" hidden></div>
+
+        <div class="se-actions">
+          <button type="button" class="se-btn ghost" id="clearBtn">ล้างข้อมูล</button>
+          <button type="button" class="se-btn soft" id="saveAnotherBtn">บันทึกและเพิ่มรายการใหม่</button>
+          <button type="submit" class="se-btn primary" id="saveBtn">บันทึกข้อมูล</button>
+        </div>
+      </form>
+    </section>
+
+  <section class="qd-panel qd-import-panel qd-entry-tab-section" id="tab-import" style="display:none;">
+    <h2>Import Scrap Records from File</h2>
+    <div class="qd-panel-note">
+      For backlog data you already tracked elsewhere. Accepts <code>.csv</code> or <code>.xlsx</code>. After choosing a file,
+      pick which worksheet holds the Scrap data — nothing is assumed. The header row and columns are then auto-detected
+      (editable if wrong) and shown in a Detection Preview before anything is validated or checked against Production.
+      Date/Shift prefer clean <code>Date</code>/<code>shift2</code> columns; a combined <code>"25 Jul 2026 #D"</code>-style value
+      is used only as a fallback. Model is checked against Production V2's real plan for that date/line/shift.
+    </div>
+    <div class="qd-import-controls">
+      <button type="button" class="mini-add-btn" id="downloadTemplateBtn">⬇ Download Template (.csv)</button>
+      <label class="qd-file-label" for="importFileInput">📂 Choose File
+        <input type="file" id="importFileInput" accept=".csv,.xlsx,.xls" style="display:none;">
+      </label>
+      <span id="importFileName" class="qd-import-filename"></span>
+    </div>
+
+    <div id="detectionWarning" class="qd-form-message error" style="display:none;"></div>
+
+    <!-- Step 1: choose which worksheet holds the Scrap data -->
+    <div id="sheetSelectorWrap" style="display:none;">
+      <h3>Select Worksheet</h3>
+      <div class="qd-panel-note">This workbook has multiple sheets — pick the one that contains the Scrap records.</div>
+      <div class="qd-import-controls">
+        <select id="sheetSelect" class="qd-select-wide"></select>
+        <button type="button" class="qd-submit-btn" id="useSheetBtn" style="width:auto;">Use This Sheet</button>
+      </div>
+    </div>
+
+    <!-- Step 2: verify the detected header row + column mapping BEFORE any validation -->
+    <div id="detectionPreviewWrap" style="display:none;">
+      <h3>Excel Detection Preview</h3>
+      <div class="qd-import-cards" id="detectionSummary"></div>
+      <div class="qd-form-field" style="max-width:260px;">
+        <label for="headerRowInput">Detected Header Row (Excel row #, editable)</label>
+        <input type="number" id="headerRowInput" min="1">
+      </div>
+      <div class="qd-panel-note">Excel Column → System Field</div>
+      <div class="qd-table-scroll">
+        <table class="qd-datatable">
+          <thead><tr><th>Excel Column</th><th></th><th>System Field</th></tr></thead>
+          <tbody id="columnMappingBody"></tbody>
+        </table>
+      </div>
+      <div class="qd-panel-note">First 10 candidate rows (raw, before validation) — check these actually look like Scrap records</div>
+      <div class="qd-table-scroll">
+        <table class="qd-datatable">
+          <thead><tr id="rawPreviewHeadRow"></tr></thead>
+          <tbody id="rawPreviewBody"></tbody>
+        </table>
+      </div>
+      <div id="scrapModelMappingNotice" class="qd-panel-note" style="display:none;"></div>
+      <div class="qd-import-controls">
+        <button type="button" class="mini-add-btn" id="backToSheetSelectBtn">← Back to Sheet Selection</button>
+        <button type="button" class="qd-submit-btn" id="continueToValidationBtn" style="width:auto;">Looks Good — Continue to Validation</button>
+      </div>
+    </div>
+
+    <div id="importPreviewWrap" style="display:none;">
+      <div class="qd-import-cards" id="importSummaryCards"></div>
+      <div class="qd-panel-note" style="margin-top:6px;">Model Mapping</div>
+      <div class="qd-import-cards" id="mappingSummaryCards"></div>
+      <div id="resolveMappingsSection" class="qd-resolve-mappings" style="display:none;"></div>
+      <div class="qd-table-scroll">
+        <table class="qd-datatable" id="importPreviewTable">
+          <thead><tr>
+            <th>Import Status</th><th>Date</th><th>Shift</th><th>Line</th>
+            <th>Excel Model/Material</th><th>Matched Production Model</th><th>Defect</th><th>Scrap Qty</th><th>Scrap Cost (THB)</th>
+          </tr></thead>
+          <tbody id="importPreviewBody"></tbody>
+        </table>
+      </div>
+      <button type="button" class="qd-submit-btn" id="importConfirmBtn">Import Valid Rows</button>
+      <div id="importMessage" class="qd-form-message" style="display:none;"></div>
+    </div>
+  </section>
+
+
+    <footer class="qd-footer se-foot">
+      <span>บันทึกลง <code>scrapLogs</code> เท่านั้น · ข้อมูล Production V2 (<code>prodV2_actualLogs</code>, <code>prodV2_dailyPlans</code>) อ่านอย่างเดียว · แก้ไข/ลบรายการได้ที่ <a href="scrap-detail.html">Scrap Detail</a></span>
+    </footer>
+
+  </main>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/firebase-init.js"></script>
+<script src="js/data-adapter.js"></script>
+<script src="js/scrap-adapter.js"></script>
+<script src="js/scrap-model-mapping-adapter.js"></script>
+<script src="js/scrap-entry-page.js?v=20261016-se1"></script>
+<script src="js/scrap-import.js"></script>
+<script src="js/nav.js"></script>
+<script>
+  document.getElementById('entryTabs').addEventListener('click', function (e) {
+    var btn = e.target.closest('button');
+    if (!btn) return;
+    var tab = btn.dataset.tab;
+    document.querySelectorAll('#entryTabs button').forEach(function (b) { b.classList.toggle('active', b === btn); });
+    document.getElementById('tab-manual').style.display = tab === 'manual' ? '' : 'none';
+    document.getElementById('tab-import').style.display = tab === 'import' ? '' : 'none';
+  });
+</script>
+</body>
+</html>
