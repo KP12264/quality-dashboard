@@ -45,19 +45,19 @@
     const date = $('ctxDate').value, shift = getShift(), line = getLine();
     const keep = sel.value;
     if (!line || !date) {
-      sel.innerHTML = `<option value="">${!line ? 'เลือก Line ก่อน' : 'เลือกวันที่ก่อน'}</option>`;
+      sel.innerHTML = `<option value="">${!line ? 'Select a line first' : 'Select a date first'}</option>`;
       sel.disabled = true;
       return;
     }
     if (window.qdFirebaseError) {
-      sel.innerHTML = '<option value="">เชื่อมต่อฐานข้อมูลไม่ได้</option>';
+      sel.innerHTML = '<option value="">Cannot connect to the database</option>';
       sel.disabled = true;
       return;
     }
     const key = `${date}|${shift}|${line}`;
     const seq = ++modelRequestSeq;
     if (!modelCache.has(key)) {
-      sel.innerHTML = '<option value="">กำลังโหลด Model…</option>';
+      sel.innerHTML = '<option value="">Loading models…</option>';
       sel.disabled = true;
       const res = await ProductionDataAdapter.getModelListForDayLine(window.qdDb, date, line, shift);
       if (!res.error) modelCache.set(key, res);   // never cache a failed read
@@ -71,16 +71,16 @@
     const sel = $('fModel');
     const names = res.names || [];
     if (res.error) {
-      sel.innerHTML = '<option value="">อ่านแผนผลิตไม่สำเร็จ ลองเลือกใหม่อีกครั้ง</option>';
+      sel.innerHTML = '<option value="">Could not load the production plan. Please select again.</option>';
       sel.disabled = true;
       return;
     }
     if (names.length === 0) {
-      sel.innerHTML = `<option value="">ไม่มี Model ในแผนของ ${escapeHtml(lineLabel(line))} · ${escapeHtml(shiftLabel(shift))} · ${escapeHtml(date)}</option>`;
+      sel.innerHTML = `<option value="">No models planned for ${escapeHtml(lineLabel(line))} · ${escapeHtml(shiftLabel(shift))} · ${escapeHtml(date)}</option>`;
       sel.disabled = true;
       return;
     }
-    sel.innerHTML = '<option value="">เลือก Model</option>' +
+    sel.innerHTML = '<option value="">Select Model</option>' +
       names.map(m => `<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`).join('');
     sel.disabled = false;
     if (keep && names.includes(keep)) sel.value = keep;
@@ -106,12 +106,12 @@
     };
     let first = null;
     const fail = (f, msg, el) => { setError(f, msg); if (!first) first = el; };
-    if (!entry.date) fail('date', 'เลือกวันที่ผลิต', $('ctxDate'));
-    if (!entry.line) fail('line', 'เลือก Line', document.querySelector('input[name="ctxLine"]'));
-    if (!entry.model) fail('model', entry.line ? 'เลือก Model' : 'เลือก Line ก่อน แล้วจึงเลือก Model', $('fModel'));
-    if (entry.scrapQty === '') fail('qty', 'ใส่จำนวน Scrap', $('fQty'));
-    else if (!/^\d+$/.test(entry.scrapQty) || Number(entry.scrapQty) <= 0) fail('qty', 'ต้องเป็นจำนวนเต็มมากกว่า 0', $('fQty'));
-    if (!entry.defectType) fail('defect', 'เลือกประเภทปัญหา', $('fDefect'));
+    if (!entry.date) fail('date', 'Select a production date.', $('ctxDate'));
+    if (!entry.line) fail('line', 'Select a line.', document.querySelector('input[name="ctxLine"]'));
+    if (!entry.model) fail('model', entry.line ? 'Select a model.' : 'Select a line first, then a model.', $('fModel'));
+    if (entry.scrapQty === '') fail('qty', 'Enter the scrap quantity.', $('fQty'));
+    else if (!/^\d+$/.test(entry.scrapQty) || Number(entry.scrapQty) <= 0) fail('qty', 'Quantity must be a whole number greater than 0.', $('fQty'));
+    if (!entry.defectType) fail('defect', 'Select a defect type.', $('fDefect'));
     if (first) { if (!first.disabled) first.focus(); return null; }
     entry.scrapQty = Number(entry.scrapQty);
     return entry;
@@ -131,8 +131,8 @@
     saving = busy;
     ['saveBtn', 'saveAnotherBtn', 'clearBtn'].forEach(id => { $(id).disabled = busy; });
     $('seForm').setAttribute('aria-busy', busy ? 'true' : 'false');
-    $('saveBtn').textContent = busy && which === 'save' ? 'กำลังบันทึก…' : 'บันทึกข้อมูล';
-    $('saveAnotherBtn').textContent = busy && which === 'another' ? 'กำลังบันทึก…' : 'บันทึกและเพิ่มรายการใหม่';
+    $('saveBtn').textContent = busy && which === 'save' ? 'Saving…' : 'Save Scrap';
+    $('saveAnotherBtn').textContent = busy && which === 'another' ? 'Saving…' : 'Save & Add Another';
   }
 
   // ---- Reset helpers ------------------------------------------------------
@@ -150,9 +150,9 @@
   async function save(mode) {
     if (saving) return;
     hideMessage();
-    if (window.qdFirebaseError) { showMessage('error', '⚠ เชื่อมต่อฐานข้อมูลไม่ได้: ' + window.qdFirebaseError); return; }
+    if (window.qdFirebaseError) { showMessage('error', '⚠ Cannot connect to the database: ' + window.qdFirebaseError); return; }
     const entry = readEntry();
-    if (!entry) { showMessage('error', 'กรอกข้อมูลที่มีเครื่องหมาย * ให้ครบก่อนบันทึก'); return; }
+    if (!entry) { showMessage('error', 'Please complete all required fields (*) before saving.'); return; }
 
     setBusy(true, mode);
     try {
@@ -162,15 +162,15 @@
         clearItemFields();
         if (mode === 'save') setLine('');   // finished: Line must be picked again for the next record
         await loadModels();
-        showMessage('success', `✓ บันทึกแล้ว: ${summary}`);
+        showMessage('success', `✓ Saved: ${summary}`);
         if (mode === 'another') $('fModel').focus();
       } else {
         const err = failed[0] && failed[0].error;
-        showMessage('error', '⚠ บันทึกไม่สำเร็จ ข้อมูลที่กรอกยังอยู่ ลองใหม่อีกครั้ง' + (err && err.message ? ` (${err.message})` : ''));
+        showMessage('error', '⚠ Save failed. Your entries have been kept — please try again.' + (err && err.message ? ` (${err.message})` : ''));
       }
     } catch (e) {
       console.error('Quality Dashboard: scrap entry save failed:', e);
-      showMessage('error', '⚠ บันทึกไม่สำเร็จ ข้อมูลที่กรอกยังอยู่ ลองใหม่อีกครั้ง (' + (e && e.message ? e.message : String(e)) + ')');
+      showMessage('error', '⚠ Save failed. Your entries have been kept — please try again. (' + (e && e.message ? e.message : String(e)) + ')');
     } finally {
       setBusy(false);
     }
@@ -199,7 +199,7 @@
       b.className = 'qd-banner error'; b.textContent = '⚠ ' + window.qdFirebaseError; b.style.display = 'flex';
     }
     $('ctxDate').value = todayStr();
-    $('fDefect').innerHTML = '<option value="">เลือกประเภทปัญหา</option>' +
+    $('fDefect').innerHTML = '<option value="">Select Defect Type</option>' +
       DEFECT_TYPES.map(d => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join('');
     loadModels();
 
