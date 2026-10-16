@@ -8,8 +8,9 @@ body.se-v5 .se-main{max-width:1280px;}
 
 /* ---------------- Header ---------------- */
 body.se-v5 .se-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:12px;margin-bottom:18px;}
-body.se-v5 .se-head h1{margin:0;font-size:28px;line-height:1.5;font-weight:600;letter-spacing:0;color:var(--v5-text);font-family:var(--font-display);}
-body.se-v5 .se-subtitle{margin:2px 0 0;font-size:15px;font-weight:400;line-height:1.55;color:var(--v5-muted);}
+/* page title + subtitle: same size/weight/colour as the Dashboard header (.qd-dashboard-header-left h1 / .qd-dashboard-subtitle) */
+body.se-v5 .se-head h1{margin:0;font-size:32px;line-height:1.15;font-weight:700;letter-spacing:-.01em;color:#16212E;font-family:var(--font-display);}
+body.se-v5 .se-subtitle{margin:4px 0 0;font-size:15px;font-weight:400;line-height:normal;color:#5E6B7A;}
 body.se-v5 .se-crumbs{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:400;line-height:1.5;color:var(--v5-muted);}
 body.se-v5 .se-crumbs a{color:var(--v5-muted);text-decoration:none;}
 body.se-v5 .se-crumbs a:hover{color:var(--v5-blue);text-decoration:underline;}
@@ -95,7 +96,7 @@ body.se-v5 .se-foot{font-family:var(--font-body);font-size:12.5px;font-weight:40
    Overrides the font tokens of styles.css / dashboard-v5.css on this
    page only, so the Import Excel panel (styles.css components that use
    var(--font-mono)) also stops using a monospace face here.
-   Scale: page title 28/600 · card title 18/600 · label 14/500 ·
+   Scale: page title 32/700 (= Dashboard) · card title 18/600 · label 14/500 ·
    input 14/400 · button 14/600 · table 13–14 · helper 12.5–13/400 ·
    summary KPI 28/600 (used from Phase B).
    ================================================================== */
@@ -158,7 +159,7 @@ body.se-v5 .qd-banner{font-size:14px;line-height:1.55;}
 }
 @media (max-width:600px){
   body.se-v5 .se-head{flex-direction:column;align-items:flex-start;}
-  body.se-v5 .se-head h1{font-size:24px;}
+  body.se-v5 .se-head h1{font-size:26px;}
   body.se-v5 .se-card{padding:18px 16px;}
   body.se-v5 .se-grid{grid-template-columns:1fr;}
   body.se-v5 .se-span2,body.se-v5 .se-span3,body.se-v5 .se-span4{grid-column:auto;}
