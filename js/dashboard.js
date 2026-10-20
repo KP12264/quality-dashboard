@@ -689,7 +689,7 @@
     const chartData = {
       labels,
       datasets: [
-        { type: 'bar', label: 'Scrap Qty', data: qty, backgroundColor: '#14B8A6', borderColor: '#14B8A6', borderRadius: 4, order: 3, yAxisID: 'y' },
+        { type: 'bar', label: 'Scrap Qty', data: qty, backgroundColor: '#14506F', borderColor: '#14506F', borderRadius: 4, order: 3, yAxisID: 'y' },   // same navy-blue as the Daily Scrap Trend bars
         { type: 'line', label: 'Cumulative %', data: cumulative, borderColor: '#2563EB', backgroundColor: '#2563EB', borderWidth: 2, pointRadius: 3, pointBackgroundColor: '#2563EB', fill: false, order: 2, yAxisID: 'y1' },
         { type: 'line', label: '80% Reference', data: eightyLine, borderColor: '#F59E0B', backgroundColor: '#F59E0B', borderWidth: 1.5, borderDash: [6, 4], pointRadius: 0, pointHoverRadius: 0, fill: false, order: 1, yAxisID: 'y1' }
       ]
