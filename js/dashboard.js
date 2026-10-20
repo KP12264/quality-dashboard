@@ -633,6 +633,30 @@
       c.restore();
     }
   };
+  // Scrap Trend value labels (presentation only): white number inside the base of each bar,
+  // like the Excel "Daily Scrap Trend". Falls back to a dark label above the bar when the bar is
+  // too short to hold the text, and skips labels when bars get too narrow (long ranges).
+  const baseLabelsPlugin = {
+    id: 'baseLabels',
+    afterDatasetsDraw(chart, args, opts) {
+      if (!opts || !opts.enabled) return;
+      const c = chart.ctx;
+      c.save(); c.font = '700 11px ' + V5_CHART_FONT; c.textAlign = 'center';
+      chart.data.datasets.forEach((ds, i) => {
+        if (ds.type !== 'bar') return;
+        const meta = chart.getDatasetMeta(i);
+        if (meta.hidden) return;
+        meta.data.forEach((bar, idx) => {
+          const v = ds.data[idx];
+          if (v === null || v === undefined || v <= 0 || bar.width < 18) return;
+          const h = bar.base - bar.y;
+          if (h >= 20) { c.fillStyle = '#FFFFFF'; c.textBaseline = 'bottom'; c.fillText(fmt(v), bar.x, bar.base - 4); }
+          else { c.fillStyle = '#0B2340'; c.textBaseline = 'bottom'; c.fillText(fmt(v), bar.x, bar.y - 3); }
+        });
+      });
+      c.restore();
+    }
+  };
   // Dashed Target reference (presentation only, opt-in via options.plugins.targetLine).
   const targetLinePlugin = {
     id: 'targetLine',
@@ -825,52 +849,77 @@
     const longRange = points.length > 16;   // up to ~2 weeks keeps a label on every day
     const sameMonth = points.every(p => p.date.slice(0, 7) === points[0].date.slice(0, 7));
     const labels = points.map(p => p.date);
-    const scrapQty = points.map(p => p.scrap);
+    // A day with neither production nor scrap logged has no data: leave a gap
+    // (null) instead of drawing it as a confirmed Scrap = 0.
+    const noData = points.map(p => !(p.production > 0) && !(p.scrap > 0));
+    const scrapQty = points.map((p, i) => noData[i] ? null : p.scrap);
     const rate = points.map(p => p.scrapRatePct);
+    // Target ≤50 pcs/day as a flat line on the pcs axis, only over daily-rule dates
+    // and only for All Lines + All Shifts (trendTargetLine() decides; unchanged).
+    const target = points.map((p, i) => targetLine && i >= targetLine.startIndex && i <= targetLine.endIndex ? targetLine.value : null);
 
-    const chartData = {
-      labels,
-      datasets: [
-        { type: 'bar', label: 'Scrap Qty (pcs)', data: scrapQty, backgroundColor: '#14B8A6', borderColor: '#14B8A6', borderRadius: 4, order: 2, yAxisID: 'y' },
-        { type: 'line', label: 'Scrap Rate (%)', data: rate, borderColor: '#2563EB', backgroundColor: '#2563EB', borderWidth: 2, pointRadius: 3, pointBackgroundColor: '#2563EB', fill: false, order: 1, yAxisID: 'y1', spanGaps: true }
-      ]
-    };
+    // Excel "Daily Scrap Trend" look: deep teal-navy bars, dark rate line with yellow-green markers,
+    // grey target line, legend on top.
+    const BAR = '#14506F', RATE = '#1F5F7E', DOT = '#A3C726', TARGET = '#9AA5B1';   // DOT: yellow-green rate markers
+    const datasets = [
+      { type: 'bar', label: 'Scrap Qty (pcs)', data: scrapQty, backgroundColor: BAR, borderColor: BAR, borderRadius: 2, maxBarThickness: 46, categoryPercentage: 0.8, barPercentage: 0.9, order: 3, yAxisID: 'y' },
+      { type: 'line', label: 'Scrap Rate (%)', data: rate, borderColor: RATE, backgroundColor: DOT, borderWidth: 2.5, pointRadius: 4, pointHoverRadius: 6, pointBackgroundColor: DOT, pointBorderColor: DOT, fill: false, tension: 0, order: 1, yAxisID: 'y1', spanGaps: true }
+    ];
+    if (targetLine) datasets.push({ type: 'line', label: targetLine.label, data: target, borderColor: TARGET, backgroundColor: TARGET, borderWidth: 3, pointRadius: 0, pointHoverRadius: 0, fill: false, order: 2, yAxisID: 'y', spanGaps: false });
+    const chartData = { labels, datasets };
     const options = {
       responsive: true, maintainAspectRatio: false,
-      layout: { padding: { top: 16 } },
+      layout: { padding: { top: 8 } },
       interaction: { mode: 'index', intersect: false },
       plugins: {
-        legend: { display: true, align: 'end', labels: { boxWidth: 10, usePointStyle: true, font: { family: V5_CHART_FONT, size: 11 } } },
-        valueLabels: { enabled: points.length <= 16 },
-        targetLine: targetLine || false,
+        legend: { display: true, position: 'top', align: 'center', labels: {
+          usePointStyle: true, pointStyleWidth: 12, boxWidth: 8, boxHeight: 8, padding: 16, font: { family: V5_CHART_FONT, size: 11 }, color: '#334155',
+          // dataset order (Scrap Qty · Scrap Rate · Target), not draw order
+          sort: (a, b) => a.datasetIndex - b.datasetIndex,
+          // bar = square swatch, rate = orange marker, target = grey line
+          generateLabels: chart => Chart.defaults.plugins.legend.labels.generateLabels(chart).map(l => {
+            const ds = chart.data.datasets[l.datasetIndex];
+            if (ds.type === 'bar') { l.pointStyle = 'rect'; }
+            else if (ds.pointRadius) { l.pointStyle = 'circle'; l.fillStyle = DOT; l.strokeStyle = DOT; }
+            else { l.pointStyle = 'line'; l.strokeStyle = ds.borderColor; l.lineWidth = 3; }
+            return l;
+          }) } },
+        baseLabels: { enabled: true },
         tooltip: compactTooltip({
           title: items => items.length ? String(items[0].label) : '',          // exact date
-          label: ctx => ctx.dataset.yAxisID === 'y1'
-            ? ' Scrap Rate: ' + Number(ctx.parsed.y).toFixed(2) + '%'
-            : ' Scrap: ' + fmt(ctx.parsed.y) + ' pcs',
-          // A day with no production has no rate (gap in the line) — say so
-          // instead of silently showing nothing, so it is never read as 0%.
-          afterBody: items => (items.length && (rate[items[0].dataIndex] === null || rate[items[0].dataIndex] === undefined))
-            ? [' Scrap Rate: N/A (no production recorded)'] : []
+          label: ctx => {
+            if (ctx.dataset.yAxisID === 'y1') return ' Scrap Rate: ' + Number(ctx.parsed.y).toFixed(2) + '%';
+            if (ctx.dataset.type === 'line') return ' Target: ≤' + fmt(ctx.parsed.y) + ' pcs/day';
+            return ' Scrap: ' + fmt(ctx.parsed.y) + ' pcs';
+          },
+          // Production, and say plainly when a day has no data / no rate, so nothing is read as 0.
+          afterBody: items => {
+            if (!items.length) return [];
+            const i = items[0].dataIndex, out = [];
+            if (noData[i]) return [' No production or scrap recorded'];
+            out.push(' Production: ' + fmt(points[i].production) + ' pcs');
+            if (rate[i] === null || rate[i] === undefined) out.push(' Scrap Rate: N/A (no production recorded)');
+            return out;
+          }
         })
       },
       scales: {
         x: { grid: { display: false }, ticks: Object.assign({
-          font: { family: V5_CHART_FONT, size: 10 },
+          font: { family: V5_CHART_FONT, size: 10 }, color: '#475569',
           callback: function (value) {
             const d = String(this.getLabelForValue(value));
-            // up to ~2 weeks: "1 Oct" on every day (like the reference); longer ranges: bare day number inside one month
+            // "1-Oct" like the Excel chart; long single-month ranges: bare day number
             return (longRange && sameMonth) ? d.slice(-2).replace(/^0/, '')
-              : `${parseInt(d.slice(8), 10)} ${MONTH_ABBR[parseInt(d.slice(5, 7), 10) - 1]}`;
+              : `${parseInt(d.slice(8), 10)}-${MONTH_ABBR[parseInt(d.slice(5, 7), 10) - 1]}`;
           }
-        }, longRange ? { autoSkip: true, maxRotation: 0, autoSkipPadding: 8 } : {}) },
-        y: { beginAtZero: true, grace: '10%', position: 'left', suggestedMax: targetLine ? Math.ceil(targetLine.value * 1.2) : undefined, title: axisTitle('Scrap Qty (pcs)'), grid: { color: 'rgba(15,39,71,0.08)' }, ticks: { precision: 0, font: { family: V5_CHART_FONT, size: 10 } } },
-        y1: { beginAtZero: true, position: 'right', title: axisTitle('Scrap Rate %'), grid: { display: false }, ticks: { font: { family: V5_CHART_FONT, size: 10 }, callback: v => v + '%' } }
+        }, longRange ? { autoSkip: true, maxRotation: 0, autoSkipPadding: 8 } : { autoSkip: false, maxRotation: 0 }) },
+        y: { beginAtZero: true, grace: '10%', position: 'left', suggestedMax: targetLine ? Math.ceil(targetLine.value * 1.2) : undefined, title: axisTitle('Scrap Qty (pcs)'), grid: { color: 'rgba(15,39,71,0.07)' }, border: { display: false }, ticks: { precision: 0, font: { family: V5_CHART_FONT, size: 10 }, color: '#475569' } },
+        y1: { beginAtZero: true, position: 'right', title: axisTitle('Scrap Rate %'), grid: { display: false }, border: { display: false }, ticks: { font: { family: V5_CHART_FONT, size: 10 }, color: '#475569', callback: v => Number(v).toFixed(2) + '%' } }
       }
     };
 
     if (scrapTrendChart) { scrapTrendChart.data = chartData; scrapTrendChart.options = options; scrapTrendChart.update(); }
-    else scrapTrendChart = new Chart($('scrapTrendChart'), { type: 'bar', data: chartData, options, plugins: [valueLabelsPlugin, targetLinePlugin] });
+    else scrapTrendChart = new Chart($('scrapTrendChart'), { type: 'bar', data: chartData, options, plugins: [baseLabelsPlugin] });
   }
 
   function baseLineOptions(tooltipFmt) {
