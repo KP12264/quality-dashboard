@@ -635,8 +635,42 @@
   // the real rank and defect that reach it are named — Others is never one defect.
   const PARETO_TOP_N = 10;
   const PARETO_CUTOFF = 80;
-  const PARETO_COL = { BAR: '#1F7A8C', OTHERS: '#A7C4CC', LINE: '#1F62D6', REF: '#F08A24' };
+  const PARETO_COL = { TOP: '#155E6E', BAR: '#1F7A8C', OTHERS: '#A7C4CC', LINE: '#1F62D6', REF: '#F08A24' };
   let paretoChart = null;
+
+  // Placement of the "80% at #N" tag: try spots around the highlighted point and keep the
+  // first one that touches none of the Cumulative line, its points or the 80% reference
+  // (then, if possible, no bar label either). Falls back to the spot with the fewest hits.
+  function paretoTagSpot(chart, m, pt, w, h) {
+    const area = chart.chartArea, line = chart.getDatasetMeta(m.lineIndex).data;
+    const refY = chart.scales.y1.getPixelForValue(m.ref), pad = 3, gap = 9;
+    const segs = [];
+    for (let i = 1; i < line.length; i++) segs.push([line[i - 1].x, line[i - 1].y, line[i].x, line[i].y]);
+    segs.push([area.left, refY, area.right, refY]);
+    const labels = chart.getDatasetMeta(m.barIndex).data.map(b => [b.x - 14, b.y - 16, 28, 14]);   // value labels above bars
+    const hitSeg = (r, [x1, y1, x2, y2]) => {   // segment vs padded rectangle (sampled; segments are short)
+      const n = Math.max(2, Math.ceil(Math.hypot(x2 - x1, y2 - y1) / 2));
+      for (let k = 0; k <= n; k++) { const x = x1 + (x2 - x1) * k / n, y = y1 + (y2 - y1) * k / n;
+        if (x >= r.x - pad && x <= r.x + r.w + pad && y >= r.y - pad && y <= r.y + r.h + pad) return true; }
+      return false;
+    };
+    const hitPt = r => line.some(q => q.x + 7 >= r.x && q.x - 7 <= r.x + r.w && q.y + 7 >= r.y && q.y - 7 <= r.y + r.h);
+    const hitBox = (r, [x, y, bw, bh]) => x < r.x + r.w && x + bw > r.x && y < r.y + r.h && y + bh > r.y;
+    const spots = [
+      [pt.x + gap, pt.y + gap], [pt.x - w - gap, pt.y + gap], [pt.x + gap, pt.y - h - gap], [pt.x - w - gap, pt.y - h - gap],
+      [pt.x - w / 2, pt.y + gap + 8], [pt.x - w / 2, pt.y - h - gap - 8], [pt.x + gap, pt.y + 3 * gap], [pt.x - w - gap, pt.y + 3 * gap],
+      [pt.x - w / 2, pt.y + 4 * gap]
+    ];
+    let best = null;
+    spots.forEach(([x, y], order) => {
+      const r = { x: Math.max(area.left + 2, Math.min(x, area.right - w - 2)), y: Math.max(area.top + 2, Math.min(y, area.bottom - h - 2)), w, h };
+      const lineHits = segs.filter(sg => hitSeg(r, sg)).length + (hitPt(r) ? 1 : 0);
+      const labelHits = labels.filter(b => hitBox(r, b)).length;
+      const score = lineHits * 100 + labelHits * 10 + order;
+      if (!best || score < best.score) best = { r, score, lineHits };
+    });
+    return best;
+  }
 
   // Bar values on top of each bar + the "80% at #N" tag next to the highlighted point.
   const paretoDecorPlugin = {
@@ -652,8 +686,9 @@
         if (pt) {
           c.font = '700 10.5px ' + V5_CHART_FONT;
           const w = c.measureText(m.markText).width + 12, h = 18;
-          let x = pt.x - w / 2; x = Math.max(area.left, Math.min(x, area.right - w));
-          const y = Math.min(pt.y + 10, area.bottom - h - 2);
+          const spot = paretoTagSpot(chart, m, pt, w, h);
+          const x = spot.r.x, y = spot.r.y;
+          chart.$paretoTag = { x, y, w, h, lineHits: spot.lineHits };   // read by the regression test only
           c.fillStyle = '#FFFFFF'; c.strokeStyle = PARETO_COL.REF; c.lineWidth = 1;
           c.beginPath(); if (c.roundRect) c.roundRect(x, y, w, h, 9); else c.rect(x, y, w, h); c.fill(); c.stroke();
           c.fillStyle = '#B4540A'; c.textAlign = 'left'; c.textBaseline = 'middle'; c.fillText(m.markText, x + 6, y + h / 2 + 0.5);
@@ -711,7 +746,7 @@
     const pointRadius = points.map((p, i) => i === markIndex ? 6 : 3);
     const datasets = [
       { type: 'bar', label: 'Scrap Qty', data: points.map(p => p.qty), yAxisID: 'y', order: 2,
-        backgroundColor: points.map(p => p.others ? PARETO_COL.OTHERS : PARETO_COL.BAR), borderRadius: 4, maxBarThickness: 44, categoryPercentage: 0.78, barPercentage: 0.9 },
+        backgroundColor: points.map((p, i) => p.others ? PARETO_COL.OTHERS : i === 0 ? PARETO_COL.TOP : PARETO_COL.BAR), borderRadius: 4, maxBarThickness: 44, categoryPercentage: 0.78, barPercentage: 0.9 },
       { type: 'line', label: 'Cumulative %', data: points.map(p => p.cum), yAxisID: 'y1', order: 1,
         borderColor: PARETO_COL.LINE, borderWidth: 2, tension: 0, fill: false, clip: false,   // the 100% point is never cut at the top edge
         pointRadius, pointHoverRadius: pointRadius.map(r => r + 1),
@@ -727,7 +762,7 @@
       interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: { display: false },
-        paretoDecor: { meta: { barIndex: 0, lineIndex: 1, qty: points.map(p => p.qty), markIndex, markText } },
+        paretoDecor: { meta: { barIndex: 0, lineIndex: 1, ref: PARETO_CUTOFF, qty: points.map(p => p.qty), markIndex, markText } },
         tooltip: Object.assign(compactTooltip({
           title: items => items.length ? `${points[items[0].dataIndex].key === 'O' ? '' : '#' + points[items[0].dataIndex].key + ' '}${points[items[0].dataIndex].name}` : '',
           label: () => '',

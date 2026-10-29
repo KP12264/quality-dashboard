@@ -11,7 +11,7 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai+Looped:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 <!-- Dashboard V5 look. Scoped to body.qd-v5, loaded only by this page. -->
-<link rel="stylesheet" href="css/dashboard-v5.css?v=20261029-p2">
+<link rel="stylesheet" href="css/dashboard-v5.css?v=20261029-p3">
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.0/chart.umd.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
@@ -288,8 +288,15 @@
         </div>
         <p class="v5-pareto-insight" id="paretoInsight"></p>
         <details class="v5-pareto-key">
-          <summary>Defect list (rank &rarr; full name)</summary>
-          <ol class="v5-pareto-keylist" id="paretoKeyList"></ol>
+          <summary>
+            <span class="v5-pareto-key-ico" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/></svg></span>
+            <span class="v5-pareto-key-text">View Defect Names</span>
+            <span class="v5-pareto-key-sub">Rank &rarr; full defect name</span>
+            <svg class="v5-pareto-key-chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+          </summary>
+          <div class="v5-pareto-key-body">
+            <ol class="v5-pareto-keylist" id="paretoKeyList"></ol>
+          </div>
         </details>
       </div>
     </section>
@@ -309,6 +316,6 @@
 <script src="js/quality-adapter.js?v=20261015-3"></script>
 <script src="js/target-evaluator.js?v=20261015-3"></script>
 <script src="js/improvement-adapter.js?v=20261015-3"></script>
-<script src="js/dashboard.js?v=20261029-p2"></script>
+<script src="js/dashboard.js?v=20261029-p3"></script>
 </body>
 </html>

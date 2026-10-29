@@ -301,9 +301,24 @@ body.qd-v5 .v5-pareto-chart{position:relative;height:300px;}
 body.qd-v5 .v5-pareto-insight{margin:8px 0 0;padding:8px 12px;border-radius:10px;background:#FFF7EE;border:1px solid #F8DDBF;font-size:13px;color:var(--v5-text-2);}
 body.qd-v5 .v5-pareto-insight:empty{display:none;}
 body.qd-v5 .v5-pareto-insight b{color:var(--v5-text);}
-body.qd-v5 .v5-pareto-key{margin-top:10px;border-top:1px solid var(--v5-line);padding-top:8px;}
-body.qd-v5 .v5-pareto-key > summary{cursor:pointer;font-size:12.5px;font-weight:600;color:var(--v5-blue);padding:4px 0;min-height:28px;}
-body.qd-v5 .v5-pareto-keylist{list-style:none;margin:6px 0 0;padding:0;columns:2;column-gap:28px;}   /* reads top-to-bottom: 1–6, then 7–O */
+/* "View Defect Names" accordion */
+body.qd-v5 .v5-pareto-key{margin-top:12px;border:1px solid var(--v5-line);border-radius:12px;background:#FFFFFF;overflow:hidden;}
+body.qd-v5 .v5-pareto-key > summary{
+  list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;min-height:48px;padding:8px 14px;
+  background:#F8FAFC;user-select:none;transition:background-color .15s ease;
+}
+body.qd-v5 .v5-pareto-key > summary::-webkit-details-marker{display:none;}
+body.qd-v5 .v5-pareto-key > summary:hover{background:#F0F5FA;}
+body.qd-v5 .v5-pareto-key > summary:focus-visible{outline:2px solid var(--v5-blue);outline-offset:-2px;}
+body.qd-v5 .v5-pareto-key-ico{flex:none;width:28px;height:28px;border-radius:8px;display:grid;place-items:center;background:#E3F0F3;color:#1F7A8C;}
+body.qd-v5 .v5-pareto-key-text{font-size:13.5px;font-weight:600;color:var(--v5-text);}
+body.qd-v5 .v5-pareto-key-sub{font-size:12px;color:var(--v5-muted);}
+body.qd-v5 .v5-pareto-key-chev{flex:none;margin-left:auto;color:var(--v5-muted);transition:transform .2s ease;}
+body.qd-v5 .v5-pareto-key[open] > summary{border-bottom:1px solid var(--v5-line);}
+body.qd-v5 .v5-pareto-key[open] .v5-pareto-key-chev{transform:rotate(180deg);color:var(--v5-blue);}
+body.qd-v5 .v5-pareto-key-body{padding:6px 14px 10px;}
+@media (prefers-reduced-motion:reduce){ body.qd-v5 .v5-pareto-key-chev,body.qd-v5 .v5-pareto-key > summary{transition:none;} }
+body.qd-v5 .v5-pareto-keylist{list-style:none;margin:0;padding:0;columns:2;column-gap:28px;}   /* reads top-to-bottom: 1–6, then 7–O */
 body.qd-v5 .v5-pareto-keylist li{break-inside:avoid;display:grid;grid-template-columns:26px minmax(0,1fr) auto 52px;gap:8px;align-items:baseline;padding:5px 0;border-bottom:1px solid #EEF2F6;font-size:13px;}
 body.qd-v5 .v5-pareto-keylist .k{font-weight:700;color:#1F7A8C;text-align:center;font-variant-numeric:tabular-nums;}
 body.qd-v5 .v5-pareto-keylist .n{color:var(--v5-text);overflow-wrap:anywhere;line-height:1.4;}
@@ -322,6 +337,9 @@ body.qd-v5 .v5-pareto-keylist li.is-note .n{color:#B4540A;font-weight:600;}
   body.qd-v5 .v5-pareto-kpi dd{font-size:17px;}
   body.qd-v5 .v5-pareto-kpi dd small{display:block;font-size:11px;}
   body.qd-v5 .v5-pareto-chart{height:260px;}
+  body.qd-v5 .v5-pareto-key-sub{display:none;}
+  body.qd-v5 .v5-pareto-key > summary,body.qd-v5 .v5-pareto-key-body{padding-left:12px;padding-right:12px;}
+  body.qd-v5 .v5-pareto-keylist li{grid-template-columns:26px minmax(0,1fr) auto 48px;gap:6px;}
 }
 
 /* ---------------- Typography (V5) ----------------
