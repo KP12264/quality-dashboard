@@ -625,65 +625,133 @@
   };
   const axisTitle = text => ({ display: true, text, color: '#64748B', font: { family: V5_CHART_FONT, size: 10, weight: '500' }, padding: { top: 0, bottom: 2 } });
 
-  // ---- Pareto Analysis (horizontal, V5) -------------------------------
-  // Same data as before: QualityAdapter.buildParetoDefects() over the scrap already
-  // loaded for the selected Date Range / Shift / Line (no extra read). Shows the Top 10;
-  // % of Total and Cumulative % are taken over ALL defects in scope, never re-based on
-  // the Top 10. Orange = the defects that bring the running total up to 80%, i.e. every
-  // defect up to and including the first one where Cumulative % reaches 80%.
+  // ---- Pareto Analysis (V5 executive) ---------------------------------
+  // Vertical bars = Scrap Qty of the Top 10 defects + "O" (Others = every remaining
+  // defect summed), blue line = Cumulative %, dashed orange line = 80%. The x-axis
+  // uses rank numbers so long Thai names never overlap; the full names are in the
+  // tooltip and in the "Defect list" panel. Data: QualityAdapter.buildParetoDefects()
+  // over the scrap already loaded for the selected Date Range / Shift / Line (no extra
+  // read). Cumulative % is over ALL defects; when the 80% point falls inside Others,
+  // the real rank and defect that reach it are named — Others is never one defect.
   const PARETO_TOP_N = 10;
   const PARETO_CUTOFF = 80;
+  const PARETO_COL = { BAR: '#1F7A8C', OTHERS: '#A7C4CC', LINE: '#1F62D6', REF: '#F08A24' };
+  let paretoChart = null;
+
+  // Bar values on top of each bar + the "80% at #N" tag next to the highlighted point.
+  const paretoDecorPlugin = {
+    id: 'paretoDecor',
+    afterDatasetsDraw(chart, args, o) {
+      if (!o || !o.meta) return;
+      const m = o.meta, c = chart.ctx, area = chart.chartArea;
+      c.save();
+      c.font = '600 10.5px ' + V5_CHART_FONT; c.fillStyle = '#3E4B5B'; c.textAlign = 'center'; c.textBaseline = 'bottom';
+      chart.getDatasetMeta(m.barIndex).data.forEach((bar, i) => c.fillText(fmt(m.qty[i]), bar.x, bar.y - 3));
+      if (m.markIndex >= 0) {
+        const pt = chart.getDatasetMeta(m.lineIndex).data[m.markIndex];
+        if (pt) {
+          c.font = '700 10.5px ' + V5_CHART_FONT;
+          const w = c.measureText(m.markText).width + 12, h = 18;
+          let x = pt.x - w / 2; x = Math.max(area.left, Math.min(x, area.right - w));
+          const y = Math.min(pt.y + 10, area.bottom - h - 2);
+          c.fillStyle = '#FFFFFF'; c.strokeStyle = PARETO_COL.REF; c.lineWidth = 1;
+          c.beginPath(); if (c.roundRect) c.roundRect(x, y, w, h, 9); else c.rect(x, y, w, h); c.fill(); c.stroke();
+          c.fillStyle = '#B4540A'; c.textAlign = 'left'; c.textBaseline = 'middle'; c.fillText(m.markText, x + 6, y + h / 2 + 0.5);
+        }
+      }
+      c.restore();
+    }
+  };
+
   function renderPareto(scrapRecords) {
-    const host = $('paretoList');
     const data = QualityAdapter.buildParetoDefects(scrapRecords);
     const label = $('paretoRangeLabel');
     if (label) label.textContent = data.length ? rangeLabelText() : '';
-    if (data.length === 0) { host.innerHTML = ''; $('paretoSummary').innerHTML = ''; return; }   // empty state: renderTopDefectsList()
-
-    const total = data.reduce((sum, d) => sum + d.qty, 0);
-    const crossIdx = data.findIndex(d => d.cumulativePct >= PARETO_CUTOFF);   // always found when total > 0 (last = 100%)
-    const top = data.slice(0, PARETO_TOP_N);
-    const maxQty = top[0].qty || 1;
-    const pct1 = n => n.toFixed(1) + '%';
-    const topCum = top[top.length - 1].cumulativePct;
-
-    $('paretoSummary').innerHTML =
-      `<span><b>${fmt(total)}</b> pcs total</span><span><b>${fmt(data.length)}</b> defect type${data.length === 1 ? '' : 's'}</span>`
-      + `<span>Top ${top.length} = <b>${pct1(topCum)}</b> of scrap</span>`;
-
-    const rows = top.map((d, i) => {
-      const share = total > 0 ? d.qty / total * 100 : 0;
-      const vital = i <= crossIdx, cross = i === crossIdx;
-      const name = escapeHtml(d.defectType);
-      const tip = `${d.defectType} — ${fmt(d.qty)} pcs · ${pct1(share)} of total · cumulative ${pct1(d.cumulativePct)}`;
-      const row = `
-        <tr class="v5-pareto-row${vital ? ' is-vital' : ''}${cross ? ' is-cross' : ''}" title="${escapeHtml(tip)}">
-          <td class="v5-pareto-rank">${i + 1}</td>
-          <th scope="row" class="v5-pareto-name">${name}</th>
-          <td class="v5-pareto-barcell"><div class="v5-pareto-track"><span class="v5-pareto-bar" style="--w:${(d.qty / maxQty).toFixed(4)}"></span><b class="v5-pareto-qty">${fmt(d.qty)}</b></div></td>
-          <td class="v5-pareto-pct num">${pct1(share)}</td>
-          <td class="v5-pareto-cum num">${pct1(d.cumulativePct)}${cross ? '<span class="v5-pareto-flag">≥80%</span>' : ''}</td>
-        </tr>`;
-      const cut = cross && i < top.length - 1
-        ? `<tr class="v5-pareto-cut" aria-hidden="true"><td colspan="5"><span>${PARETO_CUTOFF}% of total scrap reached at #${i + 1}</span></td></tr>` : '';
-      return row + cut;
-    }).join('');
-
-    // Tell the truth when the Top 10 do not reach 80% (or reach it exactly on the last row).
-    let foot = '';
-    if (crossIdx >= top.length) {
-      foot = `Top ${top.length} cover ${pct1(topCum)} of total scrap — ${PARETO_CUTOFF}% is reached at defect #${crossIdx + 1} of ${data.length}.`;
-    } else if (crossIdx === top.length - 1) {
-      foot = `${PARETO_CUTOFF}% of total scrap reached at #${crossIdx + 1}.`;
+    if (data.length === 0) {   // the empty state itself is drawn by renderTopDefectsList()
+      if (paretoChart) { paretoChart.destroy(); paretoChart = null; }
+      ['paretoKpiTotal', 'paretoKpiPriority', 'paretoKpiCoverage'].forEach(id => { $(id).textContent = '–'; });
+      $('paretoInsight').textContent = ''; $('paretoKeyList').innerHTML = '';
+      return;
     }
-    if (data.length > top.length) foot += `${foot ? ' ' : ''}${fmt(data.length - top.length)} more defect type${data.length - top.length === 1 ? '' : 's'} not shown (${pct1(100 - topCum)} of scrap).`;
 
-    host.innerHTML = `
-      <table class="v5-pareto-table">
-        <thead><tr><th class="v5-pareto-rank">#</th><th>Defect</th><th>Scrap Qty (pcs)</th><th class="num">% of Total</th><th class="num">Cumulative %</th></tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
-      ${foot ? `<p class="v5-pareto-foot">${foot}</p>` : ''}`;
+    const pct1 = n => n.toFixed(1) + '%';
+    const total = data.reduce((sum, d) => sum + d.qty, 0);
+    const crossIdx = data.findIndex(d => d.cumulativePct >= PARETO_CUTOFF);   // found whenever total > 0 (last = 100%)
+    const cross = data[crossIdx];
+    const top = data.slice(0, PARETO_TOP_N);
+    const rest = data.slice(PARETO_TOP_N);
+    const othersQty = rest.reduce((sum, d) => sum + d.qty, 0);
+    const insideOthers = crossIdx >= top.length;
+
+    // ---- KPIs + insight (all from the same data) ----
+    $('paretoKpiTotal').textContent = fmt(total);
+    $('paretoKpiPriority').textContent = fmt(crossIdx + 1);
+    $('paretoKpiPriorityUnit').textContent = `of ${fmt(data.length)} type${data.length === 1 ? '' : 's'}`;
+    $('paretoKpiCoverage').textContent = pct1(cross.cumulativePct);
+    $('paretoInsight').innerHTML =
+      `<b>${fmt(crossIdx + 1)} defect type${crossIdx === 0 ? '' : 's'}</b> account${crossIdx === 0 ? 's' : ''} for <b>${pct1(cross.cumulativePct)}</b> of scrap`
+      + (insideOthers ? ` — the ${PARETO_CUTOFF}% point is reached at defect #${crossIdx + 1} (${escapeHtml(cross.defectType)}), inside Others.` : '.');
+
+    // ---- chart points: 1..10 (+ O) ----
+    const points = top.map((d, i) => ({ key: String(i + 1), name: d.defectType, qty: d.qty, cum: d.cumulativePct }));
+    if (rest.length) points.push({ key: 'O', name: `Others (${fmt(rest.length)} defect type${rest.length === 1 ? '' : 's'})`, qty: othersQty, cum: 100, others: true });
+    const markIndex = insideOthers ? points.length - 1 : crossIdx;
+    const markText = insideOthers ? `${PARETO_CUTOFF}% at #${crossIdx + 1} (in Others)` : `${PARETO_CUTOFF}% at #${crossIdx + 1}`;
+
+    // ---- rank → full name list ----
+    $('paretoKeyList').innerHTML = points.map((p, i) => `
+      <li class="${p.others ? 'is-others' : ''}${!p.others && i <= crossIdx ? ' is-priority' : ''}">
+        <span class="k">${p.key}</span><span class="n">${escapeHtml(p.name)}</span>
+        <span class="q">${fmt(p.qty)}</span><span class="p">${pct1(p.qty / total * 100)}</span>
+      </li>`).join('')
+      + (insideOthers ? `<li class="is-note"><span class="k"></span><span class="n">${PARETO_CUTOFF}% reached at #${crossIdx + 1}: ${escapeHtml(cross.defectType)} (cumulative ${pct1(cross.cumulativePct)})</span></li>` : '');
+
+    if (typeof Chart === 'undefined') return;
+    const narrow = window.matchMedia && window.matchMedia('(max-width: 600px)').matches;
+    const pointRadius = points.map((p, i) => i === markIndex ? 6 : 3);
+    const datasets = [
+      { type: 'bar', label: 'Scrap Qty', data: points.map(p => p.qty), yAxisID: 'y', order: 2,
+        backgroundColor: points.map(p => p.others ? PARETO_COL.OTHERS : PARETO_COL.BAR), borderRadius: 4, maxBarThickness: 44, categoryPercentage: 0.78, barPercentage: 0.9 },
+      { type: 'line', label: 'Cumulative %', data: points.map(p => p.cum), yAxisID: 'y1', order: 1,
+        borderColor: PARETO_COL.LINE, borderWidth: 2, tension: 0, fill: false, clip: false,   // the 100% point is never cut at the top edge
+        pointRadius, pointHoverRadius: pointRadius.map(r => r + 1),
+        pointBackgroundColor: points.map((p, i) => i === markIndex ? PARETO_COL.REF : '#FFFFFF'),
+        pointBorderColor: points.map((p, i) => i === markIndex ? '#FFFFFF' : PARETO_COL.LINE), pointBorderWidth: points.map((p, i) => i === markIndex ? 2.5 : 1.5) },
+      { type: 'line', label: '80% reference', data: points.map(() => PARETO_CUTOFF), yAxisID: 'y1', order: 0,
+        borderColor: PARETO_COL.REF, borderWidth: 1.5, borderDash: [6, 4], pointRadius: 0, pointHoverRadius: 0, fill: false }
+    ];
+    const tick = { family: V5_CHART_FONT, size: 10 };
+    const options = {
+      responsive: true, maintainAspectRatio: false,
+      layout: { padding: { top: 18, right: 4 } },
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        paretoDecor: { meta: { barIndex: 0, lineIndex: 1, qty: points.map(p => p.qty), markIndex, markText } },
+        tooltip: Object.assign(compactTooltip({
+          title: items => items.length ? `${points[items[0].dataIndex].key === 'O' ? '' : '#' + points[items[0].dataIndex].key + ' '}${points[items[0].dataIndex].name}` : '',
+          label: () => '',
+          afterBody: items => {
+            if (!items.length) return [];
+            const p = points[items[0].dataIndex];
+            const out = [` Scrap Qty: ${fmt(p.qty)} pcs`, ` % of Total: ${pct1(p.qty / total * 100)}`, ` Cumulative %: ${pct1(p.cum)}`];
+            if (p.others && insideOthers) out.push(` ${PARETO_CUTOFF}% reached at #${crossIdx + 1}: ${cross.defectType} (${pct1(cross.cumulativePct)})`);
+            else if (!p.others && items[0].dataIndex === crossIdx) out.push(` First point at or above ${PARETO_CUTOFF}%`);
+            return out;
+          }
+        }), { displayColors: false, filter: item => item.datasetIndex === 0 })
+      },
+      scales: {
+        x: { grid: { display: false }, border: { color: '#D5DCE5' }, ticks: { font: { ...tick, size: 11, weight: '600' }, color: '#475569', autoSkip: false, maxRotation: 0 } },
+        y: { beginAtZero: true, grace: '12%', position: 'left', title: narrow ? undefined : axisTitle('Scrap Qty (pcs)'),
+          grid: { color: 'rgba(15,39,71,0.06)', drawTicks: false }, border: { display: false }, ticks: { precision: 0, font: tick, color: '#64748B', maxTicksLimit: 6, padding: 6 } },
+        y1: { min: 0, max: 100, position: 'right', title: narrow ? undefined : axisTitle('Cumulative %'),
+          grid: { display: false }, border: { display: false }, ticks: { stepSize: 20, font: tick, color: '#64748B', callback: v => v + '%', padding: 6 } }
+      }
+    };
+    const chartData = { labels: points.map(p => p.key), datasets };
+    if (paretoChart) { paretoChart.data = chartData; paretoChart.options = options; paretoChart.update(); }
+    else paretoChart = new Chart($('paretoChart'), { type: 'bar', data: chartData, options, plugins: [paretoDecorPlugin] });
   }
 
   // Compact Top 3–5 defect list alongside the Pareto chart — reuses the
