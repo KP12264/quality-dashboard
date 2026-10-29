@@ -207,8 +207,8 @@
     const lineFilteredScrap = scrapInScope.filter(r => linesInScope.includes(r.line));
     renderKpis(lineFilteredProduction, lineFilteredScrap, shiftEvals);
 
-    // ---- Scrap Target & Performance: Day/Night table for one date,
-    // range summary + drill-down for several ----
+    // ---- Target Performance detail (opened from the KPI's View Details):
+    // range summary + per-date / per-shift table ----
     renderTargetPerformance(shiftEvals, dates);
 
     // ---- Door Line Comparison: ALWAYS all 3 lines, aggregated over the
@@ -281,11 +281,17 @@
     return [mk(state.dateFrom), mk(state.dateTo)];
   }
 
-  // Short Target rule shown in the Scrap Target & Performance header.
+  // Short Target rule shown in the Target tooltip and the Target Performance detail header.
   function targetRuleHtml() {
     const base = TargetEvaluator.describeTarget(rangeRuleUnits(), fmt).ruleText;
     return base + (isMultiDay() ? ' &middot; each date judged separately' : '')
       + (state.line === 'all' ? '' : ' &middot; Status still uses all lines');
+  }
+
+  function setTargetRuleText() {
+    const html = targetRuleHtml();
+    $('targetStripText').innerHTML = html;
+    $('targetDetailRule').innerHTML = html;
   }
 
   // Status pill / tile colour class for a status string.
@@ -353,7 +359,7 @@
       statusEl.textContent = '–';
       statusEl.className = 'qd-status-pill neutral';
       noteEl.textContent = '';
-      $('targetStripText').innerHTML = targetRuleHtml();
+      setTargetRuleText();
       $('kpiScrapUnit').textContent = '–';
       $('kpiScrapRateUnit').textContent = '–';
       $('kpiScrapCostSub').textContent = '–';
@@ -436,7 +442,7 @@
     }
     noteEl.textContent = notes.join(' ');
 
-    $('targetStripText').innerHTML = targetRuleHtml();
+    setTargetRuleText();
 
     setKpiStatus(kpiCard('scrap'), scrapLoadFailed ? 'neutral' : combinedStatus === 'OVER TARGET' ? 'bad' : 'neutral');
     setKpiStatus(kpiCard('scrapRate'), 'neutral');
@@ -451,21 +457,17 @@
 
   const MONTH_ABBR = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-  let lastPerfMode = null;   // lets the detail panel open itself once per mode change, then respect the user's toggle
-  // "View Daily / Shift Detail →" in the card header toggles the existing <details> panel.
-  function syncPerfDetailButton() {
-    const d = document.querySelector('#targetPerfRange details'), b = $('targetPerfDetailBtn');
-    if (!d || !b) return;
-    b.textContent = d.open ? 'Hide Daily / Shift Detail' : 'View Daily / Shift Detail →';
-    b.setAttribute('aria-expanded', d.open ? 'true' : 'false');
+  // "View Details" on the Target Performance KPI shows / hides the detail panel under the KPI row.
+  // The panel is filled on every render() whether open or not, so opening it never reads Firestore.
+  function setPerfDetailOpen(open) {
+    const panel = $('targetDetailPanel'), b = $('targetPerfDetailBtn');
+    panel.hidden = !open;
+    b.textContent = open ? 'Hide Details' : 'View Details →';
+    b.setAttribute('aria-expanded', open ? 'true' : 'false');
   }
   function renderTargetPerformance(units, dates) {
     $('targetPerfSingle').hidden = true;
     $('targetPerfRange').hidden = false;
-    const perfMode = isMultiDay() ? 'range' : 'single';
-    const detailsEl = document.querySelector('#targetPerfRange details');
-    if (detailsEl && perfMode !== lastPerfMode) { detailsEl.open = perfMode === 'single'; syncPerfDetailButton(); }   // one date = only a couple of rows, so show them
-    lastPerfMode = perfMode;
 
     // Counts stay SEPARATE for days (≤50/day rule) and shifts (≤30/shift rule). When a range spans
     // the rule change, the tiles show the day/shift split instead of one combined percentage.
@@ -543,7 +545,7 @@
     }).join('');
     container.innerHTML = `
       <table class="qd-datatable qd-dashboard-table qd-dashboard-doortable">
-        <thead><tr><th>Line</th><th class="num">Production</th><th class="num">Scrap</th><th class="num">Scrap Rate</th><th>Share</th></tr></thead>
+        <thead><tr><th>Line</th><th class="num">Production</th><th class="num">Scrap Qty</th><th class="num">Scrap Rate</th><th>Scrap Share</th></tr></thead>
         <tbody>${body}</tbody>
       </table>`;
   }
@@ -1212,10 +1214,13 @@
   $('dateFrom').addEventListener('change', onDateRangeChange);
   $('dateTo').addEventListener('change', onDateRangeChange);
   (function wirePerfDetailButton() {
-    const d = document.querySelector('#targetPerfRange details');
-    $('targetPerfDetailBtn').addEventListener('click', () => { d.open = !d.open; });
-    d.addEventListener('toggle', syncPerfDetailButton);
-    syncPerfDetailButton();
+    $('targetPerfDetailBtn').addEventListener('click', () => {
+      const open = $('targetDetailPanel').hidden;
+      setPerfDetailOpen(open);
+      if (open) $('targetDetailPanel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
+    $('targetDetailCloseBtn').addEventListener('click', () => { setPerfDetailOpen(false); $('targetPerfDetailBtn').focus(); });
+    setPerfDetailOpen(false);
   })();
 
   $('shiftFilter').addEventListener('click', (e) => {

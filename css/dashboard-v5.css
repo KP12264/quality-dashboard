@@ -193,6 +193,81 @@ body.qd-v5 .v5-trend-note:empty{display:none;}
   body.qd-v5 .v5-trend-chart{height:260px;}
 }
 
+/* ---------------- Target Performance KPI: ⓘ tooltip + View Details ----------------
+   The Day + Night explanation sits in a tooltip next to the "Target" label; it opens on
+   hover, keyboard focus and tap (the ⓘ is focusable). The action sits in the counts row. */
+body.qd-v5 .v5c-target{position:relative;}
+body.qd-v5 .v5c-target .qd-info{display:inline-block;margin-left:4px;cursor:help;font-size:12px;line-height:1;color:var(--v5-muted);vertical-align:1px;border-radius:50%;}
+body.qd-v5 .v5c-target .qd-info:hover,body.qd-v5 .v5c-target .qd-info:focus-visible{color:var(--v5-blue);}
+body.qd-v5 .v5-tip{
+  position:absolute;z-index:30;left:0;right:0;top:calc(100% + 6px);
+  display:none;flex-direction:column;gap:6px;padding:10px 12px;border-radius:10px;
+  background:#0B2540;color:#EAF1FE;box-shadow:0 6px 20px rgba(11,37,64,.22);
+  font-size:12px;font-weight:400;line-height:1.45;letter-spacing:0;text-transform:none;white-space:normal;
+  pointer-events:none;   /* never blocks the View Details button underneath */
+}
+body.qd-v5 .qd-info:hover + .v5-tip,body.qd-v5 .qd-info:focus + .v5-tip{display:flex;}
+body.qd-v5 .v5-tip-rule{color:#fff;}
+body.qd-v5 .v5-tip-rule:empty{display:none;}
+body.qd-v5 .v5-tip-rule strong{color:#fff;font-weight:700;}
+body.qd-v5 .v5c-target-foot{display:flex;align-items:center;justify-content:space-between;gap:6px 12px;flex-wrap:wrap;}
+body.qd-v5 .v5c-target-foot .v5-counts{min-width:0;}
+body.qd-v5 .v5c-detail-btn{
+  flex:none;margin-left:auto;padding:4px 10px;min-height:28px;border-radius:8px;
+  border:1px solid #C9DAF6;background:var(--v5-blue-soft);color:var(--v5-blue);
+  font-size:12px;font-weight:600;line-height:1.2;cursor:pointer;white-space:nowrap;
+}
+body.qd-v5 .v5c-detail-btn:hover{background:#DCE8FC;}
+body.qd-v5 .v5c-detail-btn[aria-expanded="true"]{background:var(--v5-blue);border-color:var(--v5-blue);color:#fff;}
+
+/* ---------------- Target Performance detail panel (collapsible) ---------------- */
+body.qd-v5 .v5-target-detail[hidden]{display:none;}
+body.qd-v5 .v5-target-detail{border:1px solid var(--v5-line);border-radius:var(--v5-radius);box-shadow:var(--v5-shadow);margin-bottom:18px;}
+body.qd-v5 .v5-target-detail-head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px 16px;flex-wrap:wrap;margin-bottom:12px;}
+body.qd-v5 .v5-target-detail-head h2{margin:0;font-size:15px;}
+body.qd-v5 .v5-target-detail-rule{margin-top:3px;font-size:12px;color:var(--v5-muted);}
+body.qd-v5 .v5-target-detail-rule strong{color:var(--v5-text);font-weight:600;}
+body.qd-v5 .v5-target-detail .qd-dashboard-range-summary{grid-template-columns:repeat(5,minmax(0,1fr));}
+body.qd-v5 .v5-target-detail .qd-dashboard-range-stat .sub{font-size:11px;color:var(--v5-muted);}
+body.qd-v5 .v5-target-detail .qd-dashboard-range-details{margin-top:12px;}
+/* a long range keeps a bounded table (sticky header); a short one never shows a scrollbar */
+body.qd-v5 .v5-target-detail .qd-dashboard-range-scroll{max-height:360px;margin-top:0;overflow-x:auto;overflow-y:auto;}
+@media (max-width:760px){
+  body.qd-v5 .v5-target-detail .qd-dashboard-range-summary{grid-template-columns:repeat(3,minmax(0,1fr));}
+}
+@media (max-width:480px){
+  body.qd-v5 .v5-target-detail .qd-dashboard-range-summary{grid-template-columns:repeat(2,minmax(0,1fr));}
+}
+
+/* ---------------- Section order (V5): Trend → [Top 5 Defects | Door Line] → Attention → Pareto ---------------- */
+body.qd-v5 .qd-dashboard-main > .qd-dashboard-section,
+body.qd-v5 .qd-dashboard-row{margin-bottom:18px;}
+body.qd-v5 .v5-row-split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;align-items:stretch;}
+body.qd-v5 .v5-row-split > .qd-dashboard-section{display:flex;flex-direction:column;margin:0;min-width:0;}
+body.qd-v5 .v5-row-split .qd-dashboard-pareto-empty{flex:1;min-height:140px;}
+body.qd-v5 .v5-card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px 12px;flex-wrap:wrap;}
+body.qd-v5 .v5-card-head h2{margin-bottom:2px;}
+
+/* Door Line Comparison: compact 3-row table. Fills the card height next to Top 5 Defects,
+   never scrolls vertically; scrolls sideways only if a phone is narrower than the table. */
+body.qd-v5 #doorLineCard #doorLineComparison{display:flex;flex-direction:column;flex:1;margin-top:10px;overflow-x:auto;overflow-y:hidden;}
+body.qd-v5 #doorLineCard .qd-dashboard-doortable{flex:1;height:auto;}
+body.qd-v5 #doorLineCard .qd-dashboard-doortable thead th{padding:8px 10px;white-space:nowrap;}
+body.qd-v5 #doorLineCard .qd-dashboard-doortable td{padding:10px;}
+body.qd-v5 #doorLineCard .qd-dashboard-doortable-share{min-width:96px;}
+@media (max-width:1199px){
+  body.qd-v5 .v5-row-split{grid-template-columns:minmax(0,1fr);}
+}
+@media (max-width:600px){
+  body.qd-v5 #doorLineCard .qd-dashboard-doortable th,
+  body.qd-v5 #doorLineCard .qd-dashboard-doortable td{padding-left:6px;padding-right:6px;}
+  body.qd-v5 #doorLineCard .qd-dashboard-doortable-name{display:none;}   /* the A/B/C badge already names the line */
+  body.qd-v5 #doorLineCard .qd-dashboard-doortable .qd-line-badge{margin-right:0;}
+  body.qd-v5 #doorLineCard .qd-dashboard-doortable-share{min-width:64px;gap:6px;}
+  body.qd-v5 #doorLineCard .qd-dashboard-doortable thead th{white-space:normal;line-height:1.25;}
+  body.qd-v5 #doorLineCard .qd-dashboard-doortable td.num .u{display:none;}   /* "pcs" is implied by the column header */
+}
+
 /* ---------------- Typography (V5) ----------------
    One family for Thai/English/numbers. styles.css components below the KPI
    row used --font-mono with UPPERCASE + letter-spacing; on V5 pages they use
