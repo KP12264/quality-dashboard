@@ -11,7 +11,7 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai+Looped:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 <!-- Dashboard V5 look. Scoped to body.qd-v5, loaded only by this page. -->
-<link rel="stylesheet" href="css/dashboard-v5.css?v=20261021-st1">
+<link rel="stylesheet" href="css/dashboard-v5.css?v=20261030-kc1">
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.0/chart.umd.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
@@ -122,41 +122,42 @@
     <!-- V5 KPI cards: Scrap Total · Scrap Rate · Scrap Cost · Target Performance.
          Values are written by renderKpis() in js/dashboard.js; target judgement
          comes from js/target-evaluator.js (unchanged). -->
-    <section class="v5-kpis" id="kpiSection" aria-label="Key figures">
-      <article class="v5-kpi" data-kpi="scrap">
-        <div class="v5-kpi-ico rose"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></div>
-        <div class="v5-kpi-body">
+    <!-- V5 KPI cards — "Compact & Professional": small icon + label row, prominent value,
+         a divider, one line of real secondary data. Same element ids as before, so
+         renderKpis() in js/dashboard.js (unchanged) fills them exactly as it did. -->
+    <section class="v5-kpis v5c-row" id="kpiSection" aria-label="Key figures">
+      <article class="v5-kpi v5c" data-kpi="scrap">
+        <div class="v5c-head">
+          <span class="v5-kpi-ico rose" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></span>
           <h3 class="v5-kpi-label">Scrap Total</h3>
-          <div class="v5-kpi-value"><span class="na" id="kpiScrap">N/A</span> <small>pcs</small></div>
-          <div class="v5-kpi-sub" id="kpiScrapUnit">&ndash;</div>
         </div>
+        <div class="v5-kpi-value"><span class="na" id="kpiScrap">N/A</span> <small>pcs</small></div>
+        <div class="v5-kpi-sub" id="kpiScrapUnit">&ndash;</div>
       </article>
-      <article class="v5-kpi" data-kpi="scrapRate">
-        <div class="v5-kpi-ico blue"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg></div>
-        <div class="v5-kpi-body">
+      <article class="v5-kpi v5c" data-kpi="scrapRate">
+        <div class="v5c-head">
+          <span class="v5-kpi-ico blue" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg></span>
           <h3 class="v5-kpi-label">Scrap Rate</h3>
-          <div class="v5-kpi-value"><span class="na" id="kpiScrapRate">N/A</span></div>
-          <div class="v5-kpi-sub" id="kpiScrapRateUnit">&ndash;</div>
         </div>
+        <div class="v5-kpi-value"><span class="na" id="kpiScrapRate">N/A</span></div>
+        <div class="v5-kpi-sub" id="kpiScrapRateUnit">&ndash;</div>
       </article>
-      <article class="v5-kpi" data-kpi="cost">
-        <div class="v5-kpi-ico teal"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l9 4.5-9 4.5-9-4.5z"/><path d="M3 12l9 4.5 9-4.5"/><path d="M3 16.5L12 21l9-4.5"/></svg></div>
-        <div class="v5-kpi-body">
+      <article class="v5-kpi v5c" data-kpi="cost">
+        <div class="v5c-head">
+          <span class="v5-kpi-ico teal" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l9 4.5-9 4.5-9-4.5z"/><path d="M3 12l9 4.5 9-4.5"/><path d="M3 16.5L12 21l9-4.5"/></svg></span>
           <h3 class="v5-kpi-label">Scrap Cost</h3>
-          <div class="v5-kpi-value"><span class="na" id="kpiScrapCost">N/A</span></div>
-          <div class="v5-kpi-sub" id="kpiScrapCostSub">&ndash;</div>
         </div>
+        <div class="v5-kpi-value"><span class="na" id="kpiScrapCost">N/A</span></div>
+        <div class="v5-kpi-sub" id="kpiScrapCostSub">&ndash;</div>
       </article>
-      <article class="v5-kpi" data-kpi="status">
-        <div class="v5-kpi-ico amber"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></svg></div>
-        <div class="v5-kpi-body">
+      <article class="v5-kpi v5c" data-kpi="status">
+        <div class="v5c-head">
+          <span class="v5-kpi-ico amber" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></svg></span>
           <h3 class="v5-kpi-label">Target Performance</h3>
-          <div class="v5-kpi-value v5-kpi-status"><span class="qd-status-pill neutral" id="kpiStatus">&ndash;</span></div>
-          <div class="v5-kpi-sub">
-            <span class="v5-target-line">Target <b id="kpiTarget">&ndash;</b> <span id="kpiTargetUnitText">pcs scrap</span> <span class="qd-info" id="kpiTargetInfo" tabindex="0" title="Door A+B+C combined. From 01 Oct 2026: Day + Night combined per production date (≤50/day). Before that: each shift judged separately (≤30/shift)." aria-label="Door A+B+C combined; daily target from 01 Oct 2026, per-shift target before">&#9432;</span></span>
-            <span class="v5-counts" id="kpiTargetCounts"></span>
-          </div>
+          <span class="qd-status-pill neutral v5c-pill" id="kpiStatus">&ndash;</span>
         </div>
+        <div class="v5-kpi-value v5c-target"><span class="v5c-target-k">Target</span> <b id="kpiTarget">&ndash;</b> <span id="kpiTargetUnitText">pcs scrap</span> <span class="qd-info" id="kpiTargetInfo" tabindex="0" title="Door A+B+C combined. From 01 Oct 2026: Day + Night combined per production date (≤50/day). Before that: each shift judged separately (≤30/shift)." aria-label="Door A+B+C combined; daily target from 01 Oct 2026, per-shift target before">&#9432;</span></div>
+        <div class="v5-kpi-sub v5-counts" id="kpiTargetCounts"></div>
       </article>
     </section>
 
