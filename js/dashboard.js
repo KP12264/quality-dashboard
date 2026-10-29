@@ -413,7 +413,7 @@
         costLevel = 'warn';
         $('kpiScrapCostSub').textContent = `Incomplete: ${fmt(cost.count - cost.withCost)} of ${fmt(cost.count)} records have no cost`;
       } else {
-        $('kpiScrapCostSub').textContent = `${fmtBaht(cost.total)} · ${fmt(cost.count)} record${cost.count === 1 ? '' : 's'}`;
+        $('kpiScrapCostSub').textContent = `${fmt(cost.count)} scrap record${cost.count === 1 ? '' : 's'}`;
       }
     }
 
@@ -820,23 +820,33 @@
     return trendHatch;
   }
 
-  // Presentation-only plugin: labels on the Top 3 bars, "No data" / "No log"
-  // markers where a value would otherwise look like a confirmed 0, the
-  // "TARGET 50" tag at the right end of the target line, and the cutover marker.
+  // Presentation-only plugin: labels on the Top 3 bars, small text-free markers on
+  // the baseline where a value would otherwise look like a confirmed 0 (hatched stub =
+  // incomplete / no scrap log, hollow dot = no data or not readable, thin line = a
+  // recorded 0), the "TARGET 50" tag at the right end of the target line, and the
+  // cutover marker. The exact status of each date is in the tooltip.
   const trendDecorPlugin = {
     id: 'trendDecor',
     afterDatasetsDraw(chart, args, o) {
       if (!o || !o.meta) return;
       const m = o.meta, c = chart.ctx, area = chart.chartArea, x = chart.scales.x, y = chart.scales.y;
       c.save();
-      // markers for days without a usable value
-      c.font = '500 10px ' + V5_CHART_FONT; c.textAlign = 'center'; c.textBaseline = 'bottom'; c.fillStyle = '#7A8796';
+      // baseline markers for days without a usable value (no text, so they never clutter)
       const slot = m.marker.length > 1 ? Math.abs(x.getPixelForValue(1) - x.getPixelForValue(0)) : area.right - area.left;
+      const w = Math.max(4, Math.min(40, slot * 0.6));
       m.marker.forEach((t, i) => {
         if (!t) return;
-        // narrow days: a short "–" instead of words, so markers never run together
-        const txt = (t === '0' || c.measureText(t).width + 4 <= slot) ? t : '–';
-        c.fillText(txt, x.getPixelForValue(i), area.bottom - 4);
+        const cx = x.getPixelForValue(i);
+        if (t === 'No log') {   // incomplete: same hatch as the Incomplete legend, as a short stub
+          c.fillStyle = m.hatch; c.strokeStyle = '#A9B4C0'; c.lineWidth = 1;
+          c.fillRect(cx - w / 2, area.bottom - 6, w, 6); c.strokeRect(cx - w / 2 + 0.5, area.bottom - 5.5, w - 1, 5);
+        } else if (t === '0') {   // a recorded 0: thin line in the bar's own colour
+          c.fillStyle = m.zeroColor[i] || '#9DB3C7';
+          c.fillRect(cx - w / 2, area.bottom - 2, w, 2);
+        } else {   // 'No data' / 'N/A': hollow dot
+          c.strokeStyle = '#94A3B8'; c.lineWidth = 1.5; c.fillStyle = '#FFFFFF';
+          c.beginPath(); c.arc(cx, area.bottom - 5, 3.5, 0, Math.PI * 2); c.fill(); c.stroke();
+        }
       });
       // cutover marker (range crosses 01 Oct)
       if (m.cutoverIndex > 0) {
@@ -871,43 +881,61 @@
   }
 
   // Header KPIs of the card — same scope as the bars; Over Target from the evaluator.
+  // Each KPI explains itself in a small tooltip (hover, keyboard focus or tap).
+  function setTrendTip(id, text) {
+    const e = $(id); if (!e) return;
+    let tipEl = e.querySelector('.v5-tip');
+    if (!tipEl) { tipEl = document.createElement('span'); tipEl.className = 'v5-tip'; tipEl.setAttribute('role', 'tooltip'); tipEl.id = id + 'Tip'; e.appendChild(tipEl); e.setAttribute('aria-describedby', tipEl.id); }
+    e.removeAttribute('title');
+    tipEl.textContent = text;
+  }
   function renderTrendKpis(points, units, meta) {
-    const S = TargetEvaluator.STATUS;
     const set = (id, v) => { const e = $(id); if (e) e.textContent = v; };
-    const tip = (id, v) => { const e = $(id); if (e) e.title = v; };
+    const plural = (n, w) => `${fmt(n)} ${w}${n === 1 ? '' : 's'}`;
     const scrapOk = points.length > 0 && points.every(p => p.scrap !== null && p.scrap !== undefined);
     const total = scrapOk ? points.reduce((s, p) => s + p.scrap, 0) : null;
     set('trendTotal', total === null ? 'N/A' : fmt(total));
-    tip('trendKpiTotal', total === null ? 'Scrap data could not be read' : `Scrap Qty for ${meta.scopeText}, ${meta.rangeText}`);
+    setTrendTip('trendKpiTotal', total === null ? 'Scrap data could not be read' : `Scrap Qty for ${meta.scopeText}, ${meta.rangeText}`);
 
-    const dayU = units.filter(u => u.unit === 'DAY'), shiftU = units.filter(u => u.unit === 'SHIFT');
-    const count = list => ({
-      over: list.filter(u => u.status === S.OVER).length,
-      within: list.filter(u => u.status === S.WITHIN).length,
-      inc: list.filter(u => u.status === S.INCOMPLETE).length,
-      nd: list.filter(u => u.status === S.NO_DATA).length
-    });
-    const d = count(dayU), s = count(shiftU);
-    let overText = '–', unit = '', title = '';
-    if (dayU.length) {
-      overText = `${fmt(d.over)}/${fmt(d.over + d.within)}`; unit = 'days';
-      title = `Days over ≤${fmt(DAILY_TARGET_PCS)} pcs / days that could be judged (Within + Over). Not counted: ${d.inc} Incomplete, ${d.nd} No Data.`;
-      if (shiftU.length) title += ` Before ${TargetEvaluator.formatCutoverDate()} (judged per shift, ≤30/shift): ${s.over}/${s.over + s.within} shifts over.`;
-    } else if (shiftU.length) {
-      overText = `${fmt(s.over)}/${fmt(s.over + s.within)}`; unit = 'shifts';
-      title = `Shifts over their target (≤30 pcs/shift rule) / shifts that could be judged. Not counted: ${s.inc} Incomplete, ${s.nd} No Data.`;
+    // Over Target: counts straight from the central evaluator's units (TargetEvaluator.summarize).
+    // Denominator = evaluated units only (Within + Over); Incomplete / No Data are listed, never counted.
+    const sum = TargetEvaluator.summarize(units);
+    const d = sum.days, s = sum.shifts;
+    const selectedDays = points.length;
+    let overText = '–', unit = '', lines = [];
+    if (sum.hasDays) {
+      overText = fmt(d.over); unit = `over / ${plural(d.within + d.over, 'evaluated day')}`;
+      lines = [
+        `Selected days: ${fmt(selectedDays)}`,
+        `Evaluated days: ${fmt(d.within + d.over)} (${fmt(d.within)} Within, ${fmt(d.over)} Over)`,
+        `Incomplete days: ${fmt(d.incomplete)}`,
+        `No Data days: ${fmt(d.noData)}`,
+        `Target ≤${fmt(DAILY_TARGET_PCS)} pcs/day · Door A+B+C · Day + Night combined.`
+      ];
+      if (sum.hasShifts) lines.push(`Before ${TargetEvaluator.formatCutoverDate()} (${plural(selectedDays - d.total, 'day')}, judged per shift): ${fmt(s.over)} over / ${plural(s.within + s.over, 'evaluated shift')}, ${fmt(s.incomplete)} incomplete, ${fmt(s.noData)} no data.`);
+    } else if (sum.hasShifts) {
+      overText = fmt(s.over); unit = `over / ${plural(s.within + s.over, 'evaluated shift')}`;
+      lines = [
+        `Selected days: ${fmt(selectedDays)}`,
+        `Evaluated shifts: ${fmt(s.within + s.over)} (${fmt(s.within)} Within, ${fmt(s.over)} Over)`,
+        `Incomplete shifts: ${fmt(s.incomplete)}`,
+        `No Data shifts: ${fmt(s.noData)}`,
+        `Before ${TargetEvaluator.formatCutoverDate()} each shift is judged on its own target (Door A+B+C).`
+      ];
     }
-    if (state.line !== 'all' || state.shift !== 'all') title += ' Judged on Door A+B+C, Day+Night combined — not only the selected line/shift.';
-    set('trendOver', overText); set('trendOverUnit', unit); tip('trendKpiOver', title);
-    const overEl = $('trendKpiOver'); if (overEl) overEl.dataset.level = (dayU.length ? d.over : s.over) > 0 ? 'bad' : 'neutral';
+    if (state.line !== 'all' || state.shift !== 'all') lines.push('Judged on Door A+B+C, Day + Night combined — not only the selected line/shift.');
+    set('trendOver', overText); set('trendOverUnit', unit);
+    setTrendTip('trendKpiOver', lines.length ? lines.join('\n') : 'No evaluated days in this range');
+    const overEl = $('trendKpiOver'); if (overEl) overEl.dataset.level = (sum.hasDays ? d.over : s.over) > 0 ? 'bad' : 'neutral';
 
     // Daily average: total ÷ days with at least one scrap log in scope. A day
     // without any log is unknown, not 0 (see target-evaluator.js), so it is left out.
     const logged = points.filter(p => p.scrap > 0).length;
     set('trendAvg', total === null || logged === 0 ? 'N/A' : fmt(Math.round(total / logged)));
-    tip('trendKpiAvg', total === null ? 'Scrap data could not be read'
-      : logged === 0 ? 'No day in this range has a scrap log'
-      : `${fmt(total)} pcs ÷ ${logged} day${logged === 1 ? '' : 's'} with scrap logged (out of ${points.length} in range). Days without a scrap log are not counted as 0.`);
+    setTrendTip('trendKpiAvg', total === null ? 'Scrap data could not be read'
+      : logged === 0 ? 'No day in this range has recorded scrap'
+      : `${fmt(total)} pcs ÷ ${plural(logged, 'day')} with recorded scrap = ${(total / logged).toLocaleString('en-US', { maximumFractionDigits: 1 })} pcs/day\n`
+        + `Selected days: ${fmt(selectedDays)}. Days without a scrap record are not counted as 0.`);
   }
 
   function renderScrapTrend(points, targetLine, units) {
@@ -948,8 +976,9 @@
       const du = dayUnit.get(p.date);
       const scrapFail = p.scrap === null || p.scrap === undefined;
       const noData = !scrapFail && !(p.production > 0) && !(p.scrap > 0);
-      // Unfiltered daily-rule day with production but no scrap log: the total is unknown, not 0.
-      const unknown = !filtered && du && !du.scrapKnown && !scrapFail && !noData;
+      // Daily-rule day with production but no scrap log at all (any line/shift): the total is
+      // unknown, not 0 — also when a Line/Shift is selected (its 0 would not be confirmed either).
+      const unknown = du && !du.scrapKnown && !scrapFail && !noData;
       if (scrapFail) { values.push(null); marker.push('N/A'); }
       else if (noData) { values.push(null); marker.push('No data'); }
       else if (unknown) { values.push(null); marker.push('No log'); }
@@ -964,6 +993,7 @@
     const ctx = $('scrapTrendChart').getContext('2d');
     const hatch = trendHatchPattern(ctx);
     const bg = colors.map(c => c || hatch);
+    const zeroColor = bg.map(c => typeof c === 'string' ? c : '#A9B4C0');
 
     // Top 3 by Scrap Qty (ties: earlier date first)
     const top3 = values.map((v, i) => [v, i]).filter(([v]) => v > 0).sort((a, b) => b[0] - a[0] || a[1] - b[1]).slice(0, 3).map(([, i]) => i);
@@ -979,9 +1009,11 @@
       else {
         if (kind.includes('WITHIN')) parts.push(item('within', 'Within target'));
         if (kind.includes('OVER')) parts.push(item('over', 'Over target'));
-        if (kind.includes('INCOMPLETE') || marker.some(t => t === 'No data' || t === 'No log')) parts.push(item('incomplete', 'Incomplete / No data'));
+        if (kind.includes('INCOMPLETE') || marker.includes('No log')) parts.push(item('incomplete', 'Incomplete'));
         if (kind.includes('LEGACY')) parts.push(item('legacy', `Before ${TargetEvaluator.formatCutoverDate()} · judged per shift (see tooltip)`));
       }
+      if (marker.some(t => t === 'No data' || t === 'N/A')) parts.push(item('nodata', marker.includes('N/A') && !marker.includes('No data') ? 'Not readable' : 'No data'));
+      if (filtered && marker.includes('No log')) parts.push(item('incomplete', 'No scrap log'));
       if (targetLine) parts.push(item('target', `Target ≤${fmt(targetLine.value)} pcs/day${cutoverIndex > 0 ? ' (from ' + TargetEvaluator.formatCutoverDate() + ')' : ''}`));
       legend.innerHTML = parts.join('');
     }
@@ -1006,7 +1038,7 @@
       interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: { display: false },
-        trendDecor: { meta: { values, marker, top3, target: targetLine, cutoverIndex, cutoverText: `Daily rule from ${TargetEvaluator.formatCutoverDate()}` } },
+        trendDecor: { meta: { values, marker, hatch, zeroColor, top3, target: targetLine, cutoverIndex, cutoverText: `Daily rule from ${TargetEvaluator.formatCutoverDate()}` } },
         tooltip: Object.assign(compactTooltip({
           title: items => items.length ? fmtDate(String(items[0].label)) : '',
           label: () => '',
@@ -1019,7 +1051,8 @@
               : marker[i] === 'No log' ? ' Scrap Qty: N/A (no scrap log recorded)'
               : ` Scrap Qty${scopeLbl}: ${fmt(p.scrap)} pcs`);
             out.push(p.production > 0 ? ` Production Qty${scopeLbl}: ${fmt(p.production)} pcs` : ` Production Qty${scopeLbl}: N/A (not recorded)`);
-            out.push(p.scrapRatePct === null || p.scrapRatePct === undefined ? ' Scrap Rate: N/A (no production)' : ` Scrap Rate: ${Number(p.scrapRatePct).toFixed(2)}%`);
+            out.push(marker[i] === 'No log' || marker[i] === 'N/A' ? ' Scrap Rate: N/A (scrap not known)'
+              : p.scrapRatePct === null || p.scrapRatePct === undefined ? ' Scrap Rate: N/A (no production)' : ` Scrap Rate: ${Number(p.scrapRatePct).toFixed(2)}%`);
             if (du) {
               out.push(` Daily Target: ≤${fmt(du.target)} pcs (A+B+C, Day+Night)`);
               out.push(du.gap === null || du.gap === undefined ? ' Gap to Target: N/A (scrap not known)' : ` Gap to Target: ${du.gap > 0 ? '+' : ''}${fmt(du.gap)} pcs`);

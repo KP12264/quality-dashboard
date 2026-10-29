@@ -175,6 +175,17 @@ body.qd-v5 .v5-trend-li i.scope{background:#5B86A8;}
 body.qd-v5 .v5-trend-li i.legacy{background:#9DB3C7;}
 body.qd-v5 .v5-trend-li i.incomplete{background:repeating-linear-gradient(45deg,#A9B4C0 0 1.5px,#E4E9EF 1.5px 4px);}
 body.qd-v5 .v5-trend-li i.target{width:18px;height:0;border-radius:0;border-top:2px dashed #F08A24;}
+body.qd-v5 .v5-trend-li i.nodata{width:9px;height:9px;border-radius:50%;border:1.5px solid #94A3B8;background:#fff;box-sizing:border-box;}
+/* KPI tooltips (filled by setTrendTip in dashboard.js): hover, keyboard focus or tap */
+body.qd-v5 .v5-trend-kpi{position:relative;}
+body.qd-v5 .v5-trend-kpi .v5-tip{left:auto;right:0;width:min(300px,86vw);white-space:pre-line;}
+body.qd-v5 .v5-trend-kpi:first-child .v5-tip{left:0;right:auto;}
+body.qd-v5 .v5-trend-kpi:hover .v5-tip,body.qd-v5 .v5-trend-kpi:focus .v5-tip{display:block;}
+@media (max-width:600px){
+  body.qd-v5 .v5-trend-kpi:nth-child(2) .v5-tip{left:50%;right:auto;transform:translateX(-50%);}
+  body.qd-v5 .v5-trend-kpi dd{white-space:normal;}
+  body.qd-v5 .v5-trend-kpi dd small{display:block;line-height:1.3;}
+}
 /* chart scrolls inside the card on narrow screens; the page never does */
 body.qd-v5 .v5-trend-scroll{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;}
 body.qd-v5 .v5-trend-chart{height:300px;position:relative;}
