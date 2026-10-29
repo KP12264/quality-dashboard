@@ -223,7 +223,7 @@
     let trendPoints = QualityAdapter.buildDailyTrend(dates, lineFilteredProduction, lineFilteredScrap);
     // A failed scrap read must not draw zero-height "no scrap" bars.
     if (scrapLoadFailed) trendPoints = trendPoints.map(p => ({ ...p, scrap: null, scrapRatePct: null }));
-    renderScrapTrend(trendPoints, trendTargetLine(dates));
+    renderScrapTrend(trendPoints, trendTargetLine(dates), shiftEvals);
 
     // ---- Attention Required: re-runs on every render() so it follows the range ----
     renderAttentionRequired(scrapResult);
@@ -258,7 +258,7 @@
       `<div class="qd-dashboard-range-stat ${['good', 'bad', 'warn', 'neutral', 'total'][i]}"><div class="num">–</div><div class="lbl">${l}</div></div>`).join('');
     $('targetPerfDetailBody').innerHTML = '';
     $('doorLineComparison').innerHTML = '';
-    renderScrapTrend([], null);
+    renderScrapTrend([], null, []);
     renderPareto([]);
     renderTopDefectsList([]);
   }
@@ -633,30 +633,6 @@
       c.restore();
     }
   };
-  // Scrap Trend value labels (presentation only): white number inside the base of each bar,
-  // like the Excel "Daily Scrap Trend". Falls back to a dark label above the bar when the bar is
-  // too short to hold the text, and skips labels when bars get too narrow (long ranges).
-  const baseLabelsPlugin = {
-    id: 'baseLabels',
-    afterDatasetsDraw(chart, args, opts) {
-      if (!opts || !opts.enabled) return;
-      const c = chart.ctx;
-      c.save(); c.font = '700 11px ' + V5_CHART_FONT; c.textAlign = 'center';
-      chart.data.datasets.forEach((ds, i) => {
-        if (ds.type !== 'bar') return;
-        const meta = chart.getDatasetMeta(i);
-        if (meta.hidden) return;
-        meta.data.forEach((bar, idx) => {
-          const v = ds.data[idx];
-          if (v === null || v === undefined || v <= 0 || bar.width < 18) return;
-          const h = bar.base - bar.y;
-          if (h >= 20) { c.fillStyle = '#FFFFFF'; c.textBaseline = 'bottom'; c.fillText(fmt(v), bar.x, bar.base - 4); }
-          else { c.fillStyle = '#0B2340'; c.textBaseline = 'bottom'; c.fillText(fmt(v), bar.x, bar.y - 3); }
-        });
-      });
-      c.restore();
-    }
-  };
   // Dashed Target reference (presentation only, opt-in via options.plugins.targetLine).
   const targetLinePlugin = {
     id: 'targetLine',
@@ -820,10 +796,129 @@
   // production or scrap — a day with production>0/scrap=0, or
   // production=0/scrap>0, still counts as meaningful and shows the real
   // chart. Does not touch the underlying daily-trend calculation at all.
-  function renderScrapTrend(points, targetLine) {
+  // ---- Scrap Trend (V5): status-coloured daily bars -----------------------
+  // One bar per date = Scrap Qty for the selected Line/Shift scope (points from
+  // QualityAdapter.buildDailyTrend, unchanged). Bar COLOUR comes only from the
+  // central evaluator (TargetEvaluator.evaluate units already computed in
+  // render() — no extra reads): daily-rule dates use their DAY unit; dates before
+  // the cutover are judged per shift, so they get a neutral colour and their shift
+  // results are listed in the tooltip (never merged into one day status). With a
+  // specific Line or Shift selected the colours are neutral, because the target
+  // belongs to A+B+C, Day+Night combined.
+  const TREND_COL = { WITHIN: '#14A08C', OVER: '#F08A24', SCOPE: '#5B86A8', LEGACY: '#9DB3C7', INCOMPLETE: '#C7CFD8', TARGET: '#F08A24' };
+  let trendHatch = null;
+  function trendHatchPattern(ctx) {
+    if (trendHatch) return trendHatch;
+    const c = document.createElement('canvas'); c.width = 8; c.height = 8;
+    const g = c.getContext('2d');
+    g.fillStyle = '#E4E9EF'; g.fillRect(0, 0, 8, 8);
+    g.strokeStyle = '#A9B4C0'; g.lineWidth = 1.5;
+    g.beginPath(); g.moveTo(-2, 10); g.lineTo(10, -2); g.moveTo(-2, 2); g.lineTo(2, -2); g.moveTo(6, 10); g.lineTo(10, 6); g.stroke();
+    trendHatch = ctx.createPattern(c, 'repeat');
+    return trendHatch;
+  }
+
+  // Presentation-only plugin: labels on the Top 3 bars, "No data" / "No log"
+  // markers where a value would otherwise look like a confirmed 0, the
+  // "TARGET 50" tag at the right end of the target line, and the cutover marker.
+  const trendDecorPlugin = {
+    id: 'trendDecor',
+    afterDatasetsDraw(chart, args, o) {
+      if (!o || !o.meta) return;
+      const m = o.meta, c = chart.ctx, area = chart.chartArea, x = chart.scales.x, y = chart.scales.y;
+      c.save();
+      // markers for days without a usable value
+      c.font = '500 10px ' + V5_CHART_FONT; c.textAlign = 'center'; c.textBaseline = 'bottom'; c.fillStyle = '#7A8796';
+      const slot = m.marker.length > 1 ? Math.abs(x.getPixelForValue(1) - x.getPixelForValue(0)) : area.right - area.left;
+      m.marker.forEach((t, i) => {
+        if (!t) return;
+        // narrow days: a short "–" instead of words, so markers never run together
+        const txt = (t === '0' || c.measureText(t).width + 4 <= slot) ? t : '–';
+        c.fillText(txt, x.getPixelForValue(i), area.bottom - 4);
+      });
+      // cutover marker (range crosses 01 Oct)
+      if (m.cutoverIndex > 0) {
+        const px = (x.getPixelForValue(m.cutoverIndex - 1) + x.getPixelForValue(m.cutoverIndex)) / 2;
+        c.strokeStyle = '#94A3B8'; c.setLineDash([3, 3]); c.lineWidth = 1;
+        c.beginPath(); c.moveTo(px, area.top); c.lineTo(px, area.bottom); c.stroke(); c.setLineDash([]);
+        c.font = '600 10px ' + V5_CHART_FONT; c.fillStyle = '#475569'; c.textAlign = 'left'; c.textBaseline = 'top';
+        c.fillText(m.cutoverText, Math.min(px + 4, area.right - c.measureText(m.cutoverText).width), area.top + 2);
+      }
+      // "TARGET 50" tag
+      if (m.target) {
+        const ty = y.getPixelForValue(m.target.value);
+        const tag = 'TARGET ' + fmt(m.target.value);
+        c.font = '700 10px ' + V5_CHART_FONT; c.textAlign = 'right'; c.textBaseline = 'middle';
+        const tw = c.measureText(tag).width, tx = area.right - 2, tyy = ty - 10;
+        // white pill so the tag stays readable over an orange bar
+        c.fillStyle = 'rgba(255,255,255,0.92)'; c.strokeStyle = TREND_COL.TARGET; c.lineWidth = 1;
+        c.beginPath(); if (c.roundRect) c.roundRect(tx - tw - 8, tyy - 7, tw + 8, 14, 4); else c.rect(tx - tw - 8, tyy - 7, tw + 8, 14); c.fill(); c.stroke();
+        c.fillStyle = TREND_COL.TARGET; c.fillText(tag, tx - 4, tyy + 0.5);
+      }
+      // Top 3 value labels (kept inside the plot area)
+      c.font = '700 11px ' + V5_CHART_FONT; c.fillStyle = '#16212E'; c.textAlign = 'center'; c.textBaseline = 'bottom';
+      const bars = chart.getDatasetMeta(0).data;
+      m.top3.forEach(i => { const b = bars[i]; if (b) c.fillText(fmt(m.values[i]), b.x, Math.max(area.top + 12, b.y - 4)); });
+      c.restore();
+    }
+  };
+
+  function trendStatusText(s) {
+    const S = TargetEvaluator.STATUS;
+    return s === S.WITHIN ? 'WITHIN' : s === S.OVER ? 'OVER' : s === S.INCOMPLETE ? 'INCOMPLETE' : s === S.NO_DATA ? 'NO DATA' : '–';
+  }
+
+  // Header KPIs of the card — same scope as the bars; Over Target from the evaluator.
+  function renderTrendKpis(points, units, meta) {
+    const S = TargetEvaluator.STATUS;
+    const set = (id, v) => { const e = $(id); if (e) e.textContent = v; };
+    const tip = (id, v) => { const e = $(id); if (e) e.title = v; };
+    const scrapOk = points.length > 0 && points.every(p => p.scrap !== null && p.scrap !== undefined);
+    const total = scrapOk ? points.reduce((s, p) => s + p.scrap, 0) : null;
+    set('trendTotal', total === null ? 'N/A' : fmt(total));
+    tip('trendKpiTotal', total === null ? 'Scrap data could not be read' : `Scrap Qty for ${meta.scopeText}, ${meta.rangeText}`);
+
+    const dayU = units.filter(u => u.unit === 'DAY'), shiftU = units.filter(u => u.unit === 'SHIFT');
+    const count = list => ({
+      over: list.filter(u => u.status === S.OVER).length,
+      within: list.filter(u => u.status === S.WITHIN).length,
+      inc: list.filter(u => u.status === S.INCOMPLETE).length,
+      nd: list.filter(u => u.status === S.NO_DATA).length
+    });
+    const d = count(dayU), s = count(shiftU);
+    let overText = '–', unit = '', title = '';
+    if (dayU.length) {
+      overText = `${fmt(d.over)}/${fmt(d.over + d.within)}`; unit = 'days';
+      title = `Days over ≤${fmt(DAILY_TARGET_PCS)} pcs / days that could be judged (Within + Over). Not counted: ${d.inc} Incomplete, ${d.nd} No Data.`;
+      if (shiftU.length) title += ` Before ${TargetEvaluator.formatCutoverDate()} (judged per shift, ≤30/shift): ${s.over}/${s.over + s.within} shifts over.`;
+    } else if (shiftU.length) {
+      overText = `${fmt(s.over)}/${fmt(s.over + s.within)}`; unit = 'shifts';
+      title = `Shifts over their target (≤30 pcs/shift rule) / shifts that could be judged. Not counted: ${s.inc} Incomplete, ${s.nd} No Data.`;
+    }
+    if (state.line !== 'all' || state.shift !== 'all') title += ' Judged on Door A+B+C, Day+Night combined — not only the selected line/shift.';
+    set('trendOver', overText); set('trendOverUnit', unit); tip('trendKpiOver', title);
+    const overEl = $('trendKpiOver'); if (overEl) overEl.dataset.level = (dayU.length ? d.over : s.over) > 0 ? 'bad' : 'neutral';
+
+    // Daily average: total ÷ days with at least one scrap log in scope. A day
+    // without any log is unknown, not 0 (see target-evaluator.js), so it is left out.
+    const logged = points.filter(p => p.scrap > 0).length;
+    set('trendAvg', total === null || logged === 0 ? 'N/A' : fmt(Math.round(total / logged)));
+    tip('trendKpiAvg', total === null ? 'Scrap data could not be read'
+      : logged === 0 ? 'No day in this range has a scrap log'
+      : `${fmt(total)} pcs ÷ ${logged} day${logged === 1 ? '' : 's'} with scrap logged (out of ${points.length} in range). Days without a scrap log are not counted as 0.`);
+  }
+
+  function renderScrapTrend(points, targetLine, units) {
+    units = units || [];
     const holder = $('scrapTrendChartHolder');
     const existingEmpty = holder.parentElement.querySelector('.qd-dashboard-pareto-empty');
     if (existingEmpty) existingEmpty.remove();
+
+    const filtered = state.line !== 'all' || state.shift !== 'all';
+    const lineName = (LINES.find(l => l.code === state.line) || {}).label;
+    const shiftName = (SHIFTS.find(x => x.code === state.shift) || {}).label;
+    const scopeText = filtered ? [state.line !== 'all' ? lineName : 'Door A+B+C', state.shift !== 'all' ? shiftName : 'Day+Night'].join(' · ') : 'Door A+B+C · Day+Night';
+    renderTrendKpis(points, units, { scopeText, rangeText: rangeLabelText() });
 
     const hasMeaningfulData = points.some(p => p.production > 0 || p.scrap > 0);
     if (!hasMeaningfulData) {
@@ -838,88 +933,118 @@
       return;
     }
     holder.style.display = '';
-
     if (typeof Chart === 'undefined') return;
-    // Every daily point is kept and labelled with its FULL date, so the
-    // tooltip title is always the exact date. Only the x-axis TICK text is
-    // shortened: 'MM-DD' for short ranges (<= 7 points, as before), the
-    // bare day number when a longer range stays inside one month, 'MM-DD'
-    // when it crosses months — and, for long ranges, labels (never data
-    // points) are auto-skipped so they cannot overlap.
-    const longRange = points.length > 16;   // up to ~2 weeks keeps a label on every day
-    const sameMonth = points.every(p => p.date.slice(0, 7) === points[0].date.slice(0, 7));
-    const labels = points.map(p => p.date);
-    // A day with neither production nor scrap logged has no data: leave a gap
-    // (null) instead of drawing it as a confirmed Scrap = 0.
-    const noData = points.map(p => !(p.production > 0) && !(p.scrap > 0));
-    const scrapQty = points.map((p, i) => noData[i] ? null : p.scrap);
-    const rate = points.map(p => p.scrapRatePct);
-    // Target ≤50 pcs/day as a flat line on the pcs axis, only over daily-rule dates
-    // and only for All Lines + All Shifts (trendTargetLine() decides; unchanged).
-    const target = points.map((p, i) => targetLine && i >= targetLine.startIndex && i <= targetLine.endIndex ? targetLine.value : null);
 
-    // Excel "Daily Scrap Trend" look: deep teal-navy bars, dark rate line with yellow-green markers,
-    // grey target line, legend on top.
-    const BAR = '#14506F', RATE = '#1F5F7E', DOT = '#A3C726', TARGET = '#9AA5B1';   // DOT: yellow-green rate markers
+    const S = TargetEvaluator.STATUS;
+    const dayUnit = new Map(units.filter(u => u.unit === 'DAY').map(u => [u.date, u]));
+    const shiftUnits = new Map();
+    units.filter(u => u.unit === 'SHIFT').forEach(u => { if (!shiftUnits.has(u.date)) shiftUnits.set(u.date, []); shiftUnits.get(u.date).push(u); });
+
+    const labels = points.map(p => p.date);
+    const values = [], colors = [], marker = [], kind = [];
+    points.forEach(p => {
+      const du = dayUnit.get(p.date);
+      const scrapFail = p.scrap === null || p.scrap === undefined;
+      const noData = !scrapFail && !(p.production > 0) && !(p.scrap > 0);
+      // Unfiltered daily-rule day with production but no scrap log: the total is unknown, not 0.
+      const unknown = !filtered && du && !du.scrapKnown && !scrapFail && !noData;
+      if (scrapFail) { values.push(null); marker.push('N/A'); }
+      else if (noData) { values.push(null); marker.push('No data'); }
+      else if (unknown) { values.push(null); marker.push('No log'); }
+      else { values.push(p.scrap); marker.push(p.scrap > 0 ? '' : '0'); }
+      let k;
+      if (filtered) k = 'SCOPE';
+      else if (du) k = du.status === S.OVER ? 'OVER' : du.status === S.WITHIN ? 'WITHIN' : 'INCOMPLETE';
+      else k = 'LEGACY';
+      kind.push(k);
+      colors.push(k === 'INCOMPLETE' ? null : TREND_COL[k]);
+    });
+    const ctx = $('scrapTrendChart').getContext('2d');
+    const hatch = trendHatchPattern(ctx);
+    const bg = colors.map(c => c || hatch);
+
+    // Top 3 by Scrap Qty (ties: earlier date first)
+    const top3 = values.map((v, i) => [v, i]).filter(([v]) => v > 0).sort((a, b) => b[0] - a[0] || a[1] - b[1]).slice(0, 3).map(([, i]) => i);
+    const target = points.map((p, i) => targetLine && i >= targetLine.startIndex && i <= targetLine.endIndex ? targetLine.value : null);
+    const cutoverIndex = targetLine && targetLine.startIndex > 0 ? targetLine.startIndex : -1;
+
+    // Legend (HTML, so it can explain the colours honestly)
+    const legend = $('trendLegend');
+    if (legend) {
+      const item = (cls, text) => `<span class="v5-trend-li"><i class="${cls}"></i>${text}</span>`;
+      const parts = [];
+      if (filtered) parts.push(item('scope', `Scrap Qty · ${escapeHtml(scopeText)}`));
+      else {
+        if (kind.includes('WITHIN')) parts.push(item('within', 'Within target'));
+        if (kind.includes('OVER')) parts.push(item('over', 'Over target'));
+        if (kind.includes('INCOMPLETE') || marker.some(t => t === 'No data' || t === 'No log')) parts.push(item('incomplete', 'Incomplete / No data'));
+        if (kind.includes('LEGACY')) parts.push(item('legacy', `Before ${TargetEvaluator.formatCutoverDate()} · judged per shift (see tooltip)`));
+      }
+      if (targetLine) parts.push(item('target', `Target ≤${fmt(targetLine.value)} pcs/day${cutoverIndex > 0 ? ' (from ' + TargetEvaluator.formatCutoverDate() + ')' : ''}`));
+      legend.innerHTML = parts.join('');
+    }
+    const note = $('trendNote');
+    if (note) note.textContent = filtered
+      ? `Bars show ${scopeText} only. Target status and the ≤${fmt(DAILY_TARGET_PCS)} pcs/day line apply to Door A+B+C, Day+Night combined, so they are not drawn here; the day's overall status is in the tooltip.`
+      : '';
+
+    // at least ~18px per day; when the card is narrower the chart scrolls inside the card, never the page
+    holder.style.minWidth = (points.length * 18) + 'px';
+
     const datasets = [
-      { type: 'bar', label: 'Scrap Qty (pcs)', data: scrapQty, backgroundColor: BAR, borderColor: BAR, borderRadius: 2, maxBarThickness: 46, categoryPercentage: 0.8, barPercentage: 0.9, order: 3, yAxisID: 'y' },
-      { type: 'line', label: 'Scrap Rate (%)', data: rate, borderColor: RATE, backgroundColor: DOT, borderWidth: 2.5, pointRadius: 4, pointHoverRadius: 6, pointBackgroundColor: DOT, pointBorderColor: DOT, fill: false, tension: 0, order: 1, yAxisID: 'y1', spanGaps: true }
+      { type: 'bar', label: 'Scrap Qty (pcs)', data: values, backgroundColor: bg, borderColor: bg, borderRadius: 4, borderSkipped: 'bottom', maxBarThickness: 40, categoryPercentage: 0.82, barPercentage: 0.9, order: 1 }
     ];
-    if (targetLine) datasets.push({ type: 'line', label: targetLine.label, data: target, borderColor: TARGET, backgroundColor: TARGET, borderWidth: 3, pointRadius: 0, pointHoverRadius: 0, fill: false, order: 2, yAxisID: 'y', spanGaps: false });
-    const chartData = { labels, datasets };
+    if (targetLine) datasets.push({ type: 'line', label: 'Target', data: target, borderColor: TREND_COL.TARGET, borderWidth: 2, borderDash: [6, 5], pointRadius: 0, pointHoverRadius: 0, fill: false, order: 2, spanGaps: false });   // drawn over the bars, like the reference
+
+    const fmtDate = d => `${parseInt(d.slice(8), 10)} ${MONTH_ABBR[parseInt(d.slice(5, 7), 10) - 1]} ${d.slice(0, 4)}`;
+    const reasonList = u => (u.reasons || []).map(r => TargetEvaluator.reasonText(r)).join(', ');
     const options = {
       responsive: true, maintainAspectRatio: false,
-      layout: { padding: { top: 8 } },
+      layout: { padding: { top: 18, right: 6 } },
       interaction: { mode: 'index', intersect: false },
       plugins: {
-        legend: { display: true, position: 'top', align: 'center', labels: {
-          usePointStyle: true, pointStyleWidth: 12, boxWidth: 8, boxHeight: 8, padding: 16, font: { family: V5_CHART_FONT, size: 11 }, color: '#334155',
-          // dataset order (Scrap Qty · Scrap Rate · Target), not draw order
-          sort: (a, b) => a.datasetIndex - b.datasetIndex,
-          // bar = square swatch, rate = orange marker, target = grey line
-          generateLabels: chart => Chart.defaults.plugins.legend.labels.generateLabels(chart).map(l => {
-            const ds = chart.data.datasets[l.datasetIndex];
-            if (ds.type === 'bar') { l.pointStyle = 'rect'; }
-            else if (ds.pointRadius) { l.pointStyle = 'circle'; l.fillStyle = DOT; l.strokeStyle = DOT; }
-            else { l.pointStyle = 'line'; l.strokeStyle = ds.borderColor; l.lineWidth = 3; }
-            return l;
-          }) } },
-        baseLabels: { enabled: true },
-        tooltip: compactTooltip({
-          title: items => items.length ? String(items[0].label) : '',          // exact date
-          label: ctx => {
-            if (ctx.dataset.yAxisID === 'y1') return ' Scrap Rate: ' + Number(ctx.parsed.y).toFixed(2) + '%';
-            if (ctx.dataset.type === 'line') return ' Target: ≤' + fmt(ctx.parsed.y) + ' pcs/day';
-            return ' Scrap: ' + fmt(ctx.parsed.y) + ' pcs';
-          },
-          // Production, and say plainly when a day has no data / no rate, so nothing is read as 0.
+        legend: { display: false },
+        trendDecor: { meta: { values, marker, top3, target: targetLine, cutoverIndex, cutoverText: `Daily rule from ${TargetEvaluator.formatCutoverDate()}` } },
+        tooltip: Object.assign(compactTooltip({
+          title: items => items.length ? fmtDate(String(items[0].label)) : '',
+          label: () => '',
           afterBody: items => {
             if (!items.length) return [];
-            const i = items[0].dataIndex, out = [];
-            if (noData[i]) return [' No production or scrap recorded'];
-            out.push(' Production: ' + fmt(points[i].production) + ' pcs');
-            if (rate[i] === null || rate[i] === undefined) out.push(' Scrap Rate: N/A (no production recorded)');
+            const i = items[0].dataIndex, p = points[i], du = dayUnit.get(p.date), out = [];
+            const scopeLbl = filtered ? ` (${scopeText})` : '';
+            out.push(marker[i] === 'N/A' ? ' Scrap Qty: N/A (scrap data could not be read)'
+              : marker[i] === 'No data' ? ` Scrap Qty${scopeLbl}: N/A (no production or scrap recorded)`
+              : marker[i] === 'No log' ? ' Scrap Qty: N/A (no scrap log recorded)'
+              : ` Scrap Qty${scopeLbl}: ${fmt(p.scrap)} pcs`);
+            out.push(p.production > 0 ? ` Production Qty${scopeLbl}: ${fmt(p.production)} pcs` : ` Production Qty${scopeLbl}: N/A (not recorded)`);
+            out.push(p.scrapRatePct === null || p.scrapRatePct === undefined ? ' Scrap Rate: N/A (no production)' : ` Scrap Rate: ${Number(p.scrapRatePct).toFixed(2)}%`);
+            if (du) {
+              out.push(` Daily Target: ≤${fmt(du.target)} pcs (A+B+C, Day+Night)`);
+              out.push(du.gap === null || du.gap === undefined ? ' Gap to Target: N/A (scrap not known)' : ` Gap to Target: ${du.gap > 0 ? '+' : ''}${fmt(du.gap)} pcs`);
+              out.push(` Data Status: ${trendStatusText(du.status)}${filtered ? ' (whole day, A+B+C)' : ''}`);
+              if (du.status === S.INCOMPLETE && du.reasons.length) out.push(`   ${reasonList(du)}`);
+            } else if (shiftUnits.has(p.date)) {
+              out.push(' Target rule: ≤30 pcs/shift (before ' + TargetEvaluator.formatCutoverDate() + ')');
+              shiftUnits.get(p.date).forEach(u => out.push(`   ${u.label}: ${trendStatusText(u.status)}${u.totalScrap === null ? '' : ' · ' + fmt(u.totalScrap) + ' pcs'}${u.target ? ' / ≤' + fmt(u.target) : ''}`));
+            }
             return out;
           }
-        })
+        }), { displayColors: false, filter: item => item.datasetIndex === 0 })
       },
       scales: {
-        x: { grid: { display: false }, ticks: Object.assign({
-          font: { family: V5_CHART_FONT, size: 10 }, color: '#475569',
-          callback: function (value) {
-            const d = String(this.getLabelForValue(value));
-            // "1-Oct" like the Excel chart; long single-month ranges: bare day number
-            return (longRange && sameMonth) ? d.slice(-2).replace(/^0/, '')
-              : `${parseInt(d.slice(8), 10)}-${MONTH_ABBR[parseInt(d.slice(5, 7), 10) - 1]}`;
-          }
-        }, longRange ? { autoSkip: true, maxRotation: 0, autoSkipPadding: 8 } : { autoSkip: false, maxRotation: 0 }) },
-        y: { beginAtZero: true, grace: '10%', position: 'left', suggestedMax: targetLine ? Math.ceil(targetLine.value * 1.2) : undefined, title: axisTitle('Scrap Qty (pcs)'), grid: { color: 'rgba(15,39,71,0.07)' }, border: { display: false }, ticks: { precision: 0, font: { family: V5_CHART_FONT, size: 10 }, color: '#475569' } },
-        y1: { beginAtZero: true, position: 'right', title: axisTitle('Scrap Rate %'), grid: { display: false }, border: { display: false }, ticks: { font: { family: V5_CHART_FONT, size: 10 }, color: '#475569', callback: v => Number(v).toFixed(2) + '%' } }
+        x: { grid: { display: false }, border: { color: '#D5DCE5' }, ticks: {
+          font: { family: V5_CHART_FONT, size: 10 }, color: '#475569', maxRotation: 0, autoSkip: true, autoSkipPadding: 6,
+          callback: function (value) { const d = String(this.getLabelForValue(value)); return `${parseInt(d.slice(8), 10)} ${MONTH_ABBR[parseInt(d.slice(5, 7), 10) - 1]}`; }
+        } },
+        y: { beginAtZero: true, grace: '12%', suggestedMax: targetLine ? Math.ceil(targetLine.value * 1.3) : undefined,
+          title: axisTitle('Scrap Quantity (pcs)'), grid: { color: 'rgba(15,39,71,0.07)' }, border: { display: false },
+          ticks: { precision: 0, font: { family: V5_CHART_FONT, size: 10 }, color: '#475569' } }
       }
     };
 
+    const chartData = { labels, datasets };
     if (scrapTrendChart) { scrapTrendChart.data = chartData; scrapTrendChart.options = options; scrapTrendChart.update(); }
-    else scrapTrendChart = new Chart($('scrapTrendChart'), { type: 'bar', data: chartData, options, plugins: [baseLabelsPlugin] });
+    else scrapTrendChart = new Chart($('scrapTrendChart'), { type: 'bar', data: chartData, options, plugins: [trendDecorPlugin] });
   }
 
   function baseLineOptions(tooltipFmt) {
