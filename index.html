@@ -11,7 +11,7 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai+Looped:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 <!-- Dashboard V5 look. Scoped to body.qd-v5, loaded only by this page. -->
-<link rel="stylesheet" href="css/dashboard-v5.css?v=20261029-r2">
+<link rel="stylesheet" href="css/dashboard-v5.css?v=20261029-p1">
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.0/chart.umd.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
@@ -259,15 +259,25 @@
       <div id="attentionSummary" class="qd-dashboard-attention-cols"></div>
     </section>
 
-    <!-- Pareto Analysis: unchanged chart, moved below Attention Required (same scope as Top 5 Defects). -->
-    <section class="qd-dashboard-section" id="paretoCard">
-      <h2>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="20" x2="20" y2="20"/><rect x="5" y="11" width="3" height="9"/><rect x="10.5" y="14" width="3" height="6"/><rect x="16" y="17" width="3" height="3"/><polyline points="5 7 11 5 17 4"/></svg>
-        Pareto Analysis
-      </h2>
-      <div class="qd-panel-note">Scrap Qty by defect with cumulative % <span class="qd-sep">|</span> same scope as Top 5 Defects</div>
-      <div class="qd-chart-holder qd-dashboard-pareto-chart" id="paretoChartHolder">
-        <canvas id="paretoChart"></canvas>
+    <!-- Pareto Analysis (horizontal, V5): Top 10 defects for the selected Date Range / Shift / Line.
+         Filled by renderPareto() in js/dashboard.js from the scrap already loaded (no extra read). -->
+    <section class="qd-dashboard-section v5-pareto" id="paretoCard" aria-labelledby="paretoTitle">
+      <div class="qd-dashboard-section-header-row v5-pareto-head">
+        <div>
+          <h2 id="paretoTitle">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="20" x2="20" y2="20"/><rect x="5" y="11" width="3" height="9"/><rect x="10.5" y="14" width="3" height="6"/><rect x="16" y="17" width="3" height="3"/><polyline points="5 7 11 5 17 4"/></svg>
+            Pareto Analysis
+          </h2>
+          <div class="qd-panel-note">Top 10 defects by Scrap Qty <span class="qd-sep">|</span> <span id="paretoRangeLabel"></span></div>
+        </div>
+        <div class="v5-pareto-summary" id="paretoSummary"></div>
+      </div>
+      <div class="v5-pareto-legend" aria-hidden="true">
+        <span><i class="vital"></i>Defects up to 80% of total scrap</span>
+        <span><i class="other"></i>Other defects</span>
+      </div>
+      <div id="paretoChartHolder">
+        <div id="paretoList" class="v5-pareto-list"></div>
       </div>
     </section>
 
@@ -286,6 +296,6 @@
 <script src="js/quality-adapter.js?v=20261015-3"></script>
 <script src="js/target-evaluator.js?v=20261015-3"></script>
 <script src="js/improvement-adapter.js?v=20261015-3"></script>
-<script src="js/dashboard.js?v=20261029-r2"></script>
+<script src="js/dashboard.js?v=20261029-p1"></script>
 </body>
 </html>

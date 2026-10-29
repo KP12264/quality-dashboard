@@ -54,7 +54,6 @@
 
   let trendChart = null;
   let scrapTrendChart = null;
-  let paretoChart = null;
 
   function activeLines() {
     return state.line === 'all' ? ALL_LINE_CODES.slice() : [state.line];
@@ -594,16 +593,7 @@
 
   // ---- Pareto defect --------------------------------------------------
 
-  // Visual-only label shortening for crowded x-axes. Cuts on grapheme
-  // boundaries (so Thai vowel/tone marks are never split); the dataset and
-  // the tooltip title always keep the FULL defect name.
-  const graphemeSegmenter = (typeof Intl !== 'undefined' && Intl.Segmenter) ? new Intl.Segmenter(undefined, { granularity: 'grapheme' }) : null;
-  function shortLabel(text, max) {
-    const t = String(text ?? '');
-    const parts = graphemeSegmenter ? Array.from(graphemeSegmenter.segment(t), x => x.segment) : Array.from(t);
-    return parts.length > max ? parts.slice(0, max - 1).join('') + '…' : t;
-  }
-  // Compact, readable tooltip shared by both dashboard charts.
+  // Compact, readable tooltip for the Scrap Trend chart.
   function compactTooltip(callbacks) {
     return {
       backgroundColor: '#0B2540', titleColor: '#fff', bodyColor: '#EAF1FE',
@@ -614,27 +604,6 @@
       callbacks
     };
   }
-  // Draws the value above each bar (presentation only; opt-in per chart via options.plugins.valueLabels).
-  const valueLabelsPlugin = {
-    id: 'valueLabels',
-    afterDatasetsDraw(chart, args, opts) {
-      if (!opts || !opts.enabled) return;
-      const c = chart.ctx;
-      c.save(); c.font = '600 11px ' + V5_CHART_FONT; c.fillStyle = '#0B2340'; c.textAlign = 'center'; c.textBaseline = 'bottom';
-      chart.data.datasets.forEach((ds, i) => {
-        if (ds.type !== 'bar') return;
-        chart.getDatasetMeta(i).data.forEach((bar, idx) => {
-          const v = ds.data[idx];
-          if (v > 0) {
-            c.lineWidth = 3; c.strokeStyle = '#FFFFFF'; c.lineJoin = 'round';   // halo keeps the number readable where the rate line crosses it
-            c.strokeText(fmt(v), bar.x, bar.y - 4);
-            c.fillText(fmt(v), bar.x, bar.y - 4);
-          }
-        });
-      });
-      c.restore();
-    }
-  };
   // Dashed Target reference (presentation only, opt-in via options.plugins.targetLine).
   const targetLinePlugin = {
     id: 'targetLine',
@@ -656,58 +625,65 @@
   };
   const axisTitle = text => ({ display: true, text, color: '#64748B', font: { family: V5_CHART_FONT, size: 10, weight: '500' }, padding: { top: 0, bottom: 2 } });
 
+  // ---- Pareto Analysis (horizontal, V5) -------------------------------
+  // Same data as before: QualityAdapter.buildParetoDefects() over the scrap already
+  // loaded for the selected Date Range / Shift / Line (no extra read). Shows the Top 10;
+  // % of Total and Cumulative % are taken over ALL defects in scope, never re-based on
+  // the Top 10. Orange = the defects that bring the running total up to 80%, i.e. every
+  // defect up to and including the first one where Cumulative % reaches 80%.
+  const PARETO_TOP_N = 10;
+  const PARETO_CUTOFF = 80;
   function renderPareto(scrapRecords) {
-    if (typeof Chart === 'undefined') return;
+    const host = $('paretoList');
     const data = QualityAdapter.buildParetoDefects(scrapRecords);
-    const labels = data.map(d => d.defectType);
-    const qty = data.map(d => d.qty);
-    const cumulative = data.map(d => d.cumulativePct);
-    const eightyLine = labels.map(() => 80); // flat 80% Pareto reference line, right axis, independent of Qty scale
+    const label = $('paretoRangeLabel');
+    if (label) label.textContent = data.length ? rangeLabelText() : '';
+    if (data.length === 0) { host.innerHTML = ''; $('paretoSummary').innerHTML = ''; return; }   // empty state: renderTopDefectsList()
 
-    const chartData = {
-      labels,
-      datasets: [
-        { type: 'bar', label: 'Scrap Qty', data: qty, backgroundColor: '#14506F', borderColor: '#14506F', borderRadius: 4, order: 3, yAxisID: 'y' },   // same navy-blue as the Daily Scrap Trend bars
-        { type: 'line', label: 'Cumulative %', data: cumulative, borderColor: '#2563EB', backgroundColor: '#2563EB', borderWidth: 2, pointRadius: 3, pointBackgroundColor: '#2563EB', fill: false, order: 2, yAxisID: 'y1' },
-        { type: 'line', label: '80% Reference', data: eightyLine, borderColor: '#F59E0B', backgroundColor: '#F59E0B', borderWidth: 1.5, borderDash: [6, 4], pointRadius: 0, pointHoverRadius: 0, fill: false, order: 1, yAxisID: 'y1' }
-      ]
-    };
-    // Many defects -> tilt and shorten the visible labels (never skip any, never drop data).
-    const nDefects = labels.length;
-    const tilt = nDefects > 6;
-    const maxLabelLen = nDefects > 10 ? 9 : nDefects > 6 ? 11 : 14;
-    const options = {
-      responsive: true,
-      maintainAspectRatio: false,
-      layout: { padding: { top: 16 } },
-      interaction: { mode: 'index', intersect: false },
-      plugins: {
-        legend: { display: true, align: 'end', labels: { boxWidth: 10, usePointStyle: true, font: { family: V5_CHART_FONT, size: 11 } } },
-        valueLabels: { enabled: labels.length <= 16 },
-        tooltip: compactTooltip({
-          title: items => items.length ? labels[items[0].dataIndex] : '',   // full defect name
-          label: ctx => ctx.dataset.yAxisID === 'y1'
-            ? (ctx.dataset.label === '80% Reference' ? ' 80% reference' : ' Cumulative: ' + Number(ctx.parsed.y).toFixed(1) + '%')
-            : ' Scrap Qty: ' + fmt(ctx.parsed.y) + ' pcs'
-        })
-      },
-      scales: {
-        x: { grid: { display: false }, ticks: {
-          font: { family: V5_CHART_FONT, size: 10 }, autoSkip: false,
-          maxRotation: tilt ? 40 : 0, minRotation: tilt ? 40 : 0,
-          callback: function (v) { return shortLabel(this.getLabelForValue(v), maxLabelLen); }
-        } },
-        y: { beginAtZero: true, grace: '10%', position: 'left', title: axisTitle('Scrap Qty (pcs)'), grid: { color: 'rgba(15,39,71,0.08)' }, ticks: { precision: 0, font: { family: V5_CHART_FONT, size: 10 } } },
-        y1: { beginAtZero: true, min: 0, max: 100, position: 'right', title: axisTitle('Cumulative %'), grid: { display: false }, ticks: { font: { family: V5_CHART_FONT, size: 10 }, callback: v => v + '%' } }
-      }
-    };
+    const total = data.reduce((sum, d) => sum + d.qty, 0);
+    const crossIdx = data.findIndex(d => d.cumulativePct >= PARETO_CUTOFF);   // always found when total > 0 (last = 100%)
+    const top = data.slice(0, PARETO_TOP_N);
+    const maxQty = top[0].qty || 1;
+    const pct1 = n => n.toFixed(1) + '%';
+    const topCum = top[top.length - 1].cumulativePct;
 
-    if (data.length === 0) {
-      if (paretoChart) { paretoChart.destroy(); paretoChart = null; }
-      return;
+    $('paretoSummary').innerHTML =
+      `<span><b>${fmt(total)}</b> pcs total</span><span><b>${fmt(data.length)}</b> defect type${data.length === 1 ? '' : 's'}</span>`
+      + `<span>Top ${top.length} = <b>${pct1(topCum)}</b> of scrap</span>`;
+
+    const rows = top.map((d, i) => {
+      const share = total > 0 ? d.qty / total * 100 : 0;
+      const vital = i <= crossIdx, cross = i === crossIdx;
+      const name = escapeHtml(d.defectType);
+      const tip = `${d.defectType} — ${fmt(d.qty)} pcs · ${pct1(share)} of total · cumulative ${pct1(d.cumulativePct)}`;
+      const row = `
+        <tr class="v5-pareto-row${vital ? ' is-vital' : ''}${cross ? ' is-cross' : ''}" title="${escapeHtml(tip)}">
+          <td class="v5-pareto-rank">${i + 1}</td>
+          <th scope="row" class="v5-pareto-name">${name}</th>
+          <td class="v5-pareto-barcell"><div class="v5-pareto-track"><span class="v5-pareto-bar" style="--w:${(d.qty / maxQty).toFixed(4)}"></span><b class="v5-pareto-qty">${fmt(d.qty)}</b></div></td>
+          <td class="v5-pareto-pct num">${pct1(share)}</td>
+          <td class="v5-pareto-cum num">${pct1(d.cumulativePct)}${cross ? '<span class="v5-pareto-flag">≥80%</span>' : ''}</td>
+        </tr>`;
+      const cut = cross && i < top.length - 1
+        ? `<tr class="v5-pareto-cut" aria-hidden="true"><td colspan="5"><span>${PARETO_CUTOFF}% of total scrap reached at #${i + 1}</span></td></tr>` : '';
+      return row + cut;
+    }).join('');
+
+    // Tell the truth when the Top 10 do not reach 80% (or reach it exactly on the last row).
+    let foot = '';
+    if (crossIdx >= top.length) {
+      foot = `Top ${top.length} cover ${pct1(topCum)} of total scrap — ${PARETO_CUTOFF}% is reached at defect #${crossIdx + 1} of ${data.length}.`;
+    } else if (crossIdx === top.length - 1) {
+      foot = `${PARETO_CUTOFF}% of total scrap reached at #${crossIdx + 1}.`;
     }
-    if (paretoChart) { paretoChart.data = chartData; paretoChart.options = options; paretoChart.update(); }
-    else paretoChart = new Chart($('paretoChart'), { type: 'bar', data: chartData, options, plugins: [valueLabelsPlugin] });
+    if (data.length > top.length) foot += `${foot ? ' ' : ''}${fmt(data.length - top.length)} more defect type${data.length - top.length === 1 ? '' : 's'} not shown (${pct1(100 - topCum)} of scrap).`;
+
+    host.innerHTML = `
+      <table class="v5-pareto-table">
+        <thead><tr><th class="v5-pareto-rank">#</th><th>Defect</th><th>Scrap Qty (pcs)</th><th class="num">% of Total</th><th class="num">Cumulative %</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      ${foot ? `<p class="v5-pareto-foot">${foot}</p>` : ''}`;
   }
 
   // Compact Top 3–5 defect list alongside the Pareto chart — reuses the
