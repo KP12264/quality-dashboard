@@ -11,7 +11,7 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai+Looped:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 <!-- Dashboard V5 look. Scoped to body.qd-v5, loaded only by this page. -->
-<link rel="stylesheet" href="css/dashboard-v5.css?v=20261016-f1">
+<link rel="stylesheet" href="css/dashboard-v5.css?v=20261021-st1">
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.0/chart.umd.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
@@ -214,17 +214,26 @@
         </section>
     </div>
 
-        <section class="qd-dashboard-section">
-          <div class="qd-dashboard-head-text">
-            <h2>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="14 7 21 7 21 14"/></svg>
-              Daily Scrap Trend
-            </h2>
-            <div class="qd-panel-note">Daily Scrap Qty &amp; Scrap Rate <span class="qd-sep">|</span> <span id="scrapTrendRangeLabel"></span></div>
+        <!-- Scrap Trend (V5): bars coloured by the central target evaluator; KPIs from the same data. -->
+        <section class="qd-dashboard-section v5-trend" id="scrapTrendCard" aria-labelledby="scrapTrendTitle">
+          <div class="v5-trend-head">
+            <div class="v5-trend-titles">
+              <h2 id="scrapTrendTitle">SCRAP TREND</h2>
+              <div class="v5-trend-sub">Daily scrap quantity <span class="qd-sep">|</span> <span id="scrapTrendRangeLabel"></span></div>
+            </div>
+            <dl class="v5-trend-kpis">
+              <div class="v5-trend-kpi" id="trendKpiTotal" tabindex="0"><dt>TOTAL SCRAP</dt><dd><span id="trendTotal">–</span> <small>pcs</small></dd></div>
+              <div class="v5-trend-kpi" id="trendKpiOver" tabindex="0"><dt>OVER TARGET</dt><dd><span id="trendOver">–</span> <small id="trendOverUnit">days</small></dd></div>
+              <div class="v5-trend-kpi" id="trendKpiAvg" tabindex="0"><dt>DAILY AVERAGE</dt><dd><span id="trendAvg">–</span> <small>pcs/day</small></dd></div>
+            </dl>
           </div>
-          <div class="qd-chart-holder qd-dashboard-trend-chart" id="scrapTrendChartHolder">
-            <canvas id="scrapTrendChart"></canvas>
+          <div class="v5-trend-legend" id="trendLegend"></div>
+          <div class="v5-trend-scroll">
+            <div class="qd-chart-holder qd-dashboard-trend-chart v5-trend-chart" id="scrapTrendChartHolder">
+              <canvas id="scrapTrendChart" role="img" aria-label="Daily scrap quantity chart"></canvas>
+            </div>
           </div>
+          <p class="v5-trend-note" id="trendNote"></p>
         </section>
 
     <div class="qd-dashboard-row qd-dashboard-row-defects" id="paretoLayout">
@@ -276,6 +285,6 @@
 <script src="js/quality-adapter.js?v=20261015-3"></script>
 <script src="js/target-evaluator.js?v=20261015-3"></script>
 <script src="js/improvement-adapter.js?v=20261015-3"></script>
-<script src="js/dashboard.js?v=20261021-p1"></script>
+<script src="js/dashboard.js?v=20261021-st1"></script>
 </body>
 </html>
