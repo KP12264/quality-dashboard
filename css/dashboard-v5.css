@@ -92,27 +92,34 @@ body.qd-v5 .qd-segmented button{
 body.qd-v5 .qd-segmented button:hover{background:#E6ECF4;}
 body.qd-v5 .qd-segmented button.active{background:var(--v5-blue);color:#fff;box-shadow:0 1px 3px rgba(31,98,214,.35);}
 
-/* ---------------- KPI cards ---------------- */
-body.qd-v5 .v5-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin-bottom:10px;}
+/* ---------------- KPI cards — Compact & Professional ----------------
+   Row 1: small tinted icon + label (+ status pill on Target Performance)
+   Row 2: the value   ·   divider   ·   Row 3: one line of real secondary data.
+   Values/texts are written by renderKpis() (unchanged). */
+body.qd-v5 .v5-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) minmax(0,1.45fr);gap:14px;margin-bottom:10px;}   /* Target Performance gets room for its 4 counts */
 body.qd-v5 .v5-kpi{
-  display:flex;gap:16px;align-items:flex-start;min-width:0;
+  display:flex;flex-direction:column;min-width:0;
   background:var(--v5-card);border:1px solid var(--v5-line);border-radius:var(--v5-radius);
-  box-shadow:var(--v5-shadow);padding:20px 20px 18px;
+  box-shadow:var(--v5-shadow);padding:14px 16px 12px;
 }
-body.qd-v5 .v5-kpi-ico{flex:none;width:52px;height:52px;border-radius:12px;display:grid;place-items:center;}
+body.qd-v5 .v5c-head{display:flex;align-items:center;gap:10px;min-height:30px;}
+body.qd-v5 .v5-kpi-ico{flex:none;width:30px;height:30px;border-radius:8px;display:grid;place-items:center;}
+body.qd-v5 .v5-kpi-ico svg{width:16px;height:16px;}
 body.qd-v5 .v5-kpi-ico.rose{background:#FCEBEE;color:#C93A55;}
 body.qd-v5 .v5-kpi-ico.blue{background:#E8F0FD;color:#1F62D6;}
 body.qd-v5 .v5-kpi-ico.teal{background:#E3F4F1;color:#13806F;}
 body.qd-v5 .v5-kpi-ico.amber{background:#FDF0E1;color:#C2620E;}
-body.qd-v5 .v5-kpi-body{min-width:0;flex:1;}
-body.qd-v5 .v5-kpi-label{margin:0;font-size:14px;font-weight:600;color:var(--v5-text-2);}
+body.qd-v5 .v5-kpi-label{margin:0;font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;line-height:1.25;color:var(--v5-muted);min-width:0;}
 body.qd-v5 .v5-kpi-value{
-  margin-top:6px;font-size:32px;line-height:1.15;font-weight:700;letter-spacing:-.01em;
+  margin-top:8px;font-size:26px;line-height:1.2;font-weight:700;letter-spacing:-.01em;
   color:var(--v5-text);font-variant-numeric:tabular-nums;white-space:nowrap;
 }
-body.qd-v5 .v5-kpi-value small{font-size:15px;font-weight:500;color:var(--v5-muted);}
+body.qd-v5 .v5-kpi-value small{font-size:13px;font-weight:500;color:var(--v5-muted);}
 body.qd-v5 .v5-kpi-value .na{color:#8A95A3;}
-body.qd-v5 .v5-kpi-sub{margin-top:8px;font-size:13px;line-height:1.45;color:var(--v5-muted);}
+body.qd-v5 .v5-kpi-sub{
+  margin-top:10px;padding-top:9px;border-top:1px solid var(--v5-line);
+  font-size:12.5px;line-height:1.45;color:var(--v5-muted);
+}
 body.qd-v5 .v5-kpi-sub b{color:var(--v5-text);font-weight:600;}
 
 /* level comes from setKpiStatus() in dashboard.js: red only for 'bad' */
@@ -120,15 +127,21 @@ body.qd-v5 .v5-kpi[data-level="bad"]{border-color:#F2C9CF;}
 body.qd-v5 .v5-kpi[data-kpi="scrap"][data-level="bad"] .v5-kpi-value > span:first-child{color:#C42B40;}
 body.qd-v5 .v5-kpi[data-level="warn"] .v5-kpi-sub{color:#9A4F07;}
 
-/* Target Performance */
-body.qd-v5 .v5-kpi-status{font-size:inherit;margin-top:8px;}
-body.qd-v5 .v5-kpi-status .qd-status-pill{font-size:15px;font-weight:700;padding:6px 14px;border-radius:999px;letter-spacing:.01em;}
-body.qd-v5 .v5-target-line{display:block;}
-body.qd-v5 .v5-target-line b{font-variant-numeric:tabular-nums;}
-body.qd-v5 .v5-target-line .qd-info{cursor:help;}
-body.qd-v5 .v5-counts{display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:6px;font-size:12.5px;}
-body.qd-v5 .v5-counts-unit{color:var(--v5-muted);}
-body.qd-v5 .v5-count b{font-variant-numeric:tabular-nums;}
+/* Target Performance: pill in the head row, target as the value, all 4 status counts below.
+   (renderKpis() resets the pill's className, so the pill is styled by position, not by a class.) */
+body.qd-v5 .v5c-head .qd-status-pill{display:inline-block;width:auto;min-width:0;line-height:1.4;margin:0 0 0 auto;flex:none;font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;letter-spacing:.02em;white-space:nowrap;}
+body.qd-v5 .v5-kpi-value.v5c-target{font-size:14px;font-weight:500;white-space:normal;line-height:1.35;margin-top:8px;color:var(--v5-text-2);}
+body.qd-v5 .v5c-target .v5c-target-k{color:var(--v5-muted);}
+body.qd-v5 .v5c-target b{font-size:20px;font-weight:700;color:var(--v5-text);font-variant-numeric:tabular-nums;}
+body.qd-v5 .v5c-target #kpiTargetUnitText{font-size:12.5px;color:var(--v5-muted);}
+body.qd-v5 .v5c-target .qd-info{cursor:help;font-size:12px;color:var(--v5-muted);}
+body.qd-v5 .v5-counts{display:flex;flex-wrap:wrap;align-items:baseline;gap:3px 0;}
+body.qd-v5 .v5-counts:empty{display:block;}
+body.qd-v5 .v5-counts-unit{font-size:10.5px;letter-spacing:.04em;text-transform:uppercase;color:var(--v5-muted);margin-right:8px;}
+body.qd-v5 .v5-count{display:inline-flex;align-items:baseline;gap:4px;padding:0 8px;border-left:1px solid var(--v5-line);font-size:11.5px;line-height:1.35;color:var(--v5-muted);white-space:nowrap;}
+body.qd-v5 .v5-counts-unit + .v5-count{border-left:0;padding-left:0;}
+body.qd-v5 .v5-count:last-child{padding-right:0;}
+body.qd-v5 .v5-count b{font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;}
 body.qd-v5 .v5-count.good b{color:#14804F;}
 body.qd-v5 .v5-count.bad b{color:#C42B40;}
 body.qd-v5 .v5-count.warn b{color:#A45A0B;}
@@ -194,7 +207,7 @@ body.qd-v5 code{font-family:var(--v5-font);}
 
 /* ---------------- Responsive ---------------- */
 @media (max-width:1440px){
-  body.qd-v5 .v5-kpi-value{font-size:28px;}
+  body.qd-v5 .v5-kpi-value{font-size:24px;}
 }
 @media (max-width:1280px){
   body.qd-v5 .v5-kpis{grid-template-columns:repeat(2,minmax(0,1fr));}
@@ -213,7 +226,8 @@ body.qd-v5 code{font-family:var(--v5-font);}
   body.qd-v5 .qd-segmented{flex-wrap:wrap;}
 }
 @media (max-width:600px){
-  body.qd-v5 .v5-kpis{grid-template-columns:1fr;}
+  body.qd-v5 .v5-kpis{grid-template-columns:1fr;gap:10px;}
+  body.qd-v5 .v5-kpi-value{font-size:24px;}
   body.qd-v5 .qd-dashboard-header{flex-direction:column;align-items:flex-start;}
   body.qd-v5 .qd-dashboard-header-left h1{font-size:26px;}
   body.qd-v5 .qd-dashboard-main{padding-left:14px;padding-right:14px;}
