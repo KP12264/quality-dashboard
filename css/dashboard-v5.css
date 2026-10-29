@@ -138,6 +138,48 @@ body.qd-v5 .v5-count.neutral b{color:var(--v5-muted);}
 body.qd-v5 .qd-dashboard-target-note{font-size:13px;color:var(--v5-text-2);margin:0 0 18px;min-height:0;}
 body.qd-v5 .qd-dashboard-target-note:empty{display:none;}
 
+
+/* ---------------- Scrap Trend card (V5) ----------------
+   Card, header KPIs, HTML legend, chart. Scoped to #scrapTrendCard. */
+body.qd-v5 #scrapTrendCard{border-radius:18px;border:1px solid var(--v5-line);box-shadow:var(--v5-shadow);background:#fff;padding:22px 24px 18px;}
+body.qd-v5 .v5-trend-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-start;gap:14px 24px;}
+body.qd-v5 .v5-trend-titles h2{margin:0;font-family:var(--v5-font);font-size:16px;font-weight:700;letter-spacing:.06em;color:var(--v5-text);}
+body.qd-v5 .v5-trend-titles h2::before{display:none;}
+body.qd-v5 .v5-trend-sub{margin-top:4px;font-size:13px;color:var(--v5-muted);}
+body.qd-v5 .v5-trend-kpis{display:flex;gap:10px;margin:0;}
+body.qd-v5 .v5-trend-kpi{min-width:118px;padding:10px 14px;border:1px solid var(--v5-line);border-radius:12px;background:#F8FAFC;cursor:help;}
+body.qd-v5 .v5-trend-kpi:focus-visible{outline:2px solid var(--v5-blue);outline-offset:2px;}
+body.qd-v5 .v5-trend-kpi dt{font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--v5-muted);}
+body.qd-v5 .v5-trend-kpi dd{margin:2px 0 0;font-size:22px;font-weight:700;line-height:1.2;color:var(--v5-text);font-variant-numeric:tabular-nums;white-space:nowrap;}
+body.qd-v5 .v5-trend-kpi dd small{font-size:12px;font-weight:500;color:var(--v5-muted);}
+body.qd-v5 .v5-trend-kpi[data-level="bad"] dd > span:first-child{color:#C7621A;}
+body.qd-v5 .v5-trend-legend{display:flex;flex-wrap:wrap;gap:6px 18px;margin:16px 0 6px;font-size:12px;color:var(--v5-text-2);}
+body.qd-v5 .v5-trend-li{display:inline-flex;align-items:center;gap:6px;}
+body.qd-v5 .v5-trend-li i{display:inline-block;width:12px;height:12px;border-radius:3px;}
+body.qd-v5 .v5-trend-li i.within{background:#14A08C;}
+body.qd-v5 .v5-trend-li i.over{background:#F08A24;}
+body.qd-v5 .v5-trend-li i.scope{background:#5B86A8;}
+body.qd-v5 .v5-trend-li i.legacy{background:#9DB3C7;}
+body.qd-v5 .v5-trend-li i.incomplete{background:repeating-linear-gradient(45deg,#A9B4C0 0 1.5px,#E4E9EF 1.5px 4px);}
+body.qd-v5 .v5-trend-li i.target{width:18px;height:0;border-radius:0;border-top:2px dashed #F08A24;}
+/* chart scrolls inside the card on narrow screens; the page never does */
+body.qd-v5 .v5-trend-scroll{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;}
+body.qd-v5 .v5-trend-chart{height:300px;position:relative;}
+body.qd-v5 .v5-trend-note{margin:8px 0 0;font-size:12px;color:var(--v5-muted);}
+body.qd-v5 .v5-trend-note:empty{display:none;}
+@media (max-width:1023px){
+  body.qd-v5 .v5-trend-kpis{width:100%;}
+  body.qd-v5 .v5-trend-kpi{flex:1;min-width:0;}
+}
+@media (max-width:600px){
+  body.qd-v5 #scrapTrendCard{padding:18px 14px 14px;border-radius:16px;}
+  body.qd-v5 .v5-trend-kpis{gap:6px;}
+  body.qd-v5 .v5-trend-kpi{padding:8px 10px;}
+  body.qd-v5 .v5-trend-kpi dd{font-size:18px;}
+  body.qd-v5 .v5-trend-kpi dt{font-size:10px;letter-spacing:.04em;}
+  body.qd-v5 .v5-trend-chart{height:260px;}
+}
+
 /* ---------------- Typography (V5) ----------------
    One family for Thai/English/numbers. styles.css components below the KPI
    row used --font-mono with UPPERCASE + letter-spacing; on V5 pages they use
