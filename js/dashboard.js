@@ -1245,63 +1245,91 @@
     return diffDays + 'd ago';
   }
 
+  // ---- Attention Required (V5 compact) ----------------------------------
+  // Same data as before (fetchRecurringProblems / fetchImprovementStatusCounts, unchanged);
+  // only the presentation is compact: two summary cards in one row, a short status line,
+  // the top recurring problems as a compact list (only when there are any), and the
+  // improvement statuses as small chips — zero statuses tucked behind "All statuses".
+  const ATTN_ACTION_STATUSES = ['Not Effective', 'Recurring'];
+  const ATTN_ARROW = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>';
+
   async function renderAttentionRequired(rangeScrapResult) {
     const seq = renderSeq;
     const container = $('attentionSummary');
-    container.innerHTML = '<div class="qd-placeholder">Loading…</div>';
+    container.innerHTML = '<div class="v5-attn-loading">Loading…</div>';
 
     const [impResult, recResult] = await Promise.all([fetchImprovementStatusCounts(), fetchRecurringProblems(rangeScrapResult)]);
     if (seq !== renderSeq) return;   // a newer render() owns this panel now
-    const parts = [];
 
-    parts.push(`
-      <div class="qd-dashboard-attention-block">
-        <div class="qd-dashboard-attention-head">
-          <div class="qd-dashboard-attention-title">
-            <span class="qd-dashboard-attention-dot blue"></span>
-            Recurring Problems${recResult.error ? '' : ` <span class="qd-dashboard-attention-count">${recResult.groups.length}</span>`}
-          </div>
-          <a class="qd-link-btn" href="scrap-detail.html">View in Scrap Detail →</a>
-        </div>
-        ${recResult.error
-          ? '<div class="qd-placeholder">Could not load recurring problems.</div>'
-          : recResult.groups.length === 0
-            ? `<div class="qd-placeholder">${
-                recResult.scope === 'range'
-                  ? (daysInclusive(state.dateFrom, state.dateTo) < RECURRING_THRESHOLD_DISTINCT_DATES
-                      ? `Range is shorter than ${RECURRING_THRESHOLD_DISTINCT_DATES} days — a recurring problem needs ${RECURRING_THRESHOLD_DISTINCT_DATES}+ different days.`
-                      : 'No recurring problems in this date range.')
-                  : 'No recurring problems in the last 30 days.'}</div>`
-            : `<div class="qd-table-scroll"><table class="qd-datatable qd-dashboard-table">
-                <thead><tr><th>#</th><th>Defect / Issue</th><th>Last Seen</th><th>Qty</th></tr></thead>
-                <tbody>${recResult.groups.slice(0, 5).map((g, i) => `
-                  <tr>
-                    <td class="num">${i + 1}</td>
-                    <td>${escapeHtml(g.line)} &middot; ${escapeHtml(g.model)} &middot; ${escapeHtml(g.defectType)}</td>
-                    <td>${escapeHtml(daysAgoLabel(g.dates[g.dates.length - 1]))}</td>
-                    <td class="num">${fmt(g.totalQty)}</td>
-                  </tr>`).join('')}</tbody>
-              </table></div>`}
-      </div>`);
+    // ---- Recurring Problems card ----
+    const recScope = recResult.scope === 'range' ? 'in selected range' : 'in last 30 days';
+    let recNum, recState, recTone;
+    if (recResult.error) { recNum = '–'; recState = 'Could not load'; recTone = 'muted'; }
+    else if (recResult.groups.length === 0) {
+      recNum = '0'; recTone = 'ok';
+      recState = recResult.scope === 'range' && daysInclusive(state.dateFrom, state.dateTo) < RECURRING_THRESHOLD_DISTINCT_DATES
+        ? `None detected (range under ${RECURRING_THRESHOLD_DISTINCT_DATES} days)`
+        : 'None detected';
+    } else { recNum = fmt(recResult.groups.length); recState = `Seen on ${RECURRING_THRESHOLD_DISTINCT_DATES}+ days`; recTone = 'warn'; }
 
-    parts.push(`
-      <div class="qd-dashboard-attention-block">
-        <div class="qd-dashboard-attention-head">
-          <div class="qd-dashboard-attention-title">
-            <span class="qd-dashboard-attention-dot blue"></span>
-            Improvement Records${!impResult.error ? ` <span class="qd-dashboard-attention-count">${impResult.total}</span>` : ''}
-          </div>
-          <a class="qd-link-btn" href="improvement.html">View in Improvement →</a>
-        </div>
-        ${impResult.error
-          ? '<div class="qd-placeholder">Could not load improvement records.</div>'
-          : impResult.total === 0
-            ? '<div class="qd-placeholder">No improvement records yet.</div>'
-            : `<div class="qd-dashboard-improvement-stats">${IMPROVEMENT_STATUSES.map(s => `
-                <div class="qd-dashboard-improvement-stat ${statusAccentClass(s)}"><div class="count">${impResult.counts[s] || 0}</div><div class="label">${escapeHtml(s)}</div></div>`).join('')}</div>`}
-      </div>`);
+    // ---- Improvement Records card + status chips ----
+    let impNum, impState, impTone, statusHtml = '';
+    if (impResult.error) { impNum = '–'; impState = 'Could not load'; impTone = 'muted'; }
+    else {
+      impNum = fmt(impResult.total);
+      const needAction = ATTN_ACTION_STATUSES.reduce((n, st) => n + (impResult.counts[st] || 0), 0);
+      if (impResult.total === 0) { impState = 'No records yet'; impTone = 'muted'; }
+      else if (needAction > 0) { impState = `${fmt(needAction)} need${needAction === 1 ? 's' : ''} action`; impTone = 'bad'; }
+      else { impState = 'No action needed'; impTone = 'ok'; }
+      if (impResult.total > 0) {
+        const chip = st => {
+          const n = impResult.counts[st] || 0;
+          const tone = statusAccentClass(st), action = ATTN_ACTION_STATUSES.includes(st) && n > 0;
+          return `<li class="v5-attn-chip ${tone}${n === 0 ? ' is-zero' : ''}${action ? ' is-action' : ''}"><i aria-hidden="true"></i><b>${fmt(n)}</b> ${escapeHtml(st)}</li>`;
+        };
+        const nonZero = IMPROVEMENT_STATUSES.filter(st => (impResult.counts[st] || 0) > 0);
+        const zero = IMPROVEMENT_STATUSES.filter(st => !(impResult.counts[st] > 0));
+        const known = IMPROVEMENT_STATUSES.reduce((n, st) => n + (impResult.counts[st] || 0), 0);
+        const other = impResult.total - known;   // records whose status is none of the four (shown, never dropped)
+        statusHtml = `
+          <div class="v5-attn-status" style="grid-area:status">
+            <div class="v5-attn-sub">Improvement status</div>
+            <ul class="v5-attn-chips">${nonZero.map(chip).join('')}${other > 0 ? `<li class="v5-attn-chip muted"><i aria-hidden="true"></i><b>${fmt(other)}</b> other status</li>` : ''}${nonZero.length === 0 && other === 0 ? '<li class="v5-attn-none">All statuses at 0</li>' : ''}</ul>
+            ${zero.length ? `<details class="v5-attn-more"><summary><span class="show">Show 0 statuses (${fmt(zero.length)})</span><span class="hide">Hide 0 statuses</span></summary><ul class="v5-attn-chips">${zero.map(chip).join('')}</ul></details>` : ''}
+          </div>`;
+      }
+    }
 
-    container.innerHTML = parts.join('');
+    // ---- Recurring list (only when there is something to show) ----
+    let listHtml = '';
+    if (!recResult.error && recResult.groups.length > 0) {
+      const shown = recResult.groups.slice(0, 3);   // compact: top 3 (same order as before); the full list is in Scrap Detail
+      listHtml = `
+        <div class="v5-attn-list" style="grid-area:list">
+          <div class="v5-attn-sub">Top recurring problems <span>· ${recScope}${recResult.groups.length > shown.length ? ` · ${fmt(shown.length)} of ${fmt(recResult.groups.length)}` : ''}</span></div>
+          <ol>${shown.map((g, i) => `
+            <li>
+              <span class="r">${i + 1}</span>
+              <span class="n"><b>${escapeHtml(g.defectType)}</b><small>${escapeHtml(g.line)} · ${escapeHtml(g.model)}</small></span>
+              <span class="d">${escapeHtml(daysAgoLabel(g.dates[g.dates.length - 1]))}</span>
+              <span class="q">${fmt(g.totalQty)} <small>pcs</small></span>
+            </li>`).join('')}</ol>
+        </div>`;
+    }
+
+    const card = (area, title, num, stateText, tone, href, linkText) => `
+      <div class="v5-attn-card tone-${tone}" style="grid-area:${area}">
+        <div class="v5-attn-card-title">${title}</div>
+        <div class="v5-attn-card-num">${num}</div>
+        <div class="v5-attn-card-state">${stateText}</div>
+        <a class="v5-attn-link" href="${href}">${linkText} ${ATTN_ARROW}</a>
+      </div>`;
+    container.innerHTML =
+      card('rec', 'Recurring Problems', recNum, recState, recTone, 'scrap-detail.html', 'Scrap Detail')
+      + card('imp', 'Improvement Records', impNum, impState, impTone, 'improvement.html', 'Improvement')
+      + listHtml + statusHtml;
+    container.classList.toggle('has-list', !!listHtml);
+    container.classList.toggle('has-status', !!statusHtml);
   }
 
   // Purely a visual accent choice (not new business logic) matching the
