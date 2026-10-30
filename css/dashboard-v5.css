@@ -279,6 +279,16 @@ body.qd-v5 #doorLineCard .qd-dashboard-doortable-share{min-width:96px;}
   body.qd-v5 #doorLineCard .qd-dashboard-doortable td.num .u{display:none;}   /* "pcs" is implied by the column header */
 }
 
+/* ---------------- Top 5 Defects: full defect names ----------------
+   Names wrap instead of being cut with "…" (Thai and English), each row grows with its
+   text, and Qty / % sit right-aligned with tabular figures. Columns and colours unchanged. */
+body.qd-v5 #topDefectsCard .qd-dashboard-top-defect-name .t{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere;line-height:1.35;}
+body.qd-v5 #topDefectsCard .qd-dashboard-top-defect-row{align-items:center;}
+body.qd-v5 #topDefectsCard .qd-dashboard-top-defect-row > span:nth-child(3),
+body.qd-v5 #topDefectsCard .qd-dashboard-top-defect-row > span:nth-child(4),
+body.qd-v5 #topDefectsCard .qd-dashboard-top-defect-header > span:nth-child(3),
+body.qd-v5 #topDefectsCard .qd-dashboard-top-defect-header > span:nth-child(4){text-align:right;font-variant-numeric:tabular-nums;}
+
 /* ---------------- Attention Required (compact) ----------------
    Grid areas: two summary cards in one row (also on phones), then the recurring list and
    the improvement status chips (side by side on desktop, stacked below 760px). */

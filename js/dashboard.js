@@ -1212,18 +1212,22 @@
   // render() already loaded for the whole page (no extra query); a problem
   // still has to occur on RECURRING_THRESHOLD_DISTINCT_DATES different days
   // inside that range to count as recurring.
+  // Dashboard V5 shows Door A/B/C only, so recurring problems are counted on those lines
+  // only (e.g. Door In Door scrap is left out). The shared QualityAdapter definition —
+  // also used by Scrap Detail and the Executive Report — is unchanged.
+  const recurringScope = records => records.filter(r => ALL_LINE_CODES.includes(r.line));
   async function fetchRecurringProblems(rangeScrapResult) {
     if (window.qdFirebaseError) return { error: true };
     try {
       if (isMultiDay()) {
         if (!rangeScrapResult || rangeScrapResult.error) return { error: true };
-        const groups = QualityAdapter.buildRecurringProblems(rangeScrapResult.records, RECURRING_THRESHOLD_DISTINCT_DATES).filter(g => g.recurring);
+        const groups = QualityAdapter.buildRecurringProblems(recurringScope(rangeScrapResult.records), RECURRING_THRESHOLD_DISTINCT_DATES).filter(g => g.recurring);
         return { error: false, groups, scope: 'range' };
       }
       const lookbackDates = ProductionDataAdapter.dateRange(state.dateTo, 30);
       const scrapResult = await ScrapDataAdapter.getScrapData(window.qdDb, { startDate: lookbackDates[0], endDate: lookbackDates[lookbackDates.length - 1] });
       if (scrapResult.error) return { error: true };
-      const groups = QualityAdapter.buildRecurringProblems(scrapResult.records, RECURRING_THRESHOLD_DISTINCT_DATES).filter(g => g.recurring);
+      const groups = QualityAdapter.buildRecurringProblems(recurringScope(scrapResult.records), RECURRING_THRESHOLD_DISTINCT_DATES).filter(g => g.recurring);
       return { error: false, groups, scope: '30d' };
     } catch (e) {
       console.error('Quality Dashboard: failed to load recurring problems:', e);
