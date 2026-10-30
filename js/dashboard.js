@@ -222,7 +222,8 @@
     let trendPoints = QualityAdapter.buildDailyTrend(dates, lineFilteredProduction, lineFilteredScrap);
     // A failed scrap read must not draw zero-height "no scrap" bars.
     if (scrapLoadFailed) trendPoints = trendPoints.map(p => ({ ...p, scrap: null, scrapRatePct: null }));
-    renderScrapTrend(trendPoints, trendTargetLine(dates), shiftEvals);
+    const loggedDates = new Set(lineFilteredScrap.map(r => r.date));   // dates with ≥1 scrap log in the selected scope
+    renderScrapTrend(trendPoints, trendTargetLine(dates), shiftEvals, loggedDates);
 
     // ---- Attention Required: re-runs on every render() so it follows the range ----
     renderAttentionRequired(scrapResult);
@@ -375,9 +376,16 @@
     const targetDesc = TargetEvaluator.describeTarget(shiftEvals, fmt);
 
     // Card 1 — Scrap Total
+    // scrapLogs cannot hold a "0 scrap" record (scrapQty must be > 0), so a scope without any
+    // scrap log is unknown, never a confirmed 0: N/A when there is production, "–" when nothing.
+    const noScrapLog = !scrapLoadFailed && displayScrapRecords.length === 0;
+    const hasProduction = displaySummary.totalProduction > 0;
     if (scrapLoadFailed) {
       // A failed read must never look like "scrap = 0".
       scrapEl.textContent = 'N/A'; scrapEl.classList.add('na');
+      scrapRateEl.textContent = 'N/A'; scrapRateEl.classList.add('na');
+    } else if (noScrapLog) {
+      scrapEl.textContent = hasProduction ? 'N/A' : '–'; scrapEl.classList.add('na');
       scrapRateEl.textContent = 'N/A'; scrapRateEl.classList.add('na');
     } else {
       scrapEl.textContent = fmt(displaySummary.totalScrap);
@@ -386,12 +394,13 @@
       scrapRateEl.classList.toggle('na', !Number.isFinite(displaySummary.scrapRatePct));
     }
     $('kpiScrapUnit').textContent = scrapLoadFailed ? 'Scrap data could not be read'
-      : displayScrapRecords.length > 0 ? `${fmt(displayScrapRecords.length)} scrap record${displayScrapRecords.length === 1 ? '' : 's'}` : 'No scrap recorded in this scope';
+      : displayScrapRecords.length > 0 ? `${fmt(displayScrapRecords.length)} scrap record${displayScrapRecords.length === 1 ? '' : 's'}`
+      : hasProduction ? 'No scrap log in this scope · not confirmed as 0' : 'No data in this scope';
 
     // Card 2 — Scrap Rate, with Production as the secondary line
     $('kpiScrapRateUnit').innerHTML = scrapLoadFailed ? 'Scrap data could not be read'
       : `Production <b>${fmt(displaySummary.totalProduction)}</b> pcs`
-        + (Number.isFinite(displaySummary.scrapRatePct) ? '' : ' · no production in this scope');
+        + (!hasProduction ? ' · no production in this scope' : noScrapLog ? ' · no scrap log' : '');
 
     // Card 3 — Scrap Cost (stored values only)
     const cost = scrapCostSummary(displayScrapRecords);
@@ -521,7 +530,9 @@
       const production = lineProduction.reduce((s, r) => s + r.productionQty, 0);
       const scrap = lineScrap.reduce((s, r) => s + r.scrapQty, 0);
       const rate = QualityAdapter.pct(scrap, production);
-      return { line, production, scrap, rate, hasAnyDoc: lineProduction.length > 0 };
+      // No scrap log for this line in scope = unknown (a log is never 0), not a confirmed 0.
+      const noLog = !scrapLoadFailed && lineScrap.length === 0;
+      return { line, production, scrap, rate, hasAnyDoc: lineProduction.length > 0, noLog };
     });
 
     const totalScrapAllLines = perLine.reduce((s, p) => s + p.scrap, 0);
@@ -531,14 +542,17 @@
     // Same per-line numbers as before; the bar is the Share value drawn to scale.
     // The row with the highest scrap contribution is highlighted — no threshold involved.
     const body = perLine.map(p => {
-      const contribution = totalScrapAllLines > 0 ? (p.scrap / totalScrapAllLines) * 100 : null;
+      const contribution = totalScrapAllLines > 0 && !p.noLog ? (p.scrap / totalScrapAllLines) * 100 : null;
+      const scrapCell = scrapLoadFailed ? '<b>–</b>'
+        : p.noLog ? (p.production > 0 ? '<b title="No scrap log for this line in the selected scope — not confirmed as 0">No log</b>' : '<b>–</b>')
+        : `<b>${fmt(p.scrap)}</b><span class="u">pcs</span>`;
       const isHighest = p.scrap > 0 && p.scrap === maxScrap;
       return `
         <tr class="${isHighest ? 'is-highest' : ''}"${isHighest ? ' title="Highest share of total scrap"' : ''}>
           <td><span class="qd-line-badge line-${p.line.code}">${p.line.code}</span><span class="qd-dashboard-doortable-name">${p.line.label}</span></td>
           <td class="num"><b>${p.hasAnyDoc ? fmt(p.production) : '–'}</b><span class="u">pcs</span></td>
-          <td class="num scrap${p.scrap === 0 && !scrapLoadFailed ? ' zero' : ''}"><b>${scrapLoadFailed ? '–' : fmt(p.scrap)}</b>${scrapLoadFailed ? '' : '<span class="u">pcs</span>'}</td>
-          <td class="num rate"><b>${scrapLoadFailed || p.rate === null ? 'N/A' : fmtPct(p.rate)}</b></td>
+          <td class="num scrap${p.noLog ? ' zero' : ''}">${scrapCell}</td>
+          <td class="num rate"><b>${scrapLoadFailed || p.noLog || p.rate === null ? 'N/A' : fmtPct(p.rate)}</b></td>
           <td><div class="qd-dashboard-doortable-share"><span class="pct">${scrapLoadFailed || contribution === null ? '–' : contribution.toFixed(0) + '%'}</span><span class="bar" title="Share of total scrap"><i style="width:${scrapLoadFailed || contribution === null ? 0 : contribution.toFixed(1)}%"></i></span></div></td>
         </tr>`;
     }).join('');
@@ -1017,8 +1031,9 @@
         + `Selected days: ${fmt(selectedDays)}. Days without a scrap record are not counted as 0.`);
   }
 
-  function renderScrapTrend(points, targetLine, units) {
+  function renderScrapTrend(points, targetLine, units, loggedDates) {
     units = units || [];
+    loggedDates = loggedDates || new Set();
     const holder = $('scrapTrendChartHolder');
     const existingEmpty = holder.parentElement.querySelector('.qd-dashboard-pareto-empty');
     if (existingEmpty) existingEmpty.remove();
@@ -1055,9 +1070,9 @@
       const du = dayUnit.get(p.date);
       const scrapFail = p.scrap === null || p.scrap === undefined;
       const noData = !scrapFail && !(p.production > 0) && !(p.scrap > 0);
-      // Daily-rule day with production but no scrap log at all (any line/shift): the total is
-      // unknown, not 0 — also when a Line/Shift is selected (its 0 would not be confirmed either).
-      const unknown = du && !du.scrapKnown && !scrapFail && !noData;
+      // Production but no scrap log in the selected Line/Shift scope: unknown, not 0 (a scrap log
+      // is never 0, so a 0 here would only mean "nothing logged"). Target status is untouched.
+      const unknown = !scrapFail && !noData && !loggedDates.has(p.date);
       if (scrapFail) { values.push(null); marker.push('N/A'); }
       else if (noData) { values.push(null); marker.push('No data'); }
       else if (unknown) { values.push(null); marker.push('No log'); }
@@ -1127,7 +1142,7 @@
             const scopeLbl = filtered ? ` (${scopeText})` : '';
             out.push(marker[i] === 'N/A' ? ' Scrap Qty: N/A (scrap data could not be read)'
               : marker[i] === 'No data' ? ` Scrap Qty${scopeLbl}: N/A (no production or scrap recorded)`
-              : marker[i] === 'No log' ? ' Scrap Qty: N/A (no scrap log recorded)'
+              : marker[i] === 'No log' ? ` Scrap Qty${scopeLbl}: N/A (no scrap log recorded)`
               : ` Scrap Qty${scopeLbl}: ${fmt(p.scrap)} pcs`);
             out.push(p.production > 0 ? ` Production Qty${scopeLbl}: ${fmt(p.production)} pcs` : ` Production Qty${scopeLbl}: N/A (not recorded)`);
             out.push(marker[i] === 'No log' || marker[i] === 'N/A' ? ' Scrap Rate: N/A (scrap not known)'
