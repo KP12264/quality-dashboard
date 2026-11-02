@@ -1017,6 +1017,9 @@
     resolveMappingsSearch = '';
 
     $('importPreviewWrap').style.display = '';
+    // Not importable until this check has finished (re-enabled by the preview render below):
+    // rows are not matched to a Production model yet.
+    $('importConfirmBtn').disabled = true;
     $('importSummaryCards').innerHTML = '<div class="qd-import-loading">Checking against Production V2 and existing scrapLogs…</div>';
     $('importPreviewBody').innerHTML = '';
 
@@ -1351,7 +1354,7 @@
     // Sign-in enforced: mark every slot first, so a partly failed import can never be confirmed
     // by Shift Close (no-op with sign-in "off").
     try {
-      await ScrapDataAdapter.beginImport(window.qdDb, validEntries, importBatchId);
+      await ScrapDataAdapter.beginImport(window.qdDb, validEntries.filter(e => ScrapDataAdapter.isValidEntry(e)), importBatchId);
     } catch (e) {
       console.error('Quality Dashboard: import could not start:', e);
       btn.textContent = 'Import Valid Rows';

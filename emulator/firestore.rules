@@ -82,20 +82,35 @@ service cloud.firestore {
     function qdCanWriteSlot(line, shift) {
       return qdAdmin() || (qdRole('leader') && (line + '_' + shift) in qdProfile().slots);
     }
-    // Leader date window (Phase 3). Keep equal to QD_LEADER_EDIT_WINDOW_DAYS in js/config.js
-    // (tests/unit checks it). One extra day absorbs the UTC / Thailand (UTC+7) date difference.
-    function qdLeaderWindowDays() {
-      return 7;
+    // Dates are Thailand dates (Asia/Bangkok, fixed UTC+7, no daylight saving), like js/config.js
+    // (QD_TZ_OFFSET_HOURS). qdBkkNow() is the Thailand wall clock written as if it were UTC, so it
+    // compares directly with qdDayStart() (midnight of a "YYYY-MM-DD" date, also written as UTC).
+    function qdBkkNow() {
+      return request.time + duration.value(7, 'h');
     }
     function qdDayStart(d) {
       return timestamp.date(int(d[0:4]), int(d[5:7]), int(d[8:10]));
     }
-    function qdInWindow(d) {
-      return qdAdmin() || qdDayStart(d) > request.time - duration.value(qdLeaderWindowDays() + 1, 'd');
+    // Leader date window: Thailand today - date <= qdLeaderWindowDays(). Keep equal to
+    // QD_LEADER_EDIT_WINDOW_DAYS in js/config.js (tests/unit checks it). Admins: any date.
+    function qdLeaderWindowDays() {
+      return 7;
     }
-    // A slot's date must not be in the future (one day of slack for the time-zone difference).
+    function qdInWindow(d) {
+      return qdAdmin() || qdBkkNow() < qdDayStart(d) + duration.value(qdLeaderWindowDays() + 1, 'd');
+    }
+    // A date is not in the future (Thailand date <= today).
     function qdNotFuture(d) {
-      return qdDayStart(d) < request.time + duration.value(1, 'd');
+      return qdDayStart(d) <= qdBkkNow();
+    }
+    // Shift end in hours after the production date's midnight (Thailand time): DAY 20:00 the same
+    // day, NIGHT 08:00 the next day. BLOCKED: values not confirmed by Production yet. Keep equal to
+    // QD_SHIFT_END in js/config.js (tests/unit checks it).
+    function qdShiftEndHours(shift) {
+      return shift == 'DAY' ? 20 : 32;
+    }
+    function qdShiftEnded(d, shift) {
+      return qdBkkNow() >= qdDayStart(d) + duration.value(qdShiftEndHours(shift), 'h');
     }
     function qdValidSlot(line, shift) {
       return line in ['A', 'B', 'C'] && shift in ['DAY', 'NIGHT'];
@@ -186,9 +201,10 @@ service cloud.firestore {
 
     // ---- Slot: ledger + import marker + shift close ----
     // Ledger (Phase 2): logVersion / liveLogCount move only together with events v{n}.
-    // Import marker (Phase 3): importPending is set (admin) BEFORE an Excel import writes a slot and
-    //   cleared by the import transaction that writes the slot; while it is set the slot cannot be
-    //   closed, so a partly failed import is never confirmed.
+    // Import marker (Phase 3/4): importPending is set (admin) BEFORE an Excel import writes a slot and
+    //   cleared (admin) once all of that slot's rows are saved, each change audited as event m{n};
+    //   while it is set the slot cannot be closed, so a partly failed import is never confirmed.
+    // Public mirror (Phase 4): every slot write also writes scrapCloseSummary/{date} (see above).
     // Close (Phase 3): closeState + snapshot of the current version, with event c{closeRevision}.
     //   Leaders may not re-close a version that is already closed (no duplicates); admins may
     //   reconfirm. Any later scrap write raises logVersion, so the close no longer matches (CHANGED).
@@ -196,9 +212,79 @@ service cloud.firestore {
       return /databases/$(database)/documents/scrapSlots/$(slotId)/events/$('c' + string(rev));
     }
     function qdValidImportMarker(m) {
-      return m == null || (m is map && m.keys().hasOnly(['importId', 'rows', 'at', 'by'])
-        && m.importId is string && m.importId.size() > 0 && m.rows is int && m.rows > 0
-        && m.at == request.time && m.by == qdEmail());
+      return m is map && m.keys().hasOnly(['importId', 'rows', 'at', 'by'])
+        && m.importId is string && m.importId.size() > 0 && m.importId.size() <= 100 && m.rows is int && m.rows > 0
+        && m.at == request.time && m.by == qdEmail();
+    }
+    function qdMarkerEventPath(slotId, rev) {
+      return /databases/$(database)/documents/scrapSlots/$(slotId)/events/$('m' + string(rev));
+    }
+    // Import marker set (old == null) or cleared (new == null), never overwritten; each change is
+    // audited as event m{markerRevision}.
+    function qdMarkerChangeOk(slotId, old, n) {
+      return n.markerRevision == (old == null ? 0 : old.get('markerRevision', 0)) + 1
+        && existsAfter(qdMarkerEventPath(slotId, n.markerRevision))
+        && ((old == null || old.get('importPending', null) == null)
+              ? n.get('importPending', null) != null && qdValidImportMarker(n.importPending)
+              : n.get('importPending', null) == null);
+    }
+    function qdValidMarkerEvent(slotId, eventId, e) {
+      return eventId == 'm' + string(getAfter(qdSlotPath(slotId)).data.markerRevision)
+        && e.keys().hasOnly(['type', 'action', 'revision', 'importId', 'rows', 'at', 'by'])
+        && e.type == 'IMPORT_MARKER'
+        && e.revision == getAfter(qdSlotPath(slotId)).data.markerRevision
+        && (getAfter(qdSlotPath(slotId)).data.get('importPending', null) != null
+              ? e.action == 'SET' && e.importId == getAfter(qdSlotPath(slotId)).data.importPending.importId
+                && e.rows == getAfter(qdSlotPath(slotId)).data.importPending.rows
+              : e.action == 'CLEAR' && exists(qdSlotPath(slotId))
+                && e.importId == get(qdSlotPath(slotId)).data.importPending.importId
+                && e.rows == get(qdSlotPath(slotId)).data.importPending.rows);
+    }
+
+    // ---- Public, email-free mirror of the close state (Phase 4) ----
+    // scrapCloseSummary/{date}.slots["A_DAY"] = qdPublicView(scrapSlots/{date}_A_DAY): every write to
+    // a slot must leave its mirror equal to it in the same commit, and the mirror can only be
+    // written to the view of the slot as it is after that commit. The public Dashboard / Executive
+    // Report read this instead of scrapSlots (which carries employee e-mails and notes).
+    function qdSummaryPath(date) {
+      return /databases/$(database)/documents/scrapCloseSummary/$(date);
+    }
+    function qdPublicView(s) {
+      return {
+        'logVersion': s.logVersion, 'liveLogCount': s.liveLogCount,
+        'importPending': s.get('importPending', null) != null,
+        'closeState': s.get('closeState', null), 'closedVersion': s.get('closedVersion', null),
+        'closeRevision': s.get('closeRevision', 0), 'closedLogCount': s.get('closedLogCount', null),
+        'closedScrapQty': s.get('closedScrapQty', null), 'closedFingerprint': s.get('closedFingerprint', null),
+        'closedAt': s.get('closedAt', null)
+      };
+    }
+    function qdSummaryOk(n) {
+      return existsAfter(qdSummaryPath(n.date))
+        && getAfter(qdSummaryPath(n.date)).data.slots.get(n.line + '_' + n.shift, null) == qdPublicView(n);
+    }
+    function qdSummaryEntryOk(date, old, nw, k, line, shift) {
+      return nw.get(k, null) == old.get(k, null)
+        || (qdCanWriteSlot(line, shift) && existsAfter(qdSlotPath(date + '_' + k))
+            && nw.get(k, null) == qdPublicView(getAfter(qdSlotPath(date + '_' + k)).data));
+    }
+    function qdSummaryWriteOk(date, old, n) {
+      return qdActive()
+        && n.keys().hasOnly(['date', 'slots', 'updatedAt'])
+        && n.date == date && n.updatedAt == request.time
+        && n.slots is map && n.slots.keys().hasOnly(['A_DAY', 'A_NIGHT', 'B_DAY', 'B_NIGHT', 'C_DAY', 'C_NIGHT'])
+        && qdSummaryEntryOk(date, old, n.slots, 'A_DAY', 'A', 'DAY')
+        && qdSummaryEntryOk(date, old, n.slots, 'A_NIGHT', 'A', 'NIGHT')
+        && qdSummaryEntryOk(date, old, n.slots, 'B_DAY', 'B', 'DAY')
+        && qdSummaryEntryOk(date, old, n.slots, 'B_NIGHT', 'B', 'NIGHT')
+        && qdSummaryEntryOk(date, old, n.slots, 'C_DAY', 'C', 'DAY')
+        && qdSummaryEntryOk(date, old, n.slots, 'C_NIGHT', 'C', 'NIGHT');
+    }
+    match /scrapCloseSummary/{date} {
+      allow read: if true;
+      allow create: if qdSummaryWriteOk(date, {}, request.resource.data);
+      allow update: if qdSummaryWriteOk(date, resource.data.slots, request.resource.data);
+      allow delete: if false;
     }
     function qdCloseFieldsOk(slotId, n) {
       return n.closeState in ['SUBMITTED', 'CONFIRMED_ZERO', 'NO_PRODUCTION']
@@ -217,7 +303,7 @@ service cloud.firestore {
         && n.get('importPending', null) == null
         && n.closedBy == qdEmail() && n.closedAt == request.time
         && n.updatedBy == qdEmail() && n.updatedAt == request.time
-        && qdNotFuture(n.date) && qdInWindow(n.date)
+        && qdNotFuture(n.date) && qdInWindow(n.date) && qdShiftEnded(n.date, n.shift)
         && existsAfter(qdCloseEventPath(slotId, n.closeRevision));
     }
     function qdSlotBaseKeys() {
@@ -238,6 +324,7 @@ service cloud.firestore {
         && request.resource.data.legacyCount is int && request.resource.data.legacyCount >= 0
         && request.resource.data.updatedBy == qdEmail()
         && request.resource.data.updatedAt == request.time
+        && qdSummaryOk(request.resource.data)
         && (
           // (a) first ledger write: v1 with its event. legacyCount = logs saved before the ledger.
           (request.resource.data.keys().hasOnly(qdSlotBaseKeys())
@@ -247,11 +334,10 @@ service cloud.firestore {
             && request.resource.data.liveLogCount >= 0)
           // (b) import marker on a slot without a ledger yet (admin only)
           || (qdAdmin()
-            && request.resource.data.keys().hasOnly(qdSlotBaseKeys().concat(['importPending']))
+            && request.resource.data.keys().hasOnly(qdSlotBaseKeys().concat(['importPending', 'markerRevision']))
             && request.resource.data.logVersion == 0
             && request.resource.data.liveLogCount == request.resource.data.legacyCount
-            && request.resource.data.importPending != null
-            && qdValidImportMarker(request.resource.data.importPending))
+            && qdMarkerChangeOk(slotId, null, request.resource.data))
           // (c) close of a slot without a ledger yet (no scrap written through the ledger)
           || (request.resource.data.keys().hasOnly(qdSlotBaseKeys().concat(qdCloseKeys()))
             && request.resource.data.logVersion == 0
@@ -263,20 +349,18 @@ service cloud.firestore {
       allow update: if qdCanWriteSlot(resource.data.line, resource.data.shift)
         && request.resource.data.updatedBy == qdEmail()
         && request.resource.data.updatedAt == request.time
+        && qdSummaryOk(request.resource.data)
         && (
-          // (a) ledger write. It may also clear the import marker (admin only).
-          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['logVersion', 'liveLogCount', 'importPending', 'updatedAt', 'updatedBy'])
+          // (a) ledger write (the import marker is left as it is)
+          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['logVersion', 'liveLogCount', 'updatedAt', 'updatedBy'])
             && request.resource.data.logVersion == resource.data.logVersion + 1
             && existsAfter(qdEventPath(slotId, request.resource.data.logVersion))
             && request.resource.data.liveLogCount == resource.data.liveLogCount + qdEventDelta(getAfter(qdEventPath(slotId, request.resource.data.logVersion)).data)
-            && request.resource.data.liveLogCount >= 0
-            && (request.resource.data.get('importPending', null) == resource.data.get('importPending', null)
-                  ? true
-                  : qdAdmin() && request.resource.data.get('importPending', null) == null))
-          // (b) set or clear the import marker (admin only; version unchanged)
+            && request.resource.data.liveLogCount >= 0)
+          // (b) set or clear the import marker (admin only; version unchanged; audited as m{n})
           || (qdAdmin()
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['importPending', 'updatedAt', 'updatedBy'])
-            && qdValidImportMarker(request.resource.data.get('importPending', null)))
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['importPending', 'markerRevision', 'updatedAt', 'updatedBy'])
+            && qdMarkerChangeOk(slotId, resource.data, request.resource.data))
           // (c) close / reconfirm the current version
           || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(qdCloseKeys())
             && request.resource.data.logVersion == resource.data.logVersion
@@ -288,7 +372,8 @@ service cloud.firestore {
         );
       allow delete: if false;
 
-      // Audit events: v{n} = scrap-log writes (ledger), c{n} = closes. Written once, never changed.
+      // Audit events: v{n} = scrap-log writes (ledger), c{n} = closes, m{n} = import marker set /
+      // cleared. Written once, never changed.
       match /events/{eventId} {
         allow read: if qdActive();
         allow create: if existsAfter(qdSlotPath(slotId))
@@ -296,14 +381,15 @@ service cloud.firestore {
           && request.resource.data.by == qdEmail()
           && request.resource.data.at == request.time
           && (eventId.matches('v[0-9]+') ? qdValidLedgerEvent(slotId, eventId, request.resource.data)
-              : eventId.matches('c[0-9]+') && qdValidCloseEvent(slotId, eventId, request.resource.data));
+              : eventId.matches('c[0-9]+') ? qdValidCloseEvent(slotId, eventId, request.resource.data)
+              : eventId.matches('m[0-9]+') && qdAdmin() && qdValidMarkerEvent(slotId, eventId, request.resource.data));
         allow update, delete: if false;
       }
     }
     function qdValidLedgerEvent(slotId, eventId, e) {
       return eventId == 'v' + string(getAfter(qdSlotPath(slotId)).data.logVersion)
         && getAfter(qdSlotPath(slotId)).data.logVersion == qdVersionBefore(slotId) + 1
-        && e.keys().hasOnly(['type', 'version', 'at', 'by', 'creates', 'updates', 'deletes', 'movesIn', 'movesOut', 'changes', 'importId'])
+        && e.keys().hasOnly(['type', 'version', 'at', 'by', 'creates', 'updates', 'deletes', 'movesIn', 'movesOut', 'changes'])
         && e.type == 'LOG_WRITE'
         && e.version == getAfter(qdSlotPath(slotId)).data.logVersion
         && e.creates is list && e.updates is list && e.deletes is list

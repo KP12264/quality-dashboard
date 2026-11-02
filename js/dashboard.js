@@ -190,12 +190,21 @@
     const scrapInScope = scrapResult.records.filter(r => activeShifts().includes(r.shift));
 
     // Judge every date (daily rule) / date+shift (legacy rule) on its own, using ONLY Door A/B/C.
-    const shiftTargets = await TargetEvaluator.loadShiftTargetContext(window.qdDb, dates, activeShifts());
+    // Shift Close (Phase 4): the public, e-mail-free close summary for close-required dates
+    // (one query; none at all while QD_CLOSE_REQUIRED_FROM is not in use). The scrap logs are
+    // the ones already loaded above — never read twice.
+    const [shiftTargets, closeContext] = await Promise.all([
+      TargetEvaluator.loadShiftTargetContext(window.qdDb, dates, activeShifts()),
+      TargetEvaluator.loadCloseContext(window.qdDb, dates)
+    ]);
     if (seq !== renderSeq) return;
+    if (closeContext.failed && !scrapLoadFailed && productionResult.errors.length === 0) {
+      showBanner('warn', `⚠ Shift close status could not be read for this ${scopeWord} — the daily status shows READ ERROR instead of a result. Try refreshing.`);
+    }
     const shiftEvals = TargetEvaluator.evaluate({
       dates, activeShiftCodes: activeShifts(),
       production: productionResult.records, scrap: scrapResult.records,
-      scrapReadFailed: scrapLoadFailed, productionErrors: productionResult.errors, shiftTargets
+      scrapReadFailed: scrapLoadFailed, productionErrors: productionResult.errors, shiftTargets, closeContext
     });
 
     // ---- Top KPI row: Production/Scrap/Rate follow the Line filter,
@@ -296,7 +305,8 @@
 
   // Status pill / tile colour class for a status string.
   function statusClassOf(status) {
-    return status === 'WITHIN TARGET' ? 'good' : status === 'OVER TARGET' ? 'bad' : status === 'INCOMPLETE' ? 'warn' : 'neutral';
+    return status === 'WITHIN TARGET' ? 'good' : status === 'OVER TARGET' ? 'bad'
+      : (status === 'INCOMPLETE' || status === 'CONFLICT' || status === 'READ ERROR') ? 'warn' : 'neutral';
   }
 
   // Helper under the Status pill: counts of the SAME evaluations that drive the status,
@@ -338,7 +348,25 @@
     const I = sum.days.incomplete + sum.shifts.incomplete, N = sum.days.noData + sum.shifts.noData;
     const unit = sum.mixed ? 'days/shifts' : (sum.hasDays ? 'days' : 'shifts');
     const c = (cls, n, label) => `<span class="v5-count ${cls}"><b>${fmt(n)}</b> ${label}</span>`;
-    return `<span class="v5-counts-unit">${unit}:</span>` + c('good', W, 'Within') + c('bad', O, 'Over') + c('warn', I, 'Incomplete') + c('neutral', N, 'No Data');
+    // Shift Close statuses appear only when they occur (never while Shift Close is not in use).
+    const extra = (sum.days.conflict ? c('warn', sum.days.conflict, 'Conflict') : '')
+      + (sum.days.readError ? c('warn', sum.days.readError, 'Read Error') : '')
+      + (sum.days.noProduction ? c('neutral', sum.days.noProduction, 'No Production') : '');
+    return `<span class="v5-counts-unit">${unit}:</span>` + c('good', W, 'Within') + c('bad', O, 'Over') + c('warn', I, 'Incomplete') + extra + c('neutral', N, 'No Data');
+  }
+
+  // Shift Close completeness (Phase 4): "4/6 shifts confirmed" for one day, "2/7 days fully
+  // confirmed" for a range, linking to Daily Confirmation. Hidden when no date in the range is
+  // close-required. Public: shows counts only, never who confirmed.
+  function closeLineHtml(units) {
+    const closeUnits = units.filter(u => u.closeRule);
+    if (!closeUnits.length) return '';
+    const last = closeUnits[closeUnits.length - 1];
+    const href = `daily-confirmation.html?date=${encodeURIComponent(last.date)}${window.qdEmulator ? '&qdEmulator=1' : ''}`;
+    const text = closeUnits.length === 1
+      ? `Shift close: <b>${last.close.closed}/${last.close.total}</b> shifts confirmed`
+      : `Shift close: <b>${closeUnits.filter(u => u.close.closed === u.close.total).length}/${closeUnits.length}</b> days fully confirmed`;
+    return `<a class="v5-close-link" id="kpiCloseLink" href="${href}">${text} &rarr;</a>`;
   }
 
   function renderKpis(displayProductionRecords, displayScrapRecords, shiftEvals) {
@@ -356,6 +384,7 @@
       targetEl.textContent = '–';
       $('kpiTargetUnitText').textContent = 'pcs scrap';
       $('kpiTargetCounts').innerHTML = '';
+      if ($('kpiCloseLine')) { $('kpiCloseLine').innerHTML = ''; $('kpiCloseLine').hidden = true; }
       statusEl.textContent = '–';
       statusEl.className = 'qd-status-pill neutral';
       noteEl.textContent = '';
@@ -431,6 +460,8 @@
     statusEl.textContent = combinedStatus;
     statusEl.className = 'qd-status-pill ' + statusClassOf(combinedStatus);
     $('kpiTargetCounts').innerHTML = shiftEvals.length ? targetCountsHtml(shiftEvals) : '';
+    const closeLine = $('kpiCloseLine');
+    if (closeLine) { const h = closeLineHtml(shiftEvals); closeLine.innerHTML = h; closeLine.hidden = !h; }
 
     // Notes under the KPI row: Line filter, Shift filter (the daily judgement
     // ignores it) and the multi-day reminder.
@@ -447,6 +478,9 @@
     }
     if (targetDesc.mode === 'MIXED') {
       notes.push(`This range uses two target rules: ≤30 pcs/shift before ${TargetEvaluator.formatCutoverDate()}, ≤${fmt(DAILY_TARGET_PCS)} pcs/day from then on.`);
+    }
+    if (shiftEvals.some(e => e.closeRule)) {
+      notes.push('From the Shift Close start date a day is Within target only when all 6 shifts (Door A/B/C × Day/Night) are confirmed; a shift that is not closed is never counted as zero.');
     }
     noteEl.textContent = notes.join(' ');
 
@@ -497,16 +531,26 @@
 
     const spansYears = dates[0].slice(0, 4) !== dates[dates.length - 1].slice(0, 4);
     const fmtDay = d => `${d.slice(8)} ${MONTH_ABBR[parseInt(d.slice(5, 7), 10) - 1]}${spansYears ? ' ' + d.slice(0, 4) : ''}`;
+    const closeSum = $('targetCloseSummary');
+    if (closeSum) {
+      const closeUnits = units.filter(u => u.closeRule);
+      closeSum.hidden = closeUnits.length === 0;
+      closeSum.innerHTML = closeUnits.length ? `Shift close: ${fmt(sum.closeDaysComplete)} of ${fmt(sum.closeDays)} day${sum.closeDays === 1 ? '' : 's'} fully confirmed (6/6)`
+        + (sum.days.conflict ? ` · ${fmt(sum.days.conflict)} Conflict` : '') + (sum.days.readError ? ` · ${fmt(sum.days.readError)} Read Error` : '')
+        + (sum.days.noProduction ? ` · ${fmt(sum.days.noProduction)} No Production` : '') : '';
+    }
     $('targetPerfDetailBody').innerHTML = units.map(u => {
       const pill = `<span class="qd-status-pill ${statusClassOf(u.status)} qd-status-pill-sm">${escapeHtml(u.status)}</span>`;
       const reasons = u.reasons.length ? `<span class="qd-reason">${u.reasons.map(c => escapeHtml(TargetEvaluator.reasonText(c))).join(' · ')}</span>` : '';
       const targetText = `≤${fmt(u.target)}/${u.unit === 'DAY' ? 'day' : 'shift'}`;
-      const judged = u.totalScrap !== null && u.scrapKnown !== false && u.status !== 'NO DATA' && (u.unit === 'DAY' || u.hasData);
+      const judged = u.judged;   // one definition for every page (js/target-evaluator.js)
       const split = (judged && u.unit === 'DAY') ? `<span class="qd-sub">Day ${fmt(u.shiftScrap.DAY)} · Night ${fmt(u.shiftScrap.NIGHT)}</span>` : '';
       const scrapCell = judged ? `${fmt(u.totalScrap)}${split}` : '—';
       const gapCell = judged
         ? `<span style="color:${u.gap > 0 ? 'var(--red)' : 'var(--green)'};font-weight:700;">${(u.gap > 0 ? '+' : '') + fmt(u.gap)}</span>` : '—';
-      return `<tr><td>${fmtDay(u.date)}</td><td>${escapeHtml(u.label)}</td><td class="num">${scrapCell}</td><td class="num">${targetText}</td><td class="num">${gapCell}</td><td>${pill}${reasons}</td></tr>`;
+      const closeCell = u.closeRule
+        ? `<a class="qd-reason v5-close-cell" href="daily-confirmation.html?date=${encodeURIComponent(u.date)}${window.qdEmulator ? '&qdEmulator=1' : ''}">Shifts confirmed ${escapeHtml(TargetEvaluator.closeCompleteness(u))}</a>` : '';
+      return `<tr><td>${fmtDay(u.date)}</td><td>${escapeHtml(u.label)}</td><td class="num">${scrapCell}</td><td class="num">${targetText}</td><td class="num">${gapCell}</td><td>${pill}${reasons}${closeCell}</td></tr>`;
     }).join('');
   }
 
@@ -970,7 +1014,8 @@
 
   function trendStatusText(s) {
     const S = TargetEvaluator.STATUS;
-    return s === S.WITHIN ? 'WITHIN' : s === S.OVER ? 'OVER' : s === S.INCOMPLETE ? 'INCOMPLETE' : s === S.NO_DATA ? 'NO DATA' : '–';
+    return s === S.WITHIN ? 'WITHIN' : s === S.OVER ? 'OVER' : s === S.INCOMPLETE ? 'INCOMPLETE' : s === S.NO_DATA ? 'NO DATA'
+      : s === S.CONFLICT ? 'CONFLICT' : s === S.NO_PRODUCTION ? 'NO PRODUCTION' : s === S.READ_ERROR ? 'READ ERROR' : '–';
   }
 
   // Header KPIs of the card — same scope as the bars; Over Target from the evaluator.
@@ -1103,7 +1148,9 @@
       else {
         if (kind.includes('WITHIN')) parts.push(item('within', 'Within target'));
         if (kind.includes('OVER')) parts.push(item('over', 'Over target'));
-        if (kind.includes('INCOMPLETE') || marker.includes('No log')) parts.push(item('incomplete', 'Incomplete'));
+        // Shift Close statuses that are not a result (Conflict / Read Error) share the hatched bar.
+        const notConfirmed = points.some(p => { const du = dayUnit.get(p.date); return du && (du.status === S.CONFLICT || du.status === S.READ_ERROR); });
+        if (kind.includes('INCOMPLETE') || marker.includes('No log')) parts.push(item('incomplete', notConfirmed ? 'Incomplete / Conflict / Read error' : 'Incomplete'));
         if (kind.includes('LEGACY')) parts.push(item('legacy', `Before ${TargetEvaluator.formatCutoverDate()} · judged per shift (see tooltip)`));
       }
       if (marker.some(t => t === 'No data' || t === 'N/A')) parts.push(item('nodata', marker.includes('N/A') && !marker.includes('No data') ? 'Not readable' : 'No data'));
@@ -1151,7 +1198,8 @@
               out.push(` Daily Target: ≤${fmt(du.target)} pcs (A+B+C, Day+Night)`);
               out.push(du.gap === null || du.gap === undefined ? ' Gap to Target: N/A (scrap not known)' : ` Gap to Target: ${du.gap > 0 ? '+' : ''}${fmt(du.gap)} pcs`);
               out.push(` Data Status: ${trendStatusText(du.status)}${filtered ? ' (whole day, A+B+C)' : ''}`);
-              if (du.status === S.INCOMPLETE && du.reasons.length) out.push(`   ${reasonList(du)}`);
+              if ((du.status === S.INCOMPLETE || du.closeRule) && du.reasons.length) out.push(`   ${reasonList(du)}`);
+              if (du.closeRule) out.push(` Shifts confirmed: ${TargetEvaluator.closeCompleteness(du)}`);
             } else if (shiftUnits.has(p.date)) {
               out.push(' Target rule: ≤30 pcs/shift (before ' + TargetEvaluator.formatCutoverDate() + ')');
               shiftUnits.get(p.date).forEach(u => out.push(`   ${u.label}: ${trendStatusText(u.status)}${u.totalScrap === null ? '' : ' · ' + fmt(u.totalScrap) + ' pcs'}${u.target ? ' / ≤' + fmt(u.target) : ''}`));

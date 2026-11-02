@@ -14,8 +14,9 @@ const { compatDb } = require('../support/compat-shim.js');
 const E = code => `${code.toLowerCase()}@prodv2.local`;
 const pad = n => String(n).padStart(2, '0');
 const ymd = d => `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
-const daysAgo = n => ymd(new Date(Date.now() - n * 86400000));
-const D1 = daysAgo(1);           // yesterday: inside every window
+// Thailand dates (Asia/Bangkok, UTC+7), like the client and the rules.
+const daysAgo = n => ymd(new Date(Date.now() + 7 * 3600000 - n * 86400000));
+const D1 = daysAgo(2);           // two days ago: both shifts have ended, inside every window
 const S = SC.STATUS;
 let env;
 const users = {
@@ -37,6 +38,14 @@ function actor(code) {
     close: req => SC.closeSlot(db, Object.assign({ date: D1, line: 'A', shift: 'DAY' }, req), opts),
     load: (date = D1, line = 'A', shift = 'DAY') => SC.loadSlot(db, date, line, shift)
   };
+}
+// Hand-made slot write + its public mirror (scrapCloseSummary) from the merged result, so a
+// hand-made test write breaks only the rule it is aimed at.
+async function slotPut(b, db, id, data, op) {
+  const cur = (await slotOf(id)) || {};
+  if (op === 'set') b.set(doc(db, 'scrapSlots', id), data); else b.update(doc(db, 'scrapSlots', id), data);
+  const [date, line, shift] = id.split('_');
+  b.set(doc(db, 'scrapCloseSummary', date), { date, slots: { [`${line}_${shift}`]: Ledger.publicView(Object.assign({}, cur, data)) }, updatedAt: serverTimestamp() }, { merge: true });
 }
 async function raw(fn) { let out; await env.withSecurityRulesDisabled(async ctx => { out = await fn(ctx.firestore()); }); return out; }
 const slotOf = id => raw(async db => { const s = await getDoc(doc(db, 'scrapSlots', id)); return s.exists() ? s.data() : null; });
@@ -86,7 +95,7 @@ describe('close states', () => {
     const fields = st => ({ closeState: st, closedVersion: s.logVersion, closeRevision: 1, closedBy: E('leaderA'), closedAt: serverTimestamp(), closedLogCount: 1, closedScrapQty: 0, closedLogIds: ['x'], closedFingerprint: 'f', closeNote: null, noProductionReason: null, updatedAt: serverTimestamp(), updatedBy: E('leaderA') });
     const ev = st => ({ type: 'CLOSE', revision: 1, closeState: st, version: s.logVersion, logCount: 1, scrapQty: 0, logIds: ['x'], fingerprint: 'f', note: null, noProductionReason: null, previous: null, at: serverTimestamp(), by: E('leaderA') });
     for (const st of [S.CONFIRMED_ZERO, S.SUBMITTED]) {
-      const b = writeBatch(db); b.update(doc(db, 'scrapSlots', id), fields(st)); b.set(doc(db, 'scrapSlots', id, 'events', 'c1'), ev(st));
+      const b = writeBatch(db); await slotPut(b, db, id, fields(st), 'update'); b.set(doc(db, 'scrapSlots', id, 'events', 'c1'), ev(st));
       await assertFails(b.commit());
     }
   });
@@ -97,7 +106,7 @@ describe('close states', () => {
     const db = fsOf('leaderA');
     await assertFails(updateDoc(doc(db, 'scrapSlots', id), { closeState: S.SUBMITTED, closedVersion: 1, closeRevision: 1, closedBy: E('leaderA'), closedAt: serverTimestamp(), closedLogCount: 1, closedScrapQty: 3, closedLogIds: ['a'], closedFingerprint: 'f', closeNote: null, noProductionReason: null, updatedAt: serverTimestamp(), updatedBy: E('leaderA') }));
     const b = writeBatch(db);
-    b.update(doc(db, 'scrapSlots', id), { logVersion: 5, closeState: S.SUBMITTED, closedVersion: 5, closeRevision: 1, closedBy: E('leaderA'), closedAt: serverTimestamp(), closedLogCount: 1, closedScrapQty: 3, closedLogIds: ['a'], closedFingerprint: 'f', closeNote: null, noProductionReason: null, updatedAt: serverTimestamp(), updatedBy: E('leaderA') });
+    await slotPut(b, db, id, { logVersion: 5, closeState: S.SUBMITTED, closedVersion: 5, closeRevision: 1, closedBy: E('leaderA'), closedAt: serverTimestamp(), closedLogCount: 1, closedScrapQty: 3, closedLogIds: ['a'], closedFingerprint: 'f', closeNote: null, noProductionReason: null, updatedAt: serverTimestamp(), updatedBy: E('leaderA') }, 'update');
     b.set(doc(db, 'scrapSlots', id, 'events', 'c1'), { type: 'CLOSE', revision: 1, closeState: S.SUBMITTED, version: 5, logCount: 1, scrapQty: 3, logIds: ['a'], fingerprint: 'f', note: null, noProductionReason: null, previous: null, at: serverTimestamp(), by: E('leaderA') });
     await assertFails(b.commit());
     assert.equal(s.logVersion, (await slotOf(id)).logVersion);
@@ -113,10 +122,10 @@ describe('who may close', () => {
     const r = await actor('admin').close({ state: S.SUBMITTED, line: 'B' });
     assert.equal(r.verified, true);
   });
-  it('Leader date window: 7 days back yes, 9 days back no; future never; admin any past date', async () => {
+  it('Leader date window (Thailand dates): 7 days back yes, 8 days back no; future never; admin any past date', async () => {
     const L = actor('leaderA');
     await L.close({ state: S.CONFIRMED_ZERO, date: daysAgo(7) });
-    await assert.rejects(L.close({ state: S.CONFIRMED_ZERO, date: daysAgo(9) }), /permission/i);
+    await assert.rejects(L.close({ state: S.CONFIRMED_ZERO, date: daysAgo(8) }), /permission/i);
     await assert.rejects(L.close({ state: S.CONFIRMED_ZERO, date: daysAgo(-3) }), /permission/i);
     await assert.rejects(actor('admin').close({ state: S.CONFIRMED_ZERO, date: daysAgo(-3) }), /permission/i);
     await actor('admin').close({ state: S.CONFIRMED_ZERO, date: daysAgo(40) });
@@ -149,8 +158,8 @@ describe('changes after close, reconfirm, duplicates', () => {
     assert.deepEqual(ev.c2.previous, { state: S.SUBMITTED, version: 1, revision: 1, by: E('leaderA') });
     // the audit trail cannot lie about the close it replaced
     const db = fsOf('admin'), id = `${D1}_A_DAY`, cur = await slotOf(id);
-    const mk = prev => { const b = writeBatch(db);
-      b.update(doc(db, 'scrapSlots', id), { closeState: S.SUBMITTED, closedVersion: cur.logVersion, closeRevision: 3, closedBy: E('admin'), closedAt: serverTimestamp(), closedLogCount: cur.closedLogCount, closedScrapQty: cur.closedScrapQty, closedLogIds: cur.closedLogIds, closedFingerprint: cur.closedFingerprint, closeNote: null, noProductionReason: null, updatedAt: serverTimestamp(), updatedBy: E('admin') });
+    const mk = async prev => { const b = writeBatch(db);
+      await slotPut(b, db, id, { closeState: S.SUBMITTED, closedVersion: cur.logVersion, closeRevision: 3, closedBy: E('admin'), closedAt: serverTimestamp(), closedLogCount: cur.closedLogCount, closedScrapQty: cur.closedScrapQty, closedLogIds: cur.closedLogIds, closedFingerprint: cur.closedFingerprint, closeNote: null, noProductionReason: null, updatedAt: serverTimestamp(), updatedBy: E('admin') }, 'update');
       b.set(doc(db, 'scrapSlots', id, 'events', 'c3'), { type: 'CLOSE', revision: 3, closeState: S.SUBMITTED, version: cur.logVersion, logCount: cur.closedLogCount, scrapQty: cur.closedScrapQty, logIds: cur.closedLogIds, fingerprint: cur.closedFingerprint, note: null, noProductionReason: null, previous: prev, at: serverTimestamp(), by: E('admin') });
       return b.commit(); };
     await assertFails(mk(null));
@@ -245,14 +254,14 @@ describe('Excel import partial failure (import marker)', () => {
     await runImport(rows(D1, 'A', 2), `${D1}_A_DAY`);
     const id = `${D1}_A_DAY`, s = await slotOf(id), db = fsOf('admin');
     const b = writeBatch(db);
-    b.update(doc(db, 'scrapSlots', id), { closeState: S.CONFIRMED_ZERO, closedVersion: s.logVersion, closeRevision: 1, closedBy: E('admin'), closedAt: serverTimestamp(), closedLogCount: 0, closedScrapQty: 0, closedLogIds: [], closedFingerprint: 'f', closeNote: null, noProductionReason: null, updatedAt: serverTimestamp(), updatedBy: E('admin') });
+    await slotPut(b, db, id, { closeState: S.CONFIRMED_ZERO, closedVersion: s.logVersion, closeRevision: 1, closedBy: E('admin'), closedAt: serverTimestamp(), closedLogCount: 0, closedScrapQty: 0, closedLogIds: [], closedFingerprint: 'f', closeNote: null, noProductionReason: null, updatedAt: serverTimestamp(), updatedBy: E('admin') }, 'update');
     b.set(doc(db, 'scrapSlots', id, 'events', 'c1'), { type: 'CLOSE', revision: 1, closeState: S.CONFIRMED_ZERO, version: s.logVersion, logCount: 0, scrapQty: 0, logIds: [], fingerprint: 'f', note: null, noProductionReason: null, previous: null, at: serverTimestamp(), by: E('admin') });
     await assertFails(b.commit());
     // positive control: the very same writes pass once the marker is cleared
     const A = actor('admin');
     await Ledger.clearImportMarker(A.db, id, A.opts);
     const b2 = writeBatch(db);
-    b2.update(doc(db, 'scrapSlots', id), { closeState: S.CONFIRMED_ZERO, closedVersion: s.logVersion, closeRevision: 1, closedBy: E('admin'), closedAt: serverTimestamp(), closedLogCount: 0, closedScrapQty: 0, closedLogIds: [], closedFingerprint: 'f', closeNote: null, noProductionReason: null, updatedAt: serverTimestamp(), updatedBy: E('admin') });
+    await slotPut(b2, db, id, { closeState: S.CONFIRMED_ZERO, closedVersion: s.logVersion, closeRevision: 1, closedBy: E('admin'), closedAt: serverTimestamp(), closedLogCount: 0, closedScrapQty: 0, closedLogIds: [], closedFingerprint: 'f', closeNote: null, noProductionReason: null, updatedAt: serverTimestamp(), updatedBy: E('admin') }, 'update');
     b2.set(doc(db, 'scrapSlots', id, 'events', 'c1'), { type: 'CLOSE', revision: 1, closeState: S.CONFIRMED_ZERO, version: s.logVersion, logCount: 0, scrapQty: 0, logIds: [], fingerprint: 'f', note: null, noProductionReason: null, previous: null, at: serverTimestamp(), by: E('admin') });
     await assertSucceeds(b2.commit());
   });
@@ -294,12 +303,12 @@ describe('legacy logs and writes outside the ledger', () => {
     await raw(async db => { await setDoc(doc(db, 'scrapLogs', 'old1'), scrap()); });
     const db = fsOf('leaderA'), id = `${D1}_A_DAY`;
     const b = writeBatch(db);
-    b.set(doc(db, 'scrapSlots', id), { date: D1, line: 'A', shift: 'DAY', logVersion: 0, liveLogCount: 0, legacyCount: 1, closeState: S.CONFIRMED_ZERO, closedVersion: 0, closeRevision: 1, closedBy: E('leaderA'), closedAt: serverTimestamp(), closedLogCount: 0, closedScrapQty: 0, closedLogIds: [], closedFingerprint: 'f', closeNote: null, noProductionReason: null, updatedAt: serverTimestamp(), updatedBy: E('leaderA') });
+    await slotPut(b, db, id, { date: D1, line: 'A', shift: 'DAY', logVersion: 0, liveLogCount: 0, legacyCount: 1, closeState: S.CONFIRMED_ZERO, closedVersion: 0, closeRevision: 1, closedBy: E('leaderA'), closedAt: serverTimestamp(), closedLogCount: 0, closedScrapQty: 0, closedLogIds: [], closedFingerprint: 'f', closeNote: null, noProductionReason: null, updatedAt: serverTimestamp(), updatedBy: E('leaderA') }, 'set');
     b.set(doc(db, 'scrapSlots', id, 'events', 'c1'), { type: 'CLOSE', revision: 1, closeState: S.CONFIRMED_ZERO, version: 0, logCount: 0, scrapQty: 0, logIds: [], fingerprint: 'f', note: null, noProductionReason: null, previous: null, at: serverTimestamp(), by: E('leaderA') });
     await assertFails(b.commit());
     // positive control: stating the count it closes passes
     const b2 = writeBatch(db);
-    b2.set(doc(db, 'scrapSlots', id), { date: D1, line: 'A', shift: 'DAY', logVersion: 0, liveLogCount: 1, legacyCount: 1, closeState: S.SUBMITTED, closedVersion: 0, closeRevision: 1, closedBy: E('leaderA'), closedAt: serverTimestamp(), closedLogCount: 1, closedScrapQty: 3, closedLogIds: ['old1'], closedFingerprint: 'f', closeNote: null, noProductionReason: null, updatedAt: serverTimestamp(), updatedBy: E('leaderA') });
+    await slotPut(b2, db, id, { date: D1, line: 'A', shift: 'DAY', logVersion: 0, liveLogCount: 1, legacyCount: 1, closeState: S.SUBMITTED, closedVersion: 0, closeRevision: 1, closedBy: E('leaderA'), closedAt: serverTimestamp(), closedLogCount: 1, closedScrapQty: 3, closedLogIds: ['old1'], closedFingerprint: 'f', closeNote: null, noProductionReason: null, updatedAt: serverTimestamp(), updatedBy: E('leaderA') }, 'set');
     b2.set(doc(db, 'scrapSlots', id, 'events', 'c1'), { type: 'CLOSE', revision: 1, closeState: S.SUBMITTED, version: 0, logCount: 1, scrapQty: 3, logIds: ['old1'], fingerprint: 'f', note: null, noProductionReason: null, previous: null, at: serverTimestamp(), by: E('leaderA') });
     await assertSucceeds(b2.commit());
   });

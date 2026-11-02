@@ -27,6 +27,7 @@
 
   let period = 'daily'; // 'daily' | 'weekly' | 'monthly'
   let lastReportData = null; // cached for CSV export
+  let loadSeq = 0;           // only the newest load() may render (an older one finishing late is dropped)
 
   function shiftLabel(code) { return (SHIFTS.find(s => s.code === code) || {}).label || code; }
   function lineLabel(code) { return (LINES.find(l => l.code === code) || {}).label || code; }
@@ -54,6 +55,7 @@
 
     const dates = ProductionDataAdapter.dateRange(endDate, periodDays());
     const startDate = dates[0];
+    const seq = ++loadSeq;
 
     let productionResult, scrapResult, improvementsResult;
     try {
@@ -68,6 +70,7 @@
       return;
     }
 
+    if (seq !== loadSeq) return;
     // A failed scrap read must never look like "scrap = 0" or WITHIN TARGET.
     const scrapFailed = !!scrapResult.error;
     if (scrapFailed) {
@@ -90,11 +93,17 @@
     // Target judgement: the SAME shared evaluator the Dashboard uses, with the same inputs
     // (both shifts for every date), so the two pages cannot disagree. targetMaster is read
     // at most once per shift, and only when the period contains pre-cutover dates.
-    const shiftTargets = await TargetEvaluator.loadShiftTargetContext(window.qdDb, dates, ALL_SHIFT_CODES);
+    // Shift Close (Phase 4): the same public close summary and the same scrap logs as the Dashboard.
+    const [shiftTargets, closeContext] = await Promise.all([
+      TargetEvaluator.loadShiftTargetContext(window.qdDb, dates, ALL_SHIFT_CODES),
+      TargetEvaluator.loadCloseContext(window.qdDb, dates)
+    ]);
+    if (seq !== loadSeq) return;
+    if (closeContext.failed && !scrapFailed) showBanner('warn', '⚠ Shift close status could not be read — affected days show READ ERROR.');
     const units = TargetEvaluator.evaluate({
       dates, activeShiftCodes: ALL_SHIFT_CODES,
       production, scrap: scrapResult.records,
-      scrapReadFailed: scrapFailed, productionErrors: productionResult.errors, shiftTargets
+      scrapReadFailed: scrapFailed, productionErrors: productionResult.errors, shiftTargets, closeContext
     });
     const targetDesc = TargetEvaluator.describeTarget(units, fmt);
     const targetPerf = buildTargetPerformance(units);
@@ -138,7 +147,12 @@
       within: list.filter(u => u.status === 'WITHIN TARGET').length,
       over: list.filter(u => u.status === 'OVER TARGET').length,
       incomplete: list.filter(u => u.status === 'INCOMPLETE').length,
-      noData: list.filter(u => u.status === 'NO DATA').length
+      noData: list.filter(u => u.status === 'NO DATA').length,
+      conflict: list.filter(u => u.status === 'CONFLICT').length,
+      noProduction: list.filter(u => u.status === 'NO PRODUCTION').length,
+      readError: list.filter(u => u.status === 'READ ERROR').length,
+      closeDays: list.filter(u => u.closeRule).length,
+      closeComplete: list.filter(u => u.closeRule && u.close.closed === u.close.total).length
     });
     const days = units.filter(u => u.unit === 'DAY');
     if (days.length) {
@@ -157,7 +171,11 @@
   // ---- Render ---------------------------------------------------------
 
   function targetCellText(u) { return `≤${fmt(u.target)}/${u.unit === 'DAY' ? 'day' : 'shift'}`; }
-  function isJudged(u) { return u.totalScrap !== null && u.scrapKnown !== false && u.status !== 'NO DATA' && (u.unit === 'DAY' || u.hasData); }
+  function isJudged(u) { return u.judged; }   // one definition for every page (js/target-evaluator.js)
+  // Shift Close columns appear only when the period has close-required dates (Phase 4).
+  const hasClose = data => data.units.some(u => u.closeRule);
+  // Per-slot close status, no names: "A Day: SUBMITTED | A Night: PENDING | …"
+  const closeDetail = u => u.closeRule ? u.close.slots.map(x => `${x.line} ${shiftLabel(x.shift)}: ${x.status}`).join(' | ') : '';
 
   function render(data) {
     $('rProduction').textContent = fmt(data.totalProduction);
@@ -176,23 +194,30 @@
     ).join('') || '<tr class="empty-row"><td colspan="3">No data</td></tr>';
 
     // Target Performance: counts per rule, never blended into one percentage.
+    const closeCols = hasClose(data);
+    $('rTargetTable').querySelector('thead tr').innerHTML = '<th>Rule</th><th>Target</th><th>Unit</th><th>Evaluated</th><th>Within</th><th>Over</th><th>Incomplete</th><th>No Data</th>'
+      + (closeCols ? '<th>Conflict</th><th>No Production</th><th>Read Error</th><th>Fully Confirmed</th>' : '');
     $('rTargetTableBody').innerHTML = data.targetPerf.map(r => `
       <tr><td>${escapeHtml(r.ruleText)}</td><td>${escapeHtml(r.targetText)}</td><td>${r.unitCode}</td>
-        <td class="num">${fmt(r.evaluated)} ${r.unitWord}</td><td class="num">${fmt(r.within)}</td><td class="num">${fmt(r.over)}</td><td class="num">${fmt(r.incomplete)}</td><td class="num">${fmt(r.noData)}</td></tr>
-    `).join('') || '<tr class="empty-row"><td colspan="8">No data</td></tr>';
+        <td class="num">${fmt(r.evaluated)} ${r.unitWord}</td><td class="num">${fmt(r.within)}</td><td class="num">${fmt(r.over)}</td><td class="num">${fmt(r.incomplete)}</td><td class="num">${fmt(r.noData)}</td>${closeCols ? `<td class="num">${fmt(r.conflict)}</td><td class="num">${fmt(r.noProduction)}</td><td class="num">${fmt(r.readError)}</td><td class="num">${r.closeDays ? `${fmt(r.closeComplete)}/${fmt(r.closeDays)} days` : '–'}</td>` : ''}</tr>
+    `).join('') || `<tr class="empty-row"><td colspan="${closeCols ? 12 : 8}">No data</td></tr>`;
     const notes = [];
     if (data.targetPerf.length > 1 && data.targetPerf.some(r => r.rule === 'PER_DAY') && data.targetPerf.some(r => r.rule === 'PER_SHIFT')) {
       notes.push(`This period spans the rule change on ${TargetEvaluator.formatCutoverDate()}: days and shifts are counted separately and are not combined into one percentage.`);
     }
     if (data.units.some(u => u.status === 'INCOMPLETE')) notes.push('INCOMPLETE = at or below target so far, but it cannot be confirmed (missing shift production, failed read, or no scrap log). It is never counted as within target.');
+    if (closeCols) notes.push('From the Shift Close start date a day is WITHIN only when all 6 shifts (Door A/B/C × Day/Night) are confirmed. CONFLICT = scrap, ledger and close do not agree; READ ERROR = data could not be read (never shown as 0); NO PRODUCTION = all 6 shifts confirmed as not running.');
     $('rTargetNote').textContent = notes.join(' ');
 
+    $('rDailyTable').querySelector('thead tr').innerHTML = '<th>Date</th><th>Scope</th><th>Scrap</th><th>Target</th><th>Gap</th><th>Status</th>'
+      + (closeCols ? '<th>Shifts Confirmed</th>' : '') + '<th>Notes</th>';
     $('rDailyTableBody').innerHTML = data.units.map(u => {
       const judged = isJudged(u);
       const split = (judged && u.unit === 'DAY') ? ` <span class="qd-sub">Day ${fmt(u.shiftScrap.DAY)} · Night ${fmt(u.shiftScrap.NIGHT)}</span>` : '';
       const reasons = u.reasons.map(c => TargetEvaluator.reasonText(c)).join(' · ');
-      return `<tr><td>${u.date}</td><td>${escapeHtml(u.label)}</td><td class="num">${judged ? fmt(u.totalScrap) + split : '—'}</td><td class="num">${targetCellText(u)}</td><td class="num">${judged ? (u.gap > 0 ? '+' : '') + fmt(u.gap) : '—'}</td><td>${escapeHtml(u.status)}</td><td>${escapeHtml(reasons)}</td></tr>`;
-    }).join('') || '<tr class="empty-row"><td colspan="7">No data</td></tr>';
+      const closeCell = closeCols ? `<td class="num" title="${escapeHtml(closeDetail(u))}">${u.closeRule ? TargetEvaluator.closeCompleteness(u) : '–'}</td>` : '';
+      return `<tr><td>${u.date}</td><td>${escapeHtml(u.label)}</td><td class="num">${judged ? fmt(u.totalScrap) + split : '—'}</td><td class="num">${targetCellText(u)}</td><td class="num">${judged ? (u.gap > 0 ? '+' : '') + fmt(u.gap) : '—'}</td><td>${escapeHtml(u.status)}</td>${closeCell}<td>${escapeHtml(reasons)}</td></tr>`;
+    }).join('') || `<tr class="empty-row"><td colspan="${closeCols ? 8 : 7}">No data</td></tr>`;
 
     $('rDefectTableBody').innerHTML = data.scrapFailed
       ? '<tr class="empty-row"><td colspan="3">Scrap data could not be read</td></tr>'
@@ -240,14 +265,19 @@
     d.shiftInfo.forEach(s => lines.push(toCsvRow([s.label, s.production, d.scrapFailed ? 'UNAVAILABLE' : s.scrap])));
     lines.push('');
     lines.push(toCsvRow(['Target Performance (counted per rule, never blended)']));
-    lines.push(toCsvRow(['Rule', 'Target Unit', 'Target (pcs)', 'Units Evaluated', 'Within', 'Over', 'Incomplete', 'No Data']));
-    d.targetPerf.forEach(r => lines.push(toCsvRow([r.rule, r.unitCode, r.targetPcs, `${r.evaluated} ${r.unitWord}`, r.within, r.over, r.incomplete, r.noData])));
+    const closeCols = hasClose(d);
+    lines.push(toCsvRow(['Rule', 'Target Unit', 'Target (pcs)', 'Units Evaluated', 'Within', 'Over', 'Incomplete', 'No Data']
+      .concat(closeCols ? ['Conflict', 'No Production', 'Read Error', 'Days Fully Confirmed'] : [])));
+    d.targetPerf.forEach(r => lines.push(toCsvRow([r.rule, r.unitCode, r.targetPcs, `${r.evaluated} ${r.unitWord}`, r.within, r.over, r.incomplete, r.noData]
+      .concat(closeCols ? [r.conflict, r.noProduction, r.readError, r.closeDays ? `${r.closeComplete}/${r.closeDays}` : ''] : []))));
     lines.push('');
     lines.push(toCsvRow(['Daily Target Evaluation']));
-    lines.push(toCsvRow(['Date', 'Rule', 'Target Unit', 'Scope', 'Scrap', 'Target (pcs)', 'Gap', 'Status', 'Notes']));
+    lines.push(toCsvRow(['Date', 'Rule', 'Target Unit', 'Scope', 'Scrap', 'Target (pcs)', 'Gap', 'Status', 'Notes']
+      .concat(closeCols ? ['Shifts Confirmed', 'Close Detail'] : [])));
     d.units.forEach(u => {
       const judged = isJudged(u);
-      lines.push(toCsvRow([u.date, u.rule === 'DAY' ? 'PER_DAY' : 'PER_SHIFT', u.unit, u.label, judged ? u.totalScrap : '', u.target, judged ? u.gap : '', u.status, u.reasons.map(c => TargetEvaluator.reasonText(c)).join(' | ')]));
+      lines.push(toCsvRow([u.date, u.rule === 'DAY' ? 'PER_DAY' : 'PER_SHIFT', u.unit, u.label, judged ? u.totalScrap : '', u.target, judged ? u.gap : '', u.status, u.reasons.map(c => TargetEvaluator.reasonText(c)).join(' | ')]
+        .concat(closeCols ? [u.closeRule ? TargetEvaluator.closeCompleteness(u) : '', closeDetail(u)] : [])));
     });
     lines.push('');
     lines.push(toCsvRow(['Defect', 'Qty', '% of Total']));

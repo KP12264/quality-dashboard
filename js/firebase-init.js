@@ -29,6 +29,8 @@ window.qdFirebaseError = null;
 window.qdAuth = null;
 window.qdEmulator = false;
 window.qdAuthMode = (typeof QD_AUTH_MODE === "string" ? QD_AUTH_MODE : "off");
+// First date on which shift closes drive the daily target (null = never). See config.js.
+window.qdCloseRequiredFrom = null;
 
 (function initFirebase() {
   try {
@@ -57,6 +59,12 @@ window.qdAuthMode = (typeof QD_AUTH_MODE === "string" ? QD_AUTH_MODE : "off");
         if (window.qdEmulator) window.qdAuth.useEmulator(QD_EMULATOR.authUrl, { disableWarnings: true });
       }
     }
+    // Shift Close drives the daily target only while sign-in is enforced (only then are closes
+    // written). Local test mode may set the date with ?qdCloseFrom=YYYY-MM-DD.
+    let closeFrom = typeof QD_CLOSE_REQUIRED_FROM === "string" ? QD_CLOSE_REQUIRED_FROM : null;
+    const testFrom = new URLSearchParams(location.search).get("qdCloseFrom");
+    if (window.qdEmulator && /^\d{4}-\d{2}-\d{2}$/.test(testFrom || "")) closeFrom = testFrom;
+    window.qdCloseRequiredFrom = window.qdAuthMode === "enforce" && closeFrom ? closeFrom : null;
   } catch (e) {
     console.error("Quality Dashboard: Firebase init failed:", e);
     window.qdFirebaseError = "Could not connect to Firebase: " + (e && e.message ? e.message : String(e));

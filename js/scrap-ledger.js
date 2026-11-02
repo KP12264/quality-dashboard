@@ -26,12 +26,59 @@
 (function (root) {
   const SLOT_COLLECTION = "scrapSlots";
   const LOG_COLLECTION = "scrapLogs";
+  const SUMMARY_COLLECTION = "scrapCloseSummary";   // public, email-free mirror (Phase 4)
   const AUDIT_FIELDS = ["date", "shift", "line", "model", "defectType", "scrapQty", "remark"];
   // Most logs written in one transaction for one slot. Kept well under Firestore's 500
   // writes per transaction; the rules-access limit was measured in tests/rules (see report).
   const MAX_LOGS_PER_TRANSACTION = 200;
+  // Most slots one transaction may touch. Measured in tests/rules/ledger-load.test.js: with the
+  // public mirror (Phase 4) the rules accept 4 slots and refuse 6 (access-call limit). The pages
+  // use 1 (save / edit / import chunk) or 2 (a record moved to another Line/Shift/date).
+  const MAX_SLOTS_PER_TRANSACTION = 4;
 
   function slotIdOf(r) { return `${r.date}_${r.line}_${r.shift}`; }
+
+  // ---- Public mirror (Phase 4) ------------------------------------------------------------------
+  // scrapCloseSummary/{date}.slots[LINE_SHIFT] = publicView(slot). Must be written in the SAME
+  // transaction as every slot write; the rules (qdPublicView / qdSummaryOk) refuse anything else.
+  // No e-mail, note or reason is copied: this document is publicly readable.
+  function publicView(s) {
+    const g = (k, d) => (s[k] === undefined ? d : s[k]);
+    return {
+      logVersion: s.logVersion, liveLogCount: s.liveLogCount,
+      importPending: g("importPending", null) != null,
+      closeState: g("closeState", null), closedVersion: g("closedVersion", null),
+      closeRevision: g("closeRevision", 0), closedLogCount: g("closedLogCount", null),
+      closedScrapQty: g("closedScrapQty", null), closedFingerprint: g("closedFingerprint", null),
+      closedAt: g("closedAt", null)
+    };
+  }
+  const summaryRef = (db, date) => db.collection(SUMMARY_COLLECTION).doc(date);
+  // Reads (inside the transaction) the summary documents of the given dates. Call before any write.
+  async function readSummaries(tx, db, dates) {
+    const out = new Map();
+    for (const d of new Set(dates)) out.set(d, await tx.get(summaryRef(db, d)));
+    return out;
+  }
+  // Writes the views of the slots changed in this transaction. views: Map(slotId -> view).
+  function writeSummaries(tx, db, snaps, views, ts) {
+    const byDate = new Map();
+    for (const [id, v] of views) {
+      const [date, line, shift] = id.split("_");
+      if (!byDate.has(date)) byDate.set(date, {});
+      byDate.get(date)[`${line}_${shift}`] = v;
+    }
+    for (const [date, entries] of byDate) {
+      const snap = snaps.get(date);
+      if (snap && snap.exists) {
+        const patch = { updatedAt: ts() };
+        Object.keys(entries).forEach(k => { patch["slots." + k] = entries[k]; });
+        tx.update(summaryRef(db, date), patch);
+      } else {
+        tx.set(summaryRef(db, date), { date, slots: entries, updatedAt: ts() });
+      }
+    }
+  }
   function auditView(d) {
     const o = {};
     AUDIT_FIELDS.forEach(f => { if (d && d[f] !== undefined) o[f] = d[f]; });
@@ -135,6 +182,8 @@
         befores.set(o.ref.id, s.data());
       }
       const plan = planSlots(ops, befores);
+      const maxSlots = opts.maxSlots || MAX_SLOTS_PER_TRANSACTION;   // (tests raise it to measure the rules)
+      if (plan.size > maxSlots) throw new Error(`One save may touch at most ${maxSlots} Line/Shift/date slots (this one touches ${plan.size}). Save in smaller parts.`);
       const slotSnaps = new Map();
       for (const id of plan.keys()) {
         const snap = await tx.get(slotRef(id));
@@ -145,6 +194,8 @@
         // Rare: slot not seen in the pre-read (e.g. a record moved into a new slot after a retry).
         throw new Error("The slot changed while saving. Please try again.");
       }
+      const sums = await readSummaries(tx, db, Array.from(plan.keys()).map(id => id.split("_")[0]));
+      const views = new Map();
 
       ops.forEach(o => {
         if (o.op === "create") tx.set(o.ref, o.data);
@@ -160,9 +211,11 @@
         const live = (prev ? prev.liveLogCount : legacyCounts.get(id)) + deltaOf(c);
         if (prev) {
           tx.update(slotRef(id), { logVersion: version, liveLogCount: live, updatedAt: ts(), updatedBy: opts.email });
+          views.set(id, publicView(Object.assign({}, prev, { logVersion: version, liveLogCount: live })));
         } else {
           const [date, line, shift] = id.split("_");
           tx.set(slotRef(id), { date, line, shift, logVersion: version, liveLogCount: live, legacyCount: legacyCounts.get(id), updatedAt: ts(), updatedBy: opts.email });
+          views.set(id, publicView({ logVersion: version, liveLogCount: live }));
         }
         tx.set(slotRef(id).collection("events").doc("v" + version), {
           type: "LOG_WRITE", version, at: ts(), by: opts.email,
@@ -170,6 +223,7 @@
         });
         out.push({ slotId: id, version, liveLogCount: live });
       }
+      writeSummaries(tx, db, sums, views, ts);
       return { slots: out };
     });
   }
@@ -184,12 +238,16 @@
     return chunks;
   }
 
-  // ---- Import marker (Phase 3) ----------------------------------------------------------------
+  // ---- Import marker (Phase 3, audited in Phase 4) ---------------------------------------------
   // Before an Excel import writes anything, every slot it will touch gets
   //   importPending: { importId, rows, at, by }
   // and the marker is cleared only when ALL of that slot's rows were saved. A slot whose rows
   // partly failed (or whose import was abandoned) keeps the marker, and a slot with a marker
-  // cannot be closed (shows CONFLICT) until an Admin checks it and clears it.
+  // cannot be closed (shows CONFLICT) until an Admin checks it and clears it. Every set / clear
+  // raises markerRevision and writes the audit event m{markerRevision}
+  //   { type: "IMPORT_MARKER", action: "SET" | "CLEAR", revision, importId, rows, at, by }.
+  function markerError(code, msg) { const e = new Error(msg); e.code = code; return e; }
+
   async function markImport(db, entries, importId, opts) {
     const rows = new Map();
     entries.forEach(e => { const id = slotIdOf(e); rows.set(id, (rows.get(id) || 0) + 1); });
@@ -202,30 +260,41 @@
       if (!(await ref.get()).exists) legacy = (await db.collection(LOG_COLLECTION).where("date", "==", date).where("line", "==", line).where("shift", "==", shift).get()).size;
       await db.runTransaction(async tx => {
         const snap = await tx.get(ref);
-        const marker = { importId, rows: n, at: ts(), by: opts.email };
-        if (snap.exists) {
-          const cur = snap.data().importPending;
-          if (cur && cur.importId !== importId) {
-            const e = new Error(`Slot ${id} still has an unfinished import (${cur.importId}). An Admin must check and clear it before importing again.`);
-            e.code = "qd/import-pending"; throw e;
-          }
-          tx.update(ref, { importPending: marker, updatedAt: ts(), updatedBy: opts.email });
-        } else {
-          if (legacy === null) throw new Error("The slot changed while preparing the import. Please try again.");
-          tx.set(ref, { date, line, shift, logVersion: 0, liveLogCount: legacy, legacyCount: legacy, importPending: marker, updatedAt: ts(), updatedBy: opts.email });
+        const sums = await readSummaries(tx, db, [date]);
+        const prev = snap.exists ? snap.data() : null;
+        if (prev && prev.importPending) {
+          if (prev.importPending.importId === importId) return;   // already marked by this import
+          throw markerError("qd/import-pending", `Slot ${id} still has an unfinished import (${prev.importPending.importId}). An Admin must check and clear it before importing again.`);
         }
+        if (!prev && legacy === null) throw new Error("The slot changed while preparing the import. Please try again.");
+        const rev = (prev ? prev.markerRevision || 0 : 0) + 1;
+        const marker = { importId, rows: n, at: ts(), by: opts.email };
+        const fields = { importPending: marker, markerRevision: rev, updatedAt: ts(), updatedBy: opts.email };
+        let after;
+        if (prev) { tx.update(ref, fields); after = Object.assign({}, prev, fields); }
+        else { after = Object.assign({ date, line, shift, logVersion: 0, liveLogCount: legacy, legacyCount: legacy }, fields); tx.set(ref, after); }
+        tx.set(ref.collection("events").doc("m" + rev), { type: "IMPORT_MARKER", action: "SET", revision: rev, importId, rows: n, at: ts(), by: opts.email });
+        writeSummaries(tx, db, sums, new Map([[id, publicView(after)]]), ts);
       });
       marked.push(id);
     }
     return { slots: marked };
   }
+  // Clears the marker of one slot (only the marker of `importId` when given). → true when cleared.
   async function clearImportMarker(db, slotId, opts, importId) {
     const ref = db.collection(SLOT_COLLECTION).doc(slotId);
+    const ts = opts.serverTimestamp;
     return db.runTransaction(async tx => {
       const snap = await tx.get(ref);
-      const cur = snap.exists ? snap.data().importPending : null;
+      const sums = await readSummaries(tx, db, [slotId.split("_")[0]]);
+      const prev = snap.exists ? snap.data() : null;
+      const cur = prev ? prev.importPending : null;
       if (!cur || (importId && cur.importId !== importId)) return false;
-      tx.update(ref, { importPending: null, updatedAt: opts.serverTimestamp(), updatedBy: opts.email });
+      const rev = (prev.markerRevision || 0) + 1;
+      const fields = { importPending: null, markerRevision: rev, updatedAt: ts(), updatedBy: opts.email };
+      tx.update(ref, fields);
+      tx.set(ref.collection("events").doc("m" + rev), { type: "IMPORT_MARKER", action: "CLEAR", revision: rev, importId: cur.importId, rows: cur.rows, at: ts(), by: opts.email });
+      writeSummaries(tx, db, sums, new Map([[slotId, publicView(Object.assign({}, prev, fields))]]), ts);
       return true;
     });
   }
@@ -236,13 +305,14 @@
     const cleared = [], kept = [];
     for (const id of all) {
       if (bad.has(id)) { kept.push(id); continue; }
-      try { if (await clearImportMarker(db, id, opts, importId)) cleared.push(id); }
+      try { if (await clearImportMarker(db, id, opts, importId)) cleared.push(id); }   // false: no marker of this import
       catch (e) { kept.push(id); }
     }
     return { cleared, kept };
   }
 
-  const api = { applyOps, chunkBySlot, slotIdOf, planSlots, auditView, markImport, finishImport, clearImportMarker, MAX_LOGS_PER_TRANSACTION, SLOT_COLLECTION };
+  const api = { applyOps, chunkBySlot, slotIdOf, planSlots, auditView, markImport, finishImport, clearImportMarker,
+    publicView, readSummaries, writeSummaries, MAX_LOGS_PER_TRANSACTION, MAX_SLOTS_PER_TRANSACTION, SLOT_COLLECTION, SUMMARY_COLLECTION };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   if (typeof window !== "undefined") window.ScrapLedger = api;
 })(this);

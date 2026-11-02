@@ -57,13 +57,27 @@ const QD_USERS_COLLECTION = "qdUsers";
 // many days back (Admins: any date). Initial policy; emulator/firestore.rules has the same number
 // in qdLeaderWindowDays() — tests/unit checks that the two stay equal.
 const QD_LEADER_EDIT_WINDOW_DAYS = 7;
-// When a shift ends (local time). A shift can be closed only after this. DAY ends the same day,
-// NIGHT ends the next morning (it stays on its original production date). Initial values: to be
-// confirmed with Production. Checked in the browser only; the rules refuse future dates.
+// All Shift Close dates and times are Thailand time (Asia/Bangkok, UTC+7, no daylight saving),
+// whatever the device's own time zone is. emulator/firestore.rules uses the same fixed +7 hours.
+const QD_TIME_ZONE = "Asia/Bangkok";
+const QD_TZ_OFFSET_HOURS = 7;
+// When a shift ends (Thailand time). A shift can be closed only after this. DAY ends the same day,
+// NIGHT ends the next morning (it stays on its original production date).
+// BLOCKED: 20:00 / 08:00 are NOT confirmed by Production yet. emulator/firestore.rules holds the
+// same values in qdShiftEnded() (tests/unit checks they stay equal).
 const QD_SHIFT_END = {
   DAY:   { dayOffset: 0, time: "20:00" },
   NIGHT: { dayOffset: 1, time: "08:00" }
 };
+// First production date on which Shift Close is REQUIRED for the daily target (Phase 4).
+// From this date the daily status uses the shift closes (6 per day: Door A/B/C x Day/Night);
+// before it the existing rules apply unchanged. null = not in use. Do not set a date until the
+// go-live is approved: it only takes effect while QD_AUTH_MODE is "enforce". (Local emulator test
+// mode may override it with ?qdCloseFrom=YYYY-MM-DD; nothing else can.)
+const QD_CLOSE_REQUIRED_FROM = null;
+// Public, email-free mirror of each day's shift-close state (read by the public Dashboard and
+// Executive Report). Kept equal to scrapSlots by Firestore Rules; see emulator/firestore.rules.
+const QD_CLOSE_SUMMARY_COLLECTION = "scrapCloseSummary";
 const QD_EMULATOR = {
   projectId: "demo-quality-dashboard",   // "demo-" projects exist only in the emulator
   firestoreHost: "127.0.0.1", firestorePort: 8080,

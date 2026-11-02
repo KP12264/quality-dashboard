@@ -353,7 +353,12 @@
     return ScrapLedger.finishImport(db, importId, entries, failedEntries, ledgerOpts(who));
   }
 
+  // Same field check addScrapEntryBatch applies (rows failing it are never written, so they are
+  // never marked as part of an import either).
+  function isValidEntry(e) { return validateEntryFields(e).length === 0; }
+
   window.ScrapDataAdapter = {
+    isValidEntry,
     beginImport,
     finishImport,
     normalizeScrapRecord,

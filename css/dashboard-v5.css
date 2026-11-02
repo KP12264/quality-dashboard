@@ -487,3 +487,12 @@ body.qd-v5 code{font-family:var(--v5-font);}
   body.qd-v5 .qd-dashboard-daterange{flex-wrap:wrap;}
   body.qd-v5 .qd-dashboard-daterange input[type="date"]{min-width:0;}
 }
+
+/* Shift Close completeness (Phase 4). Shown only for dates on which Shift Close is required. */
+body.qd-v5 .v5-close-line[hidden],body.qd-v5 .v5-close-summary[hidden]{display:none;}
+body.qd-v5 .v5-close-line{flex-basis:100%;font-size:12.5px;line-height:1.5;}
+body.qd-v5 .v5-close-link{color:var(--v5-blue,#1F62D6);text-decoration:none;font-weight:500;display:inline-block;padding:4px 0;min-height:24px;}
+body.qd-v5 .v5-close-link:hover,body.qd-v5 .v5-close-link:focus-visible{text-decoration:underline;}
+body.qd-v5 .v5-close-summary{margin:8px 0 4px;font-size:12.5px;color:var(--v5-muted,#5E6B7A);}
+body.qd-v5 a.v5-close-cell{display:block;color:var(--v5-blue,#1F62D6);text-decoration:none;}
+body.qd-v5 a.v5-close-cell:hover{text-decoration:underline;}

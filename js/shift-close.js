@@ -41,6 +41,12 @@
   };
 
   function slotIdOf(r) { return `${r.date}_${r.line}_${r.shift}`; }
+  // The ledger module (needed only to write a close: it holds the public-mirror helpers).
+  function ledger() {
+    if (root && root.ScrapLedger) return root.ScrapLedger;
+    if (typeof require === "function") return require("./scrap-ledger.js");
+    throw new Error("js/scrap-ledger.js is not loaded on this page.");
+  }
   const num = v => { const n = parseFloat(v); return Number.isFinite(n) ? n : 0; };
 
   // FNV-1a (32-bit) over the confirmed fields of every log, sorted by id. Identifies exactly which
@@ -82,12 +88,15 @@
   }
 
   // ---- shift timing -------------------------------------------------------------------------
+  // Shift end as an absolute instant: the configured Thailand time (UTC+7, no daylight saving),
+  // independent of the device's time zone. Same arithmetic as qdShiftEnded() in the rules.
   function shiftEnd(date, shift, ends) {
     const cfg = (ends || (typeof QD_SHIFT_END !== "undefined" ? QD_SHIFT_END : null) || {})[shift];
     if (!cfg) return null;
+    const off = typeof QD_TZ_OFFSET_HOURS === "number" ? QD_TZ_OFFSET_HOURS : 7;
     const [y, m, d] = date.split("-").map(Number);
     const [hh, mm] = cfg.time.split(":").map(Number);
-    return new Date(y, m - 1, d + (cfg.dayOffset || 0), hh, mm, 0, 0);
+    return new Date(Date.UTC(y, m - 1, d + (cfg.dayOffset || 0), hh - off, mm, 0, 0));
   }
   function shiftEnded(date, shift, now, ends) {
     const end = shiftEnd(date, shift, ends);
@@ -174,16 +183,20 @@
       ? { state: pre.slot.closeState, version: pre.slot.closedVersion, revision: pre.slot.closeRevision, by: pre.slot.closedBy }
       : null;
     try {
+      const L = ledger();
       await db.runTransaction(async tx => {
         const snap = await tx.get(ref);
+        const sums = await L.readSummaries(tx, db, [req.date]);
         const cur = snap.exists ? snap.data() : null;
         if ((cur ? cur.logVersion || 0 : 0) !== version || (cur ? cur.closeRevision || 0 : 0) !== revision) {
           throw fail("qd/changed-while-closing", "Scrap for this shift changed while closing. Nothing was saved — check the new figures and try again.");
         }
         if (cur && cur.importPending) throw fail("qd/import-pending", REASONS["import-incomplete"]);
         if (cur && cur.liveLogCount !== sum.count) throw fail("qd/conflict", REASONS["ledger-count-mismatch"]);
-        if (cur) tx.update(ref, fields);
-        else tx.set(ref, Object.assign({ date: req.date, line: req.line, shift: req.shift, logVersion: 0, liveLogCount: sum.count, legacyCount: sum.count }, fields));
+        let after;
+        if (cur) { tx.update(ref, fields); after = Object.assign({}, cur, fields); }
+        else { after = Object.assign({ date: req.date, line: req.line, shift: req.shift, logVersion: 0, liveLogCount: sum.count, legacyCount: sum.count }, fields); tx.set(ref, after); }
+        L.writeSummaries(tx, db, sums, new Map([[pre.id, L.publicView(after)]]), ts);
         tx.set(ref.collection("events").doc("c" + rev), {
           type: "CLOSE", revision: rev, closeState: req.state, version, logCount: sum.count, scrapQty: sum.qty,
           logIds: sum.ids, fingerprint: fp, note: fields.closeNote, noProductionReason: fields.noProductionReason,

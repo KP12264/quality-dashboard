@@ -15,3 +15,6 @@
   `QD_LEADER_EDIT_WINDOW_DAYS` in `js/config.js`), the close / reconfirm path on `scrapSlots`
   with audit events `c{n}`, and the Excel import marker (`importPending`). Still draft, still
   emulator only.
+- Phase 4 adds: `scrapCloseSummary/{date}` (public read, written only together with the slot it
+  mirrors, no e-mails), audited import marker events `m{n}`, rules-side shift end
+  (`qdShiftEndHours`, BLOCKED: times not confirmed) and Thailand time (`qdBkkNow`, UTC+7).

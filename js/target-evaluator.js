@@ -38,6 +38,25 @@
  * INCOMPLETE ('no-scrap-log'). Door In Door is not included: only lines
  * A/B/C and shifts DAY/NIGHT are counted.
  *
+ * SHIFT CLOSE (Phase 4) — DAY-rule dates on or after the close-required date
+ * (window.qdCloseRequiredFrom, from QD_CLOSE_REQUIRED_FROM; null = never) are
+ * judged from the 6 shift closes (Door A/B/C x Day/Night) instead of from
+ * production presence. Each slot's close status comes from js/shift-close.js
+ * (deriveStatus), checked against the scrap logs actually loaded — never from
+ * closedScrapQty or legacyCount alone. One day, highest first:
+ *   READ ERROR     scrap or close status could not be read (never 0 / WITHIN)
+ *   OVER TARGET    scrap of the slots whose data is consistent > 50 (certain
+ *                  even with closes missing: other slots can only add scrap)
+ *   CONFLICT       a slot's scrap, ledger and close do not agree
+ *   INCOMPLETE     <= 50 so far, some slot Pending or Changed
+ *   NO DATA        nothing at all: no scrap log, no close, no production
+ *   NO PRODUCTION  all 6 slots confirmed "no production"
+ *   WITHIN TARGET  all 6 slots closed (Submitted / Confirmed Zero / No
+ *                  Production) and the scrap is <= 50
+ * Across days (combineStatuses): OVER > READ ERROR > CONFLICT > INCOMPLETE >
+ * WITHIN > NO PRODUCTION > NO DATA. The Line / Shift filters never change a
+ * day's judgement: every evaluation uses all 6 slots.
+ *
  * Exposed as window.TargetEvaluator.
  * ------------------------------------------------------------------
  */
@@ -47,6 +66,10 @@
   const WITHIN = 'WITHIN TARGET';
   const INCOMPLETE = 'INCOMPLETE';
   const NO_DATA = 'NO DATA';
+  const CONFLICT = 'CONFLICT';
+  const NO_PRODUCTION = 'NO PRODUCTION';
+  const READ_ERROR = 'READ ERROR';
+  const CLOSED_STATES = ['SUBMITTED', 'CONFIRMED_ZERO', 'NO_PRODUCTION'];
 
   const LINE_CODES = LINES.map(l => l.code);
   const SHIFT_CODES = SHIFTS.map(s => s.code);
@@ -55,6 +78,38 @@
 
   // ---- which rule applies -------------------------------------------------
   function ruleFor(dateStr) { return dateStr >= TARGET_DAILY_RULE_EFFECTIVE_DATE ? 'DAY' : 'SHIFT'; }
+
+  // Close-required date in force on this page (null = Shift Close does not drive the target).
+  function closeRequiredFrom() { return typeof window !== 'undefined' && typeof window.qdCloseRequiredFrom === 'string' ? window.qdCloseRequiredFrom : null; }
+  // True when this date's daily status is judged from the shift closes.
+  function closeRequired(dateStr, from) {
+    const f = from === undefined ? closeRequiredFrom() : from;
+    return !!f && ruleFor(dateStr) === 'DAY' && dateStr >= f;
+  }
+
+  /**
+   * loadCloseContext(db, dates)
+   * Reads the PUBLIC close summary (QD_CLOSE_SUMMARY_COLLECTION, one document per date, no
+   * e-mails) for the close-required dates in `dates` — one range query, nothing when no date
+   * needs it. Scrap logs are NOT read here: the caller passes the logs it already loaded.
+   * -> { from, summaries: Map(date -> { slots }), failed: bool, error, queries, docs }
+   */
+  async function loadCloseContext(db, dates) {
+    const from = closeRequiredFrom();
+    const ctx = { from, summaries: new Map(), failed: false, error: null, queries: 0, docs: 0 };
+    const need = dates.filter(d => closeRequired(d, from));
+    if (need.length === 0) return ctx;
+    const coll = typeof QD_CLOSE_SUMMARY_COLLECTION === 'string' ? QD_CLOSE_SUMMARY_COLLECTION : 'scrapCloseSummary';
+    try {
+      ctx.queries = 1;
+      const snap = await db.collection(coll).where('date', '>=', need[0]).where('date', '<=', need[need.length - 1]).get();
+      snap.forEach(d => { const v = d.data(); if (v && v.date) { ctx.summaries.set(v.date, v); ctx.docs++; } });
+    } catch (e) {
+      console.error('Quality Dashboard: failed to read the shift close summary', e);
+      ctx.failed = true; ctx.error = e;
+    }
+    return ctx;
+  }
 
   function formatCutoverDate() {
     const m = TARGET_DAILY_RULE_EFFECTIVE_DATE.match(/^(\d{4})-(\d{2})-(\d{2})$/);
@@ -126,7 +181,8 @@
    * no scrap log for a daily-rule date, so the 0 must not be displayed as a fact), gap,
    * status, reasons[], hasData, totalProduction.
    */
-  function evaluate({ dates, activeShiftCodes, production, scrap, scrapReadFailed, productionErrors, shiftTargets }) {
+  function evaluate({ dates, activeShiftCodes, production, scrap, scrapReadFailed, productionErrors, shiftTargets, closeContext }) {
+    const closeFrom = closeContext ? closeContext.from : null;
     const prodCount = new Map(), prodQty = new Map(), scrapSum = new Map(), scrapN = new Map();
     const scrapDateN = new Map(), errByDate = new Map(), errByDateShift = new Map();
     let excludedScrapRecords = 0;
@@ -153,7 +209,12 @@
 
     const units = [];
     dates.forEach(date => {
-      if (ruleFor(date) === 'DAY') {
+      if (closeRequired(date, closeFrom)) {
+        units.push(evaluateClosedDay(date, { scrap, scrapReadFailed, closeContext,
+          hasProduction: (prodCount.get(`${date}|DAY`) || 0) + (prodCount.get(`${date}|NIGHT`) || 0) > 0,
+          totalProduction: (prodQty.get(`${date}|DAY`) || 0) + (prodQty.get(`${date}|NIGHT`) || 0),
+          productionErrors: errByDate.get(date) || 0 }));
+      } else if (ruleFor(date) === 'DAY') {
         const hasDay = (prodCount.get(`${date}|DAY`) || 0) > 0;
         const hasNight = (prodCount.get(`${date}|NIGHT`) || 0) > 0;
         const dayScrap = scrapSum.get(`${date}|DAY`) || 0, nightScrap = scrapSum.get(`${date}|NIGHT`) || 0;
@@ -208,17 +269,77 @@
         });
       }
     });
+    // One definition of "a scrap total that may be shown and compared with the target", used by
+    // every page (Dashboard detail, Executive Report table, CSV).
+    units.forEach(u => {
+      if (u.judged === undefined) u.judged = u.totalScrap !== null && u.scrapKnown !== false && u.status !== NO_DATA && (u.unit === 'DAY' || u.hasData);
+    });
     units.excludedScrapRecords = excludedScrapRecords;
     return units;
   }
 
-  // Priority across units: OVER > INCOMPLETE > WITHIN > NO DATA.
-  // (Per-unit results are never summed and no target is ever added together.)
+  // One close-required date: 6 slots (Door A/B/C x Day/Night), whatever the page's filters are.
+  function evaluateClosedDay(date, { scrap, scrapReadFailed, closeContext, hasProduction, totalProduction, productionErrors }) {
+    const SC = typeof window !== 'undefined' ? window.ShiftClose : null;
+    const summary = closeContext && closeContext.summaries ? closeContext.summaries.get(date) : null;
+    const slots = [];
+    let reliable = 0, all = 0, logCount = 0;
+    const shiftScrap = { DAY: 0, NIGHT: 0 };
+    LINE_CODES.forEach(line => SHIFT_CODES.forEach(shift => {
+      const key = `${line}_${shift}`;
+      const logs = (scrap || []).filter(r => r.date === date && r.line === line && r.shift === shift);
+      const view = summary && summary.slots ? summary.slots[key] || null : null;
+      const info = SC ? SC.deriveStatus({ slot: view, logs }) : { status: 'CONFLICT', reasons: ['close-module-missing'], count: logs.length, qty: logs.reduce((n, r) => n + (Number(r.scrapQty) || 0), 0) };
+      slots.push({ key, line, shift, status: info.status, reasons: info.reasons, count: info.count, qty: info.qty, touched: !!view });
+      all += info.qty; logCount += info.count; shiftScrap[shift] += info.qty;
+      if (info.status !== 'CONFLICT') reliable += info.qty;
+    }));
+    const of = st => slots.filter(x => x.status === st).map(x => x.key);
+    const close = {
+      total: slots.length, slots,
+      closed: slots.filter(x => CLOSED_STATES.includes(x.status)).length,
+      pending: of('PENDING'), changed: of('CHANGED'), conflict: of('CONFLICT'), noProduction: of('NO_PRODUCTION').length
+    };
+    const closeReadFailed = !!(closeContext && closeContext.failed) || !SC;
+    const readError = !!scrapReadFailed || closeReadFailed;
+    const reasons = [];
+    let status;
+    if (readError) {
+      status = READ_ERROR;
+      if (scrapReadFailed) reasons.push('scrap-read-failed');
+      if (closeReadFailed) reasons.push('close-read-failed');
+    } else {
+      if (close.conflict.length) reasons.push('close-conflict:' + close.conflict.join(','));
+      if (close.changed.length) reasons.push('close-changed:' + close.changed.join(','));
+      if (close.pending.length) reasons.push('close-pending:' + close.pending.join(','));
+      if (productionErrors > 0) reasons.push('production-read-error');
+      if (reliable > DAILY_TARGET_PCS) status = OVER;                              // certain even if closes are missing
+      else if (close.conflict.length) status = CONFLICT;
+      else if (close.pending.length || close.changed.length) {
+        const nothing = logCount === 0 && !slots.some(x => x.touched) && !hasProduction && productionErrors === 0;
+        if (nothing) { status = NO_DATA; reasons.length = 0; } else status = INCOMPLETE;
+      } else if (close.noProduction === slots.length) status = NO_PRODUCTION;
+      else status = WITHIN;
+    }
+    const totalScrap = scrapReadFailed ? null : all;
+    const scrapKnown = !readError && (logCount > 0 || close.closed === slots.length);
+    const judged = scrapKnown && [OVER, WITHIN, INCOMPLETE].includes(status);
+    return {
+      date, rule: 'DAY', unit: 'DAY', closeRule: true, shiftCode: null, label: 'Day + Night',
+      target: DAILY_TARGET_PCS, totalScrap, shiftScrap, totalProduction,
+      hasData: hasProduction || logCount > 0 || close.closed > 0, hasShiftProduction: null, scrapLogCount: logCount,
+      reliableScrap: readError ? null : reliable, scrapKnown, judged,
+      gap: judged ? totalScrap - DAILY_TARGET_PCS : null, status, reasons, close
+    };
+  }
+
+  // Priority across units: OVER > READ ERROR > CONFLICT > INCOMPLETE > WITHIN > NO PRODUCTION > NO DATA.
+  // (Without Shift Close only OVER / INCOMPLETE / WITHIN / NO DATA occur — the previous order.)
+  // Per-unit results are never summed and no target is ever added together.
+  const RANGE_PRIORITY = [OVER, READ_ERROR, CONFLICT, INCOMPLETE, WITHIN, NO_PRODUCTION, NO_DATA];
   function combineStatuses(units) {
     if (!units || units.length === 0) return NO_DATA;
-    if (units.some(u => u.status === OVER)) return OVER;
-    if (units.some(u => u.status === INCOMPLETE)) return INCOMPLETE;
-    if (units.some(u => u.status === WITHIN)) return WITHIN;
+    for (const st of RANGE_PRIORITY) if (units.some(u => u.status === st)) return st;
     return NO_DATA;
   }
 
@@ -226,13 +347,16 @@
   // rule) so a range that spans the rule change is never reduced to one
   // unexplained percentage.
   function summarize(units) {
-    const blank = () => ({ total: 0, within: 0, over: 0, incomplete: 0, noData: 0 });
-    const out = { days: blank(), shifts: blank(), mixed: false, hasDays: false, hasShifts: false };
+    const blank = () => ({ total: 0, within: 0, over: 0, incomplete: 0, noData: 0, conflict: 0, noProduction: 0, readError: 0 });
+    const out = { days: blank(), shifts: blank(), mixed: false, hasDays: false, hasShifts: false, closeDays: 0, closeDaysComplete: 0 };
     units.forEach(u => {
       const b = u.unit === 'DAY' ? out.days : out.shifts;
       b.total++;
       if (u.status === WITHIN) b.within++; else if (u.status === OVER) b.over++;
-      else if (u.status === INCOMPLETE) b.incomplete++; else b.noData++;
+      else if (u.status === INCOMPLETE) b.incomplete++; else if (u.status === CONFLICT) b.conflict++;
+      else if (u.status === NO_PRODUCTION) b.noProduction++; else if (u.status === READ_ERROR) b.readError++;
+      else b.noData++;
+      if (u.closeRule) { out.closeDays++; if (u.close.closed === u.close.total) out.closeDaysComplete++; }
     });
     out.hasDays = out.days.total > 0; out.hasShifts = out.shifts.total > 0; out.mixed = out.hasDays && out.hasShifts;
     return out;
@@ -277,14 +401,27 @@
     'production-read-error': 'Production read error',
     'no-scrap-log': 'No scrap log recorded',
     'scrap-read-failed': 'Scrap data could not be read',
-    'target-unavailable': 'Target could not be read'
+    'target-unavailable': 'Target could not be read',
+    'close-read-failed': 'Shift close status could not be read',
+    'close-pending': 'Not closed',
+    'close-changed': 'Changed after close (reconfirm needed)',
+    'close-conflict': 'Conflict'
   };
-  function reasonText(code) { return REASON_TEXT[code] || code; }
+  const SLOT_TEXT = k => { const [l, sh] = k.split('_'); return `${l} ${shiftLabel(sh)}`; };
+  // "close-pending:A_NIGHT,B_DAY" -> "Not closed: A Night, B Day"
+  function reasonText(code) {
+    const i = code.indexOf(':');
+    if (i > 0) { const base = code.slice(0, i); return `${REASON_TEXT[base] || base}: ${code.slice(i + 1).split(',').map(SLOT_TEXT).join(', ')}`; }
+    return REASON_TEXT[code] || code;
+  }
+  // "4/6 shifts confirmed" for one close-required day.
+  function closeCompleteness(u) { return u && u.closeRule ? `${u.close.closed}/${u.close.total}` : ''; }
 
   window.TargetEvaluator = {
-    STATUS: { OVER, WITHIN, INCOMPLETE, NO_DATA },
-    ruleFor, formatCutoverDate, productionFetchPlan, loadShiftTargetContext,
-    evaluate, combineStatuses, summarize, describeTarget, reasonText
+    STATUS: { OVER, WITHIN, INCOMPLETE, NO_DATA, CONFLICT, NO_PRODUCTION, READ_ERROR },
+    RANGE_PRIORITY,
+    ruleFor, closeRequired, closeRequiredFrom, formatCutoverDate, productionFetchPlan, loadShiftTargetContext, loadCloseContext,
+    evaluate, combineStatuses, summarize, describeTarget, reasonText, closeCompleteness
   };
 
 })();

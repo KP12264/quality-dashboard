@@ -11,7 +11,7 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai+Looped:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 <!-- Dashboard V5 look. Scoped to body.qd-v5, loaded only by this page. -->
-<link rel="stylesheet" href="css/dashboard-v5.css?v=20261030-f1">
+<link rel="stylesheet" href="css/dashboard-v5.css?v=20261102-p4">
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.0/chart.umd.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
@@ -162,6 +162,7 @@
         <div class="v5-kpi-value v5c-target"><span class="v5c-target-k">Target<span class="qd-info" id="kpiTargetInfo" tabindex="0" role="button" aria-label="How the target is evaluated" aria-describedby="kpiTargetTip">&#9432;</span><span class="v5-tip" id="kpiTargetTip" role="tooltip"><span class="v5-tip-rule" id="targetStripText"></span><span class="v5-tip-text">From 01 Oct 2026 each production date is judged once: Day + Night combined, Door A+B+C combined (&le;50 pcs/day). Before that, each shift is judged separately against its targetMaster target. With Shift = Day or Night, Status still reflects the full-day evaluation.</span></span></span> <b id="kpiTarget">&ndash;</b> <span id="kpiTargetUnitText">pcs scrap</span></div>
         <div class="v5-kpi-sub v5c-target-foot">
           <div class="v5-counts" id="kpiTargetCounts"></div>
+          <div class="v5-close-line" id="kpiCloseLine" hidden></div>
           <button type="button" class="v5c-detail-btn" id="targetPerfDetailBtn" aria-expanded="false" aria-controls="targetDetailPanel">View Details &rarr;</button>
         </div>
       </article>
@@ -188,6 +189,7 @@
       </div>
       <div id="targetPerfRange">
         <div class="qd-dashboard-range-summary" id="targetPerfRangeSummary"></div>
+        <div class="v5-close-summary" id="targetCloseSummary" hidden></div>
         <div class="qd-dashboard-range-details">
           <div class="qd-table-scroll qd-dashboard-range-scroll">
             <table class="qd-datatable qd-dashboard-table qd-dashboard-table-compact" id="targetPerfDetailTable">
@@ -309,15 +311,16 @@
   </main>
 </div>
 
-<script src="js/config.js?v=20261102-p3"></script>
-<script src="js/firebase-init.js?v=20261102-p1"></script>
-<script src="js/qd-auth.js?v=20261102-p3"></script>
+<script src="js/config.js?v=20261102-p4"></script>
+<script src="js/firebase-init.js?v=20261102-p4"></script>
+<script src="js/qd-auth.js?v=20261102-p4"></script>
 <script src="js/data-adapter.js?v=20261015-3"></script>
-<script src="js/scrap-adapter.js?v=20261102-p3"></script>
+<script src="js/scrap-adapter.js?v=20261102-p4"></script>
 <script src="js/target-adapter.js?v=20261102-p1"></script>
 <script src="js/quality-adapter.js?v=20261015-3"></script>
-<script src="js/target-evaluator.js?v=20261015-3"></script>
+<script src="js/shift-close.js?v=20261102-p4"></script>
+<script src="js/target-evaluator.js?v=20261102-p4"></script>
 <script src="js/improvement-adapter.js?v=20261102-p1"></script>
-<script src="js/dashboard.js?v=20261030-z1"></script>
+<script src="js/dashboard.js?v=20261102-p4"></script>
 </body>
 </html>

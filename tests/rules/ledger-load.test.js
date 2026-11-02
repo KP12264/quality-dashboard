@@ -25,7 +25,7 @@ function writer(code) {
   return {
     db,
     apply: ops => Ledger.applyOps(db, ops.map(o => Object.assign({ ref: db.collection('scrapLogs').doc(o.id) }, o)), opts),
-    createMany: rows => Ledger.applyOps(db, rows.map(r => ({ op: 'create', ref: db.collection('scrapLogs').doc(), data: Object.assign({ createdBy: email }, r) })), opts)
+    createMany: (rows, extra) => Ledger.applyOps(db, rows.map(r => ({ op: 'create', ref: db.collection('scrapLogs').doc(), data: Object.assign({ createdBy: email }, r) })), Object.assign({}, opts, extra))
   };
 }
 
@@ -78,14 +78,15 @@ describe('rules access-call limits: logs per transaction', () => {
   });
   it('several slots in one transaction: measure, then confirm one-slot chunks always work', async () => {
     const results = [];
-    for (const k of [1, 2, 3, 4, 6]) {
+    for (const k of [1, 2, 3, 4, 5, 6]) {
       const rows = [];
       ['A', 'B', 'C'].forEach(line => ['DAY', 'NIGHT'].forEach(shift => rows.push(scrap({ date: `2026-11-${10 + k}`, line, shift }))));
-      try { await writer('admin').createMany(rows.slice(0, k)); results.push(`${k} slots: accepted`); }
+      try { await writer('admin').createMany(rows.slice(0, k), { maxSlots: 99 }); results.push(`${k} slots: accepted`); }
       catch (e) { results.push(`${k} slots: refused (${e.code || e.message.slice(0, 40)})`); }
     }
     report.push('one log in each of k slots, one transaction -> ' + results.join(' | '));
     assert.ok(results[1].includes('accepted'), 'a move needs 2 slots in one transaction');
+    assert.ok(results[Ledger.MAX_SLOTS_PER_TRANSACTION - 1].includes('accepted'), 'the client limit must be accepted by the rules');
   });
 });
 

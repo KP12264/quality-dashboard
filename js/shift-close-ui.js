@@ -25,11 +25,14 @@
   const domain = typeof QD_EMPLOYEE_EMAIL_DOMAIN === "string" ? QD_EMPLOYEE_EMAIL_DOMAIN : "@prodv2.local";
   const who = email => email ? String(email).replace(domain, "").toUpperCase() : "—";
   const pcs = n => `${Number(n || 0).toLocaleString()} pcs`;
+  // Times are shown in Thailand time (UTC+7), like every Shift Close date.
   function when(t) {
     const d = t && typeof t.toDate === "function" ? t.toDate() : (t instanceof Date ? t : null);
     if (!d) return "—";
+    const off = typeof QD_TZ_OFFSET_HOURS === "number" ? QD_TZ_OFFSET_HOURS : 7;
+    const b = new Date(d.getTime() + off * 3600000);
     const p = n => String(n).padStart(2, "0");
-    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+    return `${b.getUTCFullYear()}-${p(b.getUTCMonth() + 1)}-${p(b.getUTCDate())} ${p(b.getUTCHours())}:${p(b.getUTCMinutes())}`;
   }
   function chip(status) { return `<span class="sc-chip sc-${esc(status)}" data-status="${esc(status)}">${esc(LABEL[status] || status)}</span>`; }
   const opts = () => {

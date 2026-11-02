@@ -56,7 +56,13 @@
 
   // "YYYY-MM-DD" arithmetic in UTC (dates only, no time zone involved).
   function dayNumber(d) { const [y, m, dd] = d.split("-").map(Number); return Date.UTC(y, m - 1, dd) / 86400000; }
-  function localToday() { const t = new Date(); return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`; }
+  // "Today" in Thailand time (Asia/Bangkok, fixed UTC+7), whatever the device's time zone is —
+  // the same clock emulator/firestore.rules uses for the Leader window.
+  function localToday(now) {
+    const off = typeof QD_TZ_OFFSET_HOURS === "number" ? QD_TZ_OFFSET_HOURS : 7;
+    const t = new Date((now ? now.getTime() : Date.now()) + off * 3600000);
+    return `${t.getUTCFullYear()}-${String(t.getUTCMonth() + 1).padStart(2, "0")}-${String(t.getUTCDate()).padStart(2, "0")}`;
+  }
   // A Leader may touch a production date from (today - windowDays) up to today (or later, for scrap
   // only — closing a future shift is never allowed, see canRole).
   function withinWindow(date, today, windowDays) {

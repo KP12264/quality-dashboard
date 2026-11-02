@@ -17,7 +17,7 @@
     if (window.qdFirebaseError) { const b = $('connectionBanner'); b.className = 'qd-banner error'; b.textContent = '⚠ ' + window.qdFirebaseError; b.style.display = 'flex'; }
 
     const qs = new URLSearchParams(location.search);
-    const date = /^\d{4}-\d{2}-\d{2}$/.test(qs.get('date') || '') ? qs.get('date') : fmt(new Date());
+    const date = /^\d{4}-\d{2}-\d{2}$/.test(qs.get('date') || '') ? qs.get('date') : QDAuth.localToday();   // Thailand date
     $('dcDate').value = date;
     const m = ShiftCloseUI.mountMatrix($('dcMatrix'), $('dcDetail'), date);
     const go = d => {

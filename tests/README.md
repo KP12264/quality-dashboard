@@ -57,3 +57,20 @@ Both appear only in sign-in mode (`?qdEmulator=1` locally); with sign-in "off" t
 
 By hand: seed as above, then open `scrap-entry.html?qdEmulator=1&date=<yesterday>&line=A&shift=DAY`
 or `daily-confirmation.html?qdEmulator=1`.
+
+## Target + Shift Close (Phase 4)
+
+From `QD_CLOSE_REQUIRED_FROM` (config, `null` = not in use) the daily ≤50 status is judged from
+the 6 shift closes by `js/target-evaluator.js` (one evaluator for Dashboard, Executive Report
+and CSV). Public pages read the e-mail-free mirror `scrapCloseSummary/{date}`, which the rules
+keep equal to `scrapSlots` in every write. In local test mode `?qdCloseFrom=YYYY-MM-DD` sets the
+date for that page only (emulator only).
+
+- `tests/unit/target-close.test.js` — status of a day from the 6 closes, the priority when several
+  statuses meet, before/after the close date, filters, Thailand time vs rules, public view fields.
+- `tests/rules/close-summary.test.js` — the mirror cannot disagree with the slots or carry personal
+  data, the public can read it but not the ledger, the import marker is audited (m{n}), and the
+  rules enforce shift end and the Thailand-date Leader window.
+- `tests/e2e/target-close.e2e.test.js` — Dashboard vs Executive Report vs CSV on the same days,
+  filters, READ ERROR, read counts, phone width, and an Excel import with a real CSV file
+  (success, partial failure → Conflict, blocked second import).

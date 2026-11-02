@@ -65,13 +65,14 @@ test('fingerprint depends on ids and quantities, not order', () => {
   assert.notEqual(SC.fingerprint([]), SC.fingerprint(a));
 });
 
-test('shift end: DAY same evening, NIGHT next morning', () => {
+test('shift end (Thailand time): DAY same evening, NIGHT next morning, whatever the device time zone', () => {
   const ends = { DAY: { dayOffset: 0, time: '20:00' }, NIGHT: { dayOffset: 1, time: '08:00' } };
-  assert.equal(SC.shiftEnded('2026-11-01', 'DAY', new Date(2026, 10, 1, 19, 59), ends), false);
-  assert.equal(SC.shiftEnded('2026-11-01', 'DAY', new Date(2026, 10, 1, 20, 0), ends), true);
-  assert.equal(SC.shiftEnded('2026-11-01', 'NIGHT', new Date(2026, 10, 1, 23, 0), ends), false);
-  assert.equal(SC.shiftEnded('2026-11-01', 'NIGHT', new Date(2026, 10, 2, 8, 0), ends), true);
-  assert.equal(SC.shiftEnded('2026-11-30', 'NIGHT', new Date(2026, 11, 1, 8, 1), ends), true);   // month rollover
+  const at = iso => new Date(iso);
+  assert.equal(SC.shiftEnded('2026-11-01', 'DAY', at('2026-11-01T12:59:00Z'), ends), false);   // 19:59 Bangkok
+  assert.equal(SC.shiftEnded('2026-11-01', 'DAY', at('2026-11-01T13:00:00Z'), ends), true);    // 20:00 Bangkok
+  assert.equal(SC.shiftEnded('2026-11-01', 'NIGHT', at('2026-11-01T16:00:00Z'), ends), false);
+  assert.equal(SC.shiftEnded('2026-11-01', 'NIGHT', at('2026-11-02T01:00:00Z'), ends), true);  // 08:00 Bangkok next day
+  assert.equal(SC.shiftEnded('2026-11-30', 'NIGHT', at('2026-12-01T01:01:00Z'), ends), true);  // month rollover
 });
 
 test('leader close window: 7 days back yes, 8 no; nobody closes the future', () => {

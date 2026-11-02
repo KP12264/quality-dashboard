@@ -290,11 +290,18 @@ describe('slot ledger: every scrap write moves the version and leaves an audit e
 describe('slot ledger: writes that skip or fake the ledger are refused', () => {
   before(seed);
   // Builds a ledger write by hand so each test can break exactly one rule.
-  async function handWrite(code, { logs = [], slot, event, eventId, skipSlot, skipEvent, slotId = SLOT_A }) {
+  // The public mirror (scrapCloseSummary, Phase 4) is written too, from the numbers the slot is
+  // meant to end at (`view` when they are not plain numbers), so each test breaks only one rule.
+  async function handWrite(code, { logs = [], slot, event, eventId, skipSlot, skipEvent, slotId = SLOT_A, view }) {
     const db = as(code);
     const b = writeBatch(db);
     logs.forEach(l => l.del ? b.delete(doc(db, 'scrapLogs', l.id)) : l.update ? b.update(doc(db, 'scrapLogs', l.id), l.data) : b.set(doc(db, 'scrapLogs', l.id), l.data));
-    if (!skipSlot) b.set(doc(db, 'scrapSlots', slotId), slot, { merge: true });
+    if (!skipSlot) {
+      b.set(doc(db, 'scrapSlots', slotId), slot, { merge: true });
+      const v = view || { logVersion: slot.logVersion, liveLogCount: slot.liveLogCount };
+      const [date, line, shift] = slotId.split('_');
+      b.set(doc(db, 'scrapCloseSummary', date), { date, slots: { [`${line}_${shift}`]: Ledger.publicView(v) }, updatedAt: serverTimestamp() }, { merge: true });
+    }
     if (!skipEvent) b.set(doc(db, 'scrapSlots', slotId, 'events', eventId), event);
     return b.commit();
   }
@@ -350,7 +357,7 @@ describe('slot ledger: writes that skip or fake the ledger are refused', () => {
   it('increment(): Rules see the value after the transform (observed: accepted)', async () => {
     // A correct write that uses FieldValue.increment instead of an explicit number.
     const v = (await slotDoc(SLOT_A)).logVersion, live = (await slotDoc(SLOT_A)).liveLogCount;
-    await assertSucceeds(handWrite('leaderA', { logs: [log('inc1')], slot: { logVersion: increment(1), liveLogCount: increment(1), updatedAt: serverTimestamp(), updatedBy: E('leaderA') }, event: ev({ version: v + 1, creates: ['inc1'] }), eventId: 'v' + (v + 1) }));
+    await assertSucceeds(handWrite('leaderA', { logs: [log('inc1')], slot: { logVersion: increment(1), liveLogCount: increment(1), updatedAt: serverTimestamp(), updatedBy: E('leaderA') }, view: { logVersion: v + 1, liveLogCount: live + 1 }, event: ev({ version: v + 1, creates: ['inc1'] }), eventId: 'v' + (v + 1) }));
     assert.equal((await slotDoc(SLOT_A)).liveLogCount, live + 1);
   });
 });
