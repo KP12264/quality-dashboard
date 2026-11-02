@@ -9,7 +9,7 @@ uses an in-page mock of Firestore and opens the pages straight from disk.
 cd tests
 npm install            # firebase-tools, @firebase/rules-unit-testing, firebase (compat 10.13.0 for the browser), chart.js
 npm run test:unit      # permission matrix (js/qd-auth.js)
-npm run test:rules     # Firestore Security Rules, emulator/firestore.rules (starts the emulator)
+npm run test:rules     # Firestore Security Rules + slot-ledger load/concurrency tests (starts the emulator)
 npm run test:e2e       # pages in Chromium against the Auth + Firestore emulators (?qdEmulator=1)
 npm run test:regression            # Dashboard V5 vs an independent oracle, sign-in off (≈10 min)
 QD_REGRESSION_QUICK=1 npm run test:regression   # subset (≈2 min)
@@ -28,3 +28,13 @@ cd .. && python3 -m http.server 5510 --bind 127.0.0.1
 Open `http://127.0.0.1:5510/scrap-entry.html?qdEmulator=1` and sign in with `LEADA` / `demo1234`
 (Leader, Door A Day + Night), `ADMIN1` (admin), `VIEW1` (viewer) or `PV2ONLY` (Production V2 only).
 `?qdEmulator=1` works only on localhost and forces the demo project, so the page cannot reach real data.
+
+## Slot ledger (Phase 2)
+
+Every scrap write in sign-in mode goes through `js/scrap-ledger.js`: one transaction writes the
+logs, raises `scrapSlots/{date}_{line}_{shift}.logVersion` by one and creates the audit event
+`events/v{logVersion}`. `tests/rules/rules.test.js` proves that writes skipping or faking the
+ledger are refused; `tests/rules/ledger-load.test.js` measures logs per transaction, runs
+concurrent writers and an Excel-size import, and checks after each that the version, the events
+and the stored logs agree. `tests/support/compat-shim.js` lets the real ledger module run on the
+emulator's Firestore in Node.

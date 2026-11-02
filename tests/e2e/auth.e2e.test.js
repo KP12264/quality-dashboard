@@ -246,6 +246,97 @@ describe('sign-in and roles in the browser (emulator)', () => {
   });
 });
 
+async function slotState(slotId) {
+  let out = null;
+  await env.withSecurityRulesDisabled(async ctx => {
+    const db = ctx.firestore();
+    const { getDoc } = require('firebase/firestore');
+    const snap = await getDoc(doc(db, 'scrapSlots', slotId));
+    if (!snap.exists()) return;
+    const events = [];
+    (await getDocs(collection(db, 'scrapSlots', slotId, 'events'))).forEach(d => events.push(Object.assign({ id: d.id }, d.data())));
+    out = Object.assign({ events: events.sort((a, b) => a.version - b.version) }, snap.data());
+  });
+  return out;
+}
+
+describe('slot ledger through the pages (emulator)', () => {
+  before(seed);
+  const slotA = () => `${today}_A_DAY`;
+
+  it('Scrap Entry: a leader save creates the ledger version and audit event', async () => {
+    const { page, context, errors } = await newPage();
+    await open(page, 'scrap-entry.html');
+    await signIn(page, 'LEADA');
+    await fillScrapEntry(page, 'A', 6);
+    assert.match(await save(page), /Saved/);
+    const st = await slotState(slotA());
+    assert.equal(st.logVersion, 1);
+    assert.equal(st.legacyCount, 1);            // the seeded record saved before the ledger
+    assert.equal(st.liveLogCount, 2);
+    assert.equal(st.events[0].by, E('LEADA'));
+    assert.equal(st.events[0].creates.length, 1);
+    assert.equal(st.events[0].changes[0].after.scrapQty, 6);
+    assert.deepEqual(errors, []);
+    await context.close();
+  });
+
+  it('Scrap Detail: an edit that keeps the quantity, then a delete, each add a version', async () => {
+    const { page, context, errors } = await newPage();
+    await open(page, 'scrap-detail.html');
+    await signIn(page, 'LEADA');
+    const id = (await scrapDocs()).find(r => r.createdBy === E('LEADA')).id;
+    const r2 = await page.evaluate(async ({ id, date }) => {
+      await ScrapDataAdapter.updateScrapEntry(window.qdDb, id, { date, shift: 'DAY', line: 'A', model: 'M-100 FR', defectType: 'Scratch', scrapQty: 6, remark: '' });
+      await ScrapDataAdapter.deleteScrapEntry(window.qdDb, id);
+      return 'ok';
+    }, { id, date: today });
+    assert.equal(r2, 'ok');
+    const st = await slotState(slotA());
+    assert.equal(st.logVersion, 3);
+    assert.deepEqual(st.events[1].updates, [id]);
+    assert.equal(st.events[1].changes[0].before.defectType !== st.events[1].changes[0].after.defectType, true);
+    assert.equal(st.events[1].changes[0].before.scrapQty, st.events[1].changes[0].after.scrapQty);   // same quantity, still recorded
+    assert.deepEqual(st.events[2].deletes, [id]);
+    assert.equal(st.liveLogCount, 1);
+    assert.deepEqual(errors, []);
+    await context.close();
+  });
+
+  it('Excel import path: admin imports 30 rows over 3 slots; a leader is refused', async () => {
+    const { page, context } = await newPage();
+    await open(page, 'scrap-entry.html');
+    await signIn(page, 'ADMIN1');
+    const rows = Array.from({ length: 30 }, (_, i) => ({ date: '2026-10-15', shift: 'DAY', line: 'ABC'[i % 3], model: 'M-1', defectType: 'Dent', scrapQty: 1 + (i % 4), remark: '' }));
+    const res = await page.evaluate(async rows => { const r = await ScrapDataAdapter.addScrapEntryBatch(window.qdDb, rows); return { ok: r.succeeded.length, failed: r.failed.length }; }, rows);
+    assert.deepEqual(res, { ok: 30, failed: 0 });
+    for (const line of ['A', 'B', 'C']) {
+      const st = await slotState(`2026-10-15_${line}_DAY`);
+      assert.equal(st.logVersion, 1);
+      assert.equal(st.liveLogCount, 10);
+      assert.equal(st.events[0].creates.length, 10);
+    }
+    await page.click('#qdAuthSignOut'); await page.waitForSelector('#qdAuthOpen');
+    await signIn(page, 'LEADA');
+    const leader = await page.evaluate(async rows => { try { await ScrapDataAdapter.addScrapEntryBatch(window.qdDb, rows); return 'saved'; } catch (e) { return e.message; } }, rows.slice(0, 3));
+    assert.match(leader, /cannot import scrap from Excel/);
+    await context.close();
+  });
+
+  it('a page without the ledger module refuses scrap writes while sign-in is on', async () => {
+    const { page, context } = await newPage();
+    await open(page, 'scrap-entry.html');
+    await signIn(page, 'LEADA');
+    const r = await page.evaluate(async today => {
+      const keep = window.ScrapLedger; window.ScrapLedger = undefined;
+      try { await ScrapDataAdapter.addScrapEntry(window.qdDb, { date: today, shift: 'DAY', line: 'A', model: 'M', defectType: 'Dent', scrapQty: 1 }); return 'saved'; }
+      catch (e) { return e.code; } finally { window.ScrapLedger = keep; }
+    }, today);
+    assert.equal(r, 'qd/ledger-missing');
+    await context.close();
+  });
+});
+
 describe('sign-in off (the live default)', () => {
   it('without ?qdEmulator=1 the page stays in "off" mode: no sign-in box, no auth instance', async () => {
     const { page, context } = await newPage();

@@ -78,9 +78,6 @@ service cloud.firestore {
     function qdAdmin() {
       return qdRole('admin');
     }
-    function qdStaff() {
-      return qdAdmin() || qdRole('leader');
-    }
     // Admin: any Line/Shift. Leader: only the slots assigned in qdUsers ("A_DAY", ...).
     function qdCanWriteSlot(line, shift) {
       return qdAdmin() || (qdRole('leader') && (line + '_' + shift) in qdProfile().slots);
@@ -116,19 +113,104 @@ service cloud.firestore {
       allow delete: if qdAdmin();
     }
 
+    // ---- Slot ledger (Phase 2) ----
+    // One ledger document per production Date + Line + Shift: scrapSlots/{date}_{line}_{shift}.
+    // Every scrap-log write must, in the SAME commit (batch / transaction):
+    //   * raise that slot's logVersion by exactly 1,
+    //   * create the audit event scrapSlots/{slotId}/events/v{new logVersion} that lists
+    //     the log id under creates / updates / deletes / movesIn / movesOut,
+    //   * keep liveLogCount = previous + creates + movesIn - deletes - movesOut.
+    // So any change — even one that leaves the total quantity and the number of logs
+    // unchanged — produces a new version and an audit event, or it is refused.
+    function qdSlotId(d) {
+      return d.date + '_' + d.line + '_' + d.shift;
+    }
+    function qdSlotPath(slotId) {
+      return /databases/$(database)/documents/scrapSlots/$(slotId);
+    }
+    function qdEventPath(slotId, version) {
+      return /databases/$(database)/documents/scrapSlots/$(slotId)/events/$('v' + string(version));
+    }
+    function qdVersionBefore(slotId) {
+      return exists(qdSlotPath(slotId)) ? get(qdSlotPath(slotId)).data.logVersion : 0;
+    }
+    // The slot moved up exactly one version in this commit and its event lists `logId` in `listName`.
+    function qdLedgerRecords(slotId, listName, logId) {
+      return existsAfter(qdSlotPath(slotId))
+        && getAfter(qdSlotPath(slotId)).data.logVersion == qdVersionBefore(slotId) + 1
+        && existsAfter(qdEventPath(slotId, getAfter(qdSlotPath(slotId)).data.logVersion))
+        && logId in getAfter(qdEventPath(slotId, getAfter(qdSlotPath(slotId)).data.logVersion)).data[listName];
+    }
+    function qdEventDelta(e) {
+      return e.creates.size() + e.movesIn.size() - e.deletes.size() - e.movesOut.size();
+    }
+
     // ---- Scrap logs ----
     match /scrapLogs/{id} {
       allow read: if true;
       allow create: if qdCanWriteSlot(request.resource.data.line, request.resource.data.shift)
         && qdValidScrap(request.resource.data)
-        && request.resource.data.createdBy == qdEmail();
+        && request.resource.data.createdBy == qdEmail()
+        && qdLedgerRecords(qdSlotId(request.resource.data), 'creates', id);
       // Both the stored Line/Shift and the new one must be the writer's; who created it never changes.
       allow update: if qdCanWriteSlot(resource.data.line, resource.data.shift)
         && qdCanWriteSlot(request.resource.data.line, request.resource.data.shift)
         && qdValidScrap(request.resource.data)
         && request.resource.data.get('createdBy', null) == resource.data.get('createdBy', null)
-        && request.resource.data.updatedBy == qdEmail();
-      allow delete: if qdCanWriteSlot(resource.data.line, resource.data.shift);
+        && request.resource.data.updatedBy == qdEmail()
+        && (qdSlotId(resource.data) == qdSlotId(request.resource.data)
+              ? qdLedgerRecords(qdSlotId(resource.data), 'updates', id)
+              : qdLedgerRecords(qdSlotId(resource.data), 'movesOut', id)
+                && qdLedgerRecords(qdSlotId(request.resource.data), 'movesIn', id));
+      allow delete: if qdCanWriteSlot(resource.data.line, resource.data.shift)
+        && qdLedgerRecords(qdSlotId(resource.data), 'deletes', id);
+    }
+
+    match /scrapSlots/{slotId} {
+      // Ledger and audit trail: signed-in Quality Dashboard users only (they hold employee codes).
+      allow read: if qdActive();
+      // First write to a slot. legacyCount = logs that existed before the ledger (attested by the
+      // writer; logs saved from now on are all counted through events).
+      allow create: if qdCanWriteSlot(request.resource.data.line, request.resource.data.shift)
+        && qdValidSlot(request.resource.data.line, request.resource.data.shift)
+        && slotId == qdSlotId(request.resource.data)
+        && request.resource.data.keys().hasOnly(['date', 'line', 'shift', 'logVersion', 'liveLogCount', 'legacyCount', 'updatedAt', 'updatedBy'])
+        && request.resource.data.logVersion == 1
+        && request.resource.data.legacyCount is int && request.resource.data.legacyCount >= 0
+        && existsAfter(qdEventPath(slotId, 1))
+        && request.resource.data.liveLogCount == request.resource.data.legacyCount + qdEventDelta(getAfter(qdEventPath(slotId, 1)).data)
+        && request.resource.data.liveLogCount >= 0
+        && request.resource.data.updatedBy == qdEmail()
+        && request.resource.data.updatedAt == request.time;
+      allow update: if qdCanWriteSlot(resource.data.line, resource.data.shift)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['logVersion', 'liveLogCount', 'updatedAt', 'updatedBy'])
+        && request.resource.data.logVersion == resource.data.logVersion + 1
+        && existsAfter(qdEventPath(slotId, request.resource.data.logVersion))
+        && request.resource.data.liveLogCount == resource.data.liveLogCount + qdEventDelta(getAfter(qdEventPath(slotId, request.resource.data.logVersion)).data)
+        && request.resource.data.liveLogCount >= 0
+        && request.resource.data.updatedBy == qdEmail()
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if false;
+
+      // Audit events: written once, together with the version they describe; never changed.
+      match /events/{eventId} {
+        allow read: if qdActive();
+        allow create: if existsAfter(qdSlotPath(slotId))
+          && qdCanWriteSlot(getAfter(qdSlotPath(slotId)).data.line, getAfter(qdSlotPath(slotId)).data.shift)
+          && eventId == 'v' + string(getAfter(qdSlotPath(slotId)).data.logVersion)
+          && getAfter(qdSlotPath(slotId)).data.logVersion == qdVersionBefore(slotId) + 1
+          && request.resource.data.keys().hasOnly(['type', 'version', 'at', 'by', 'creates', 'updates', 'deletes', 'movesIn', 'movesOut', 'changes'])
+          && request.resource.data.type == 'LOG_WRITE'
+          && request.resource.data.version == getAfter(qdSlotPath(slotId)).data.logVersion
+          && request.resource.data.by == qdEmail()
+          && request.resource.data.at == request.time
+          && request.resource.data.creates is list && request.resource.data.updates is list
+          && request.resource.data.deletes is list && request.resource.data.movesIn is list
+          && request.resource.data.movesOut is list && request.resource.data.changes is list
+          && (request.resource.data.creates.size() + request.resource.data.updates.size() + request.resource.data.deletes.size()
+              + request.resource.data.movesIn.size() + request.resource.data.movesOut.size()) > 0;
+        allow update, delete: if false;
+      }
     }
 
     // ---- Other Quality Dashboard collections ----
@@ -138,8 +220,7 @@ service cloud.firestore {
     }
     match /improvements/{id} {
       allow read: if true;
-      allow create, update: if qdStaff();
-      allow delete: if qdAdmin();
+      allow write: if qdAdmin();          // Leader / Viewer: read-only
     }
     match /scrapModelMappings/{id} {
       allow read: if true;
@@ -147,7 +228,7 @@ service cloud.firestore {
     }
     match /scrapWeeklyPlans/{id} {
       allow read: if true;
-      allow write: if qdStaff();
+      allow write: if qdAdmin();          // Leader / Viewer: read-only
     }
     // ===== END Quality Dashboard =====
 

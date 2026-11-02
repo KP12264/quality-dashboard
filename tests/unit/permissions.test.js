@@ -42,10 +42,8 @@ test('leader without any slot cannot write scrap at all', () => {
   assert.equal(canRole(none, 'scrap.write', { line: 'A', shift: 'DAY' }), false);
 });
 
-test('leader: improvements and weekly plans yes; import, mappings, targets, users no', () => {
-  assert.equal(canRole(leaderA, 'improvement.write'), true);
-  assert.equal(canRole(leaderA, 'weeklyPlan.write'), true);
-  for (const a of ['scrap.import', 'mapping.write', 'targetMaster.write', 'users.manage']) assert.equal(canRole(leaderA, a), false, a);
+test('leader writes nothing but scrap: improvements, weekly plans, import, mappings, targets, users are read-only', () => {
+  for (const a of ['improvement.write', 'weeklyPlan.write', 'scrap.import', 'mapping.write', 'targetMaster.write', 'users.manage']) assert.equal(canRole(leaderA, a), false, a);
 });
 
 test('disabled, missing or unknown profiles get nothing', () => {

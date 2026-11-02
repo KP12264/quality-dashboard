@@ -35,8 +35,8 @@
     "scrap.import":       { admin: true, leader: false,  viewer: false },   // Excel import (batch, many slots)
     "mapping.write":      { admin: true, leader: false,  viewer: false },   // Excel model mapping
     "targetMaster.write": { admin: true, leader: false,  viewer: false },
-    "improvement.write":  { admin: true, leader: true,   viewer: false },
-    "weeklyPlan.write":   { admin: true, leader: true,   viewer: false },
+    "improvement.write":  { admin: true, leader: false,  viewer: false },   // Leader: read-only (Phase 2 matrix)
+    "weeklyPlan.write":   { admin: true, leader: false,  viewer: false },   // Leader: read-only (Phase 2 matrix)
     "users.manage":       { admin: true, leader: false,  viewer: false }
   };
 

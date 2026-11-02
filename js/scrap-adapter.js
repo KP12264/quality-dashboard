@@ -22,6 +22,19 @@
 
 (function () {
 
+  // Slot ledger (js/scrap-ledger.js) is used only while sign-in is enforced. With sign-in
+  // "off" (the live default) every write below takes its original path, unchanged.
+  function ledgerOn() {
+    if (typeof window === "undefined" || window.qdAuthMode !== "enforce") return false;
+    if (!window.ScrapLedger) {
+      const e = new Error("The scrap ledger is not loaded on this page, so scrap cannot be saved here.");
+      e.code = "qd/ledger-missing";
+      throw e;
+    }
+    return true;
+  }
+  const ledgerOpts = who => ({ email: who.email, serverTimestamp: () => firebase.firestore.FieldValue.serverTimestamp() });
+
   function num(v) {
     const n = parseFloat(v);
     return Number.isFinite(n) ? n : 0;
@@ -129,13 +142,19 @@
     }
     // Sign-in gate (js/firebase-init.js): {} when sign-in is off, so the write is unchanged.
     const who = typeof qdGuardWrite === "function" ? qdGuardWrite("scrap.write", { line, shift }) : {};
-    return db.collection(SCRAP_COLLECTION).add({
+    const data = {
       date, shift, line, model, defectType,
       scrapQty: num(scrapQty),
       remark: remark || "",
       createdAt: Date.now(),
       ...(who.email ? { createdBy: who.email } : {})
-    });
+    };
+    if (ledgerOn()) {
+      const ref = db.collection(SCRAP_COLLECTION).doc();
+      await ScrapLedger.applyOps(db, [{ op: "create", ref, data }], ledgerOpts(who));
+      return ref;
+    }
+    return db.collection(SCRAP_COLLECTION).add(data);
   }
 
   /**
@@ -160,13 +179,17 @@
     }
     // Client check covers the new Line/Shift; the rules also check the record's current one.
     const who = typeof qdGuardWrite === "function" ? qdGuardWrite("scrap.write", { line, shift }) : {};
-    return db.collection(SCRAP_COLLECTION).doc(id).update({
+    const patch = {
       date, shift, line, model, defectType,
       scrapQty: num(scrapQty),
       remark: remark || "",
       updatedAt: Date.now(),
       ...(who.email ? { updatedBy: who.email } : {})
-    });
+    };
+    if (ledgerOn()) {
+      return ScrapLedger.applyOps(db, [{ op: "update", ref: db.collection(SCRAP_COLLECTION).doc(id), data: patch }], ledgerOpts(who));
+    }
+    return db.collection(SCRAP_COLLECTION).doc(id).update(patch);
   }
 
   /**
@@ -179,7 +202,10 @@
   async function deleteScrapEntry(db, id) {
     if (!db) throw new Error("No Firestore connection available (db is null).");
     if (!id) throw new Error("deleteScrapEntry requires an id.");
-    if (typeof qdGuardWrite === "function") qdGuardWrite("scrap.write", {});   // the rules check the stored Line/Shift
+    const who = typeof qdGuardWrite === "function" ? qdGuardWrite("scrap.write", {}) : {};   // the rules check the stored Line/Shift
+    if (ledgerOn()) {
+      return ScrapLedger.applyOps(db, [{ op: "delete", ref: db.collection(SCRAP_COLLECTION).doc(id) }], ledgerOpts(who));
+    }
     return db.collection(SCRAP_COLLECTION).doc(id).delete();
   }
 
@@ -258,6 +284,30 @@
     if (valid.length === 0) return { succeeded: [], failed };
 
     const who = typeof qdGuardWrite === "function" ? qdGuardWrite("scrap.import", {}) : {};
+    const buildDoc = e => {
+      const doc = {
+        date: e.date, shift: e.shift, line: e.line, model: e.model, defectType: e.defectType,
+        scrapQty: num(e.scrapQty), remark: e.remark || "", createdAt: Date.now()
+      };
+      if (who.email) doc.createdBy = who.email;
+      OPTIONAL_SCRAP_FIELDS.forEach(f => { if (e[f] !== undefined) doc[f] = e[f]; });
+      return doc;
+    };
+    if (ledgerOn()) {
+      // With the ledger, each transaction covers ONE slot (Date + Line + Shift), so a failure
+      // rejects only that slot's rows; the rows of other slots are still saved.
+      const succeeded = [];
+      for (const chunk of ScrapLedger.chunkBySlot(valid)) {
+        const ops = chunk.map(e => ({ op: "create", ref: db.collection(SCRAP_COLLECTION).doc(), data: buildDoc(e) }));
+        try {
+          await ScrapLedger.applyOps(db, ops, ledgerOpts(who));
+          ops.forEach((o, i) => succeeded.push({ entry: chunk[i], id: o.ref.id }));
+        } catch (err) {
+          chunk.forEach(e => failed.push({ entry: e, error: err }));
+        }
+      }
+      return { succeeded, failed };
+    }
     const batch = db.batch();
     const refs = valid.map(e => {
       const ref = db.collection(SCRAP_COLLECTION).doc();
