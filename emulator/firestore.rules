@@ -1,0 +1,159 @@
+rules_version = '2';
+// =============================================================================
+//  COMBINED FIRESTORE RULES — DRAFT FOR THE FIREBASE EMULATOR ONLY
+//  Quality Dashboard (Shift Scrap Close, Phase 1) + Production V2
+//
+//  DO NOT PUBLISH OR DEPLOY THIS FILE.
+//  * The rules actually deployed on daily-production-report-46b60 are NOT
+//    VERIFIED (Phase 0, item G1). The Production V2 part below is copied
+//    verbatim from KP12264/daily-production-report @ 431836a
+//    production-v2/firestore.rules, which is known to differ from what is live.
+//  * Publishing this file would replace the live rules of BOTH systems.
+//  * This folder's .firebaserc points at "demo-quality-dashboard", a project
+//    that exists only in the emulator.
+// =============================================================================
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===== BEGIN Production V2 (verbatim, production-v2/firestore.rules @ 431836a) =====
+    // ── Legacy system — UNCHANGED. Stays exactly as open as it is today so the
+    // original site keeps working with no login, forever. Production V2 never
+    // writes here (enforced client-side too, in firebase-v2.js).
+    match /productionLogs/{doc} {
+      allow read, write: if true;
+    }
+
+    // ── Production V2 — Dashboard must be viewable by anyone with no login,
+    // so all prodV2_* collections are publicly readable. Writing requires the
+    // caller to be signed in AND present in the prodV2_authorizedUsers allowlist.
+    match /prodV2_authorizedUsers/{email} {
+      allow read: if true;
+      // Never writable from the app — only an admin editing directly in the
+      // Firebase Console (which bypasses these rules) can add/remove entries.
+      allow write: if false;
+    }
+
+    match /{collection}/{doc}
+      // Matches any collection literally named prodV2_* (and its subcollections
+      // if any are ever added under a document, e.g. .../subcol/{doc=**}).
+      // Explicitly excludes prodV2_authorizedUsers — Firestore rules are OR'd
+      // across every matching block, so without this exclusion this generic
+      // "allowed employee" rule would override the stricter allow-write:false
+      // rule above for that one collection.
+      {
+      allow read: if collection.matches('prodV2_.*');
+      allow write: if collection.matches('prodV2_.*')
+        && collection != 'prodV2_authorizedUsers'
+        && request.auth != null
+        && request.auth.token.email != null
+        && exists(/databases/$(database)/documents/prodV2_authorizedUsers/$(request.auth.token.email.lower()));
+    }
+    // ===== END Production V2 =====
+
+    // ===== BEGIN Quality Dashboard =====
+    // Same Firebase Auth accounts as Production V2 ("<code>@prodv2.local").
+    // Quality Dashboard roles live ONLY in qdUsers/{email}; prodV2_authorizedUsers
+    // is never consulted here, and qdUsers is never consulted by the Production V2
+    // block above, so a role in one system grants nothing in the other.
+    // Read policy: everything the public dashboards read stays publicly readable
+    // (Phase 0 decision pending, item G4); qdUsers is never public.
+
+    function qdEmail() {
+      return request.auth.token.email.lower();
+    }
+    function qdSignedIn() {
+      return request.auth != null && request.auth.token.email != null;
+    }
+    function qdProfile() {
+      return get(/databases/$(database)/documents/qdUsers/$(qdEmail())).data;
+    }
+    function qdActive() {
+      return qdSignedIn()
+        && exists(/databases/$(database)/documents/qdUsers/$(qdEmail()))
+        && qdProfile().active == true;
+    }
+    function qdRole(r) {
+      return qdActive() && qdProfile().role == r;
+    }
+    function qdAdmin() {
+      return qdRole('admin');
+    }
+    function qdStaff() {
+      return qdAdmin() || qdRole('leader');
+    }
+    // Admin: any Line/Shift. Leader: only the slots assigned in qdUsers ("A_DAY", ...).
+    function qdCanWriteSlot(line, shift) {
+      return qdAdmin() || (qdRole('leader') && (line + '_' + shift) in qdProfile().slots);
+    }
+    function qdValidSlot(line, shift) {
+      return line in ['A', 'B', 'C'] && shift in ['DAY', 'NIGHT'];
+    }
+
+    function qdValidUser(d) {
+      return d.keys().hasOnly(['role', 'active', 'displayName', 'slots', 'updatedAt', 'updatedBy'])
+        && d.keys().hasAll(['role', 'active', 'slots', 'updatedAt', 'updatedBy'])
+        && d.role in ['admin', 'leader', 'viewer']
+        && d.active is bool
+        && d.slots is list && d.slots.size() <= 6
+        && d.slots.toSet().difference(['A_DAY', 'A_NIGHT', 'B_DAY', 'B_NIGHT', 'C_DAY', 'C_NIGHT'].toSet()).size() == 0
+        && (!('displayName' in d) || (d.displayName is string && d.displayName.size() <= 80))
+        && d.updatedBy == qdEmail()
+        && d.updatedAt == request.time;
+    }
+    function qdValidScrap(d) {
+      return qdValidSlot(d.line, d.shift)
+        && d.date is string && d.date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && d.model is string && d.model.size() > 0
+        && d.defectType is string && d.defectType.size() > 0
+        && d.scrapQty is number && d.scrapQty > 0;
+    }
+
+    // ---- Roles (Admin only) ----
+    match /qdUsers/{email} {
+      allow get: if qdAdmin() || (qdSignedIn() && qdEmail() == email);
+      allow list: if qdAdmin();
+      allow create, update: if qdAdmin() && email == email.lower() && qdValidUser(request.resource.data);
+      allow delete: if qdAdmin();
+    }
+
+    // ---- Scrap logs ----
+    match /scrapLogs/{id} {
+      allow read: if true;
+      allow create: if qdCanWriteSlot(request.resource.data.line, request.resource.data.shift)
+        && qdValidScrap(request.resource.data)
+        && request.resource.data.createdBy == qdEmail();
+      // Both the stored Line/Shift and the new one must be the writer's; who created it never changes.
+      allow update: if qdCanWriteSlot(resource.data.line, resource.data.shift)
+        && qdCanWriteSlot(request.resource.data.line, request.resource.data.shift)
+        && qdValidScrap(request.resource.data)
+        && request.resource.data.get('createdBy', null) == resource.data.get('createdBy', null)
+        && request.resource.data.updatedBy == qdEmail();
+      allow delete: if qdCanWriteSlot(resource.data.line, resource.data.shift);
+    }
+
+    // ---- Other Quality Dashboard collections ----
+    match /targetMaster/{id} {
+      allow read: if true;
+      allow write: if qdAdmin();
+    }
+    match /improvements/{id} {
+      allow read: if true;
+      allow create, update: if qdStaff();
+      allow delete: if qdAdmin();
+    }
+    match /scrapModelMappings/{id} {
+      allow read: if true;
+      allow write: if qdAdmin();
+    }
+    match /scrapWeeklyPlans/{id} {
+      allow read: if true;
+      allow write: if qdStaff();
+    }
+    // ===== END Quality Dashboard =====
+
+    // ── Everything else — default deny. (from production-v2/firestore.rules)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

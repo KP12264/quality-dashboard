@@ -36,6 +36,29 @@ const FIREBASE_CONFIG = {
 // another tab, or a future admin tool in a later phase).
 const FIREBASE_APP_NAME = "qualityDashboardReadOnly";
 
+// ---- Sign-in and roles (Shift Scrap Close, Phase 1) ----------------------
+// QD_AUTH_MODE
+//   "off"     : behaviour of the live site today — no sign-in, no client-side
+//               permission checks; what may be written is decided only by the
+//               Firestore Security Rules that are deployed.
+//   "enforce" : sign in with the SAME employee account as Production V2
+//               (Firebase Auth, "<code>@prodv2.local"); the Quality Dashboard role
+//               comes from qdUsers/{email}, kept apart from Production V2's
+//               prodV2_authorizedUsers. The client checks are convenience only:
+//               the real boundary is emulator/firestore.rules, which is NOT
+//               deployed (draft, emulator only).
+// Stays "off" until the rules are approved and deployed. Local test mode
+// (localhost + ?qdEmulator=1, see firebase-init.js) always runs "enforce"
+// against the Firebase Emulator and can never reach the real project.
+const QD_AUTH_MODE = "off";
+const QD_EMPLOYEE_EMAIL_DOMAIN = "@prodv2.local";   // same convention as Production V2 (production-v2/js/auth-v2.js)
+const QD_USERS_COLLECTION = "qdUsers";
+const QD_EMULATOR = {
+  projectId: "demo-quality-dashboard",   // "demo-" projects exist only in the emulator
+  firestoreHost: "127.0.0.1", firestorePort: 8080,
+  authUrl: "http://127.0.0.1:9099"
+};
+
 // Firestore collections belonging to Production V2 (the system this
 // dashboard now reads production data from — READ ONLY, same rules as
 // the legacy collection below: only .get() calls anywhere in this

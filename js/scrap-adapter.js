@@ -127,11 +127,14 @@
     if (missing.length) {
       throw new Error("addScrapEntry is missing/invalid: " + missing.join(", "));
     }
+    // Sign-in gate (js/firebase-init.js): {} when sign-in is off, so the write is unchanged.
+    const who = typeof qdGuardWrite === "function" ? qdGuardWrite("scrap.write", { line, shift }) : {};
     return db.collection(SCRAP_COLLECTION).add({
       date, shift, line, model, defectType,
       scrapQty: num(scrapQty),
       remark: remark || "",
-      createdAt: Date.now()
+      createdAt: Date.now(),
+      ...(who.email ? { createdBy: who.email } : {})
     });
   }
 
@@ -155,11 +158,14 @@
     if (missing.length) {
       throw new Error("updateScrapEntry is missing/invalid: " + missing.join(", "));
     }
+    // Client check covers the new Line/Shift; the rules also check the record's current one.
+    const who = typeof qdGuardWrite === "function" ? qdGuardWrite("scrap.write", { line, shift }) : {};
     return db.collection(SCRAP_COLLECTION).doc(id).update({
       date, shift, line, model, defectType,
       scrapQty: num(scrapQty),
       remark: remark || "",
-      updatedAt: Date.now()
+      updatedAt: Date.now(),
+      ...(who.email ? { updatedBy: who.email } : {})
     });
   }
 
@@ -173,6 +179,7 @@
   async function deleteScrapEntry(db, id) {
     if (!db) throw new Error("No Firestore connection available (db is null).");
     if (!id) throw new Error("deleteScrapEntry requires an id.");
+    if (typeof qdGuardWrite === "function") qdGuardWrite("scrap.write", {});   // the rules check the stored Line/Shift
     return db.collection(SCRAP_COLLECTION).doc(id).delete();
   }
 
@@ -250,6 +257,7 @@
     });
     if (valid.length === 0) return { succeeded: [], failed };
 
+    const who = typeof qdGuardWrite === "function" ? qdGuardWrite("scrap.import", {}) : {};
     const batch = db.batch();
     const refs = valid.map(e => {
       const ref = db.collection(SCRAP_COLLECTION).doc();
@@ -257,6 +265,7 @@
         date: e.date, shift: e.shift, line: e.line, model: e.model, defectType: e.defectType,
         scrapQty: num(e.scrapQty), remark: e.remark || "", createdAt: Date.now()
       };
+      if (who.email) doc.createdBy = who.email;
       // Carry through whichever optional fields this entry actually has
       // (see OPTIONAL_SCRAP_FIELDS above) — never write `undefined`
       // (Firestore rejects it); everything else is simply omitted from

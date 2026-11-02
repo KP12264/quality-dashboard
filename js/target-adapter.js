@@ -112,12 +112,14 @@
     if (!shift || !effectiveDate || !Number.isFinite(num(targetQty))) {
       throw new Error("setTarget requires shift, targetQty, and effectiveDate.");
     }
+    const who = typeof qdGuardWrite === "function" ? qdGuardWrite("targetMaster.write", {}) : {};
     return db.collection(TARGET_MASTER_COLLECTION).add({
       shift,
       targetQty: num(targetQty),
       effectiveDate,
       note: note || "",
-      createdAt: Date.now()
+      createdAt: Date.now(),
+      ...(who.email ? { createdBy: who.email } : {})
     });
   }
 

@@ -118,6 +118,8 @@
       createdAt: now,
       updatedAt: now
     };
+    const who = typeof qdGuardWrite === "function" ? qdGuardWrite("improvement.write", {}) : {};
+    if (who.email) { doc.createdBy = who.email; doc.updatedBy = who.email; }
     return db.collection(IMPROVEMENT_COLLECTION).add(doc);
   }
 
@@ -132,9 +134,11 @@
   async function updateImprovement(db, id, patch) {
     if (!db) throw new Error("No Firestore connection available (db is null).");
     if (!id) throw new Error("updateImprovement requires an id.");
+    const who = typeof qdGuardWrite === "function" ? qdGuardWrite("improvement.write", {}) : {};
     return db.collection(IMPROVEMENT_COLLECTION).doc(id).update({
       ...patch,
-      updatedAt: Date.now()
+      updatedAt: Date.now(),
+      ...(who.email ? { updatedBy: who.email } : {})
     });
   }
 

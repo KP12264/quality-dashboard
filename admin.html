@@ -11,6 +11,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
 </head>
 <body>
 <div class="wrap">
@@ -33,7 +34,7 @@
     <button data-tab="mapping">Defect Mapping</button>
     <button data-tab="fourm">4M Master</button>
     <button data-tab="audit">Audit Log</button>
-    <button data-tab="permission">Permission / PIN</button>
+    <button data-tab="permission">Users &amp; Roles</button>
   </div>
 
   <!-- Target Management: FUNCTIONAL -->
@@ -100,15 +101,49 @@
   </section>
 
   <section class="qd-panel qd-admin-section" id="tab-permission" style="display:none;">
-    <h2>Permission / PIN Settings</h2>
-    <div class="qd-placeholder"><strong>Coming in a later phase</strong>All pages are currently open to view AND edit for any visitor, as agreed for this phase. PIN-protected editing is a later phase — nothing here restricts writes yet.</div>
+    <h2>Users &amp; Roles (Quality Dashboard)</h2>
+    <div class="qd-panel-note">Employees sign in with the same employee code and password as Production V2. The role here applies to the Quality Dashboard only and is stored separately (qdUsers); it never changes what anyone may do in Production V2. Leaders can save scrap only for the Line and Shift ticked below.</div>
+    <div id="usersStatus" class="qd-form-message" style="display:none;"></div>
+    <div id="usersPanel" hidden>
+      <form id="userForm" class="qd-form-grid" style="margin-bottom:12px;" novalidate>
+        <div class="qd-form-field">
+          <label for="uCode">Employee code</label>
+          <input type="text" id="uCode" autocomplete="off" autocapitalize="characters" required>
+        </div>
+        <div class="qd-form-field">
+          <label for="uName">Display name</label>
+          <input type="text" id="uName" maxlength="80" placeholder="Optional">
+        </div>
+        <div class="qd-form-field">
+          <label for="uRole">Role</label>
+          <select id="uRole"><option value="leader">Leader</option><option value="viewer">Viewer</option><option value="admin">Admin</option></select>
+        </div>
+        <div class="qd-form-field">
+          <label for="uActive">Status</label>
+          <select id="uActive"><option value="true">Active</option><option value="false">Disabled</option></select>
+        </div>
+        <fieldset class="qd-form-field" id="uSlotsField" style="grid-column:1 / -1;border:0;padding:0;margin:0;">
+          <legend>Leader: Line and Shift</legend>
+          <div id="uSlots" style="display:flex;flex-wrap:wrap;gap:6px 16px;"></div>
+        </fieldset>
+        <button type="submit" class="mini-add-btn" id="uSave" style="align-self:end;">Save user</button>
+      </form>
+      <div id="userMessage" class="qd-form-message" style="display:none;"></div>
+      <div class="qd-table-scroll">
+        <table class="qd-datatable" id="usersTable">
+          <thead><tr><th>Employee code</th><th>Name</th><th>Role</th><th>Line / Shift</th><th>Status</th><th>Updated by</th><th></th></tr></thead>
+          <tbody id="usersBody"></tbody>
+        </table>
+      </div>
+    </div>
   </section>
 
 </div>
 
-<script src="js/config.js"></script>
-<script src="js/firebase-init.js"></script>
-<script src="js/target-adapter.js"></script>
+<script src="js/config.js?v=20261102-p1"></script>
+<script src="js/firebase-init.js?v=20261102-p1"></script>
+<script src="js/qd-auth.js?v=20261102-p1"></script>
+<script src="js/target-adapter.js?v=20261102-p1"></script>
 <script src="js/admin-page.js"></script>
 <script src="js/nav.js"></script>
 </body>

@@ -61,13 +61,15 @@
     if (!db) return { succeeded: 0, error: "No Firestore connection available (db is null)." };
     if (!pairs || pairs.length === 0) return { succeeded: 0 };
     try {
+      const who = typeof qdGuardWrite === "function" ? qdGuardWrite("mapping.write", {}) : {};
       const batch = db.batch();
       pairs.forEach(p => {
         const ref = db.collection(SCRAP_MODEL_MAPPING_COLLECTION).doc(mappingDocId(p.excelModel));
         batch.set(ref, {
           excelModel: p.excelModel,
           productionModel: p.productionModel,
-          updatedAt: Date.now()
+          updatedAt: Date.now(),
+          ...(who.email ? { updatedBy: who.email } : {})
         });
       });
       await batch.commit();

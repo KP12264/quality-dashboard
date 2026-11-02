@@ -105,6 +105,108 @@
     $('fourMMasterList').innerHTML = FOUR_M_TYPES.map(m => `<li>${escapeHtml(m)}</li>`).join('');
   }
 
+  // ---- Users & Roles (qdUsers) ----------------------------------------------
+  // Admin-only list/edit of Quality Dashboard roles, through QDAuth (js/qd-auth.js).
+  // Firestore Rules allow these reads/writes only to an active QD admin.
+
+  function usersStatus(kind, text) {
+    const el = $('usersStatus');
+    el.className = 'qd-form-message ' + kind;
+    el.textContent = text;
+    el.style.display = text ? 'block' : 'none';
+  }
+  function userMessage(kind, text) {
+    const el = $('userMessage');
+    el.className = 'qd-form-message ' + kind;
+    el.textContent = text;
+    el.style.display = text ? 'block' : 'none';
+  }
+  function slotLabel(k) { const [l, s] = k.split('_'); return `Door ${l} ${s === 'DAY' ? 'Day' : 'Night'}`; }
+
+  function renderSlotBoxes(selected) {
+    $('uSlots').innerHTML = QDAuth.ALL_SLOTS.map(k =>
+      `<label style="display:inline-flex;align-items:center;gap:6px;min-height:36px;"><input type="checkbox" value="${k}"${selected.includes(k) ? ' checked' : ''}> ${slotLabel(k)}</label>`).join('');
+  }
+
+  async function loadUsers() {
+    const body = $('usersBody');
+    body.innerHTML = '<tr class="empty-row"><td colspan="7">Loading…</td></tr>';
+    try {
+      const users = await QDAuth.listUsers();
+      body.innerHTML = users.length ? users.map(u => `
+        <tr>
+          <td>${escapeHtml(u.email.replace(QD_EMPLOYEE_EMAIL_DOMAIN, '').toUpperCase())}</td>
+          <td>${escapeHtml(u.displayName || '–')}</td>
+          <td>${escapeHtml(u.role)}</td>
+          <td>${u.role === 'leader' ? escapeHtml((u.slots || []).map(slotLabel).join(', ') || '–') : 'All'}</td>
+          <td>${u.active ? 'Active' : 'Disabled'}</td>
+          <td>${escapeHtml(u.updatedBy ? u.updatedBy.replace(QD_EMPLOYEE_EMAIL_DOMAIN, '').toUpperCase() : '–')}</td>
+          <td><button type="button" class="mini-add-btn" data-edit="${escapeHtml(u.email)}">Edit</button></td>
+        </tr>`).join('') : '<tr class="empty-row"><td colspan="7">No Quality Dashboard users yet.</td></tr>';
+      body.querySelectorAll('[data-edit]').forEach(b => b.addEventListener('click', () => {
+        const u = users.find(x => x.email === b.dataset.edit);
+        $('uCode').value = u.email.replace(QD_EMPLOYEE_EMAIL_DOMAIN, '').toUpperCase();
+        $('uName').value = u.displayName || '';
+        $('uRole').value = u.role;
+        $('uActive').value = u.active ? 'true' : 'false';
+        renderSlotBoxes(u.slots || []);
+        syncSlotField();
+        $('uCode').focus();
+      }));
+    } catch (e) {
+      console.error('Quality Dashboard: could not load users:', e);
+      body.innerHTML = '<tr class="empty-row"><td colspan="7">Could not load users: ' + escapeHtml(e.message || String(e)) + '</td></tr>';
+    }
+  }
+
+  function syncSlotField() { $('uSlotsField').hidden = $('uRole').value !== 'leader'; }
+
+  function refreshUsersTab() {
+    if (typeof QDAuth === 'undefined' || window.qdAuthMode !== 'enforce') {
+      $('usersPanel').hidden = true;
+      usersStatus('info', 'Sign-in is off on this site (QD_AUTH_MODE = "off" in js/config.js), so every page works as before and roles are not used yet. Roles are switched on only after the Firestore Security Rules are approved and published.');
+      return;
+    }
+    const st = QDAuth.getState();
+    if (!st.ready || st.checking) { $('usersPanel').hidden = true; usersStatus('info', 'Checking sign-in…'); return; }
+    if (!QDAuth.can('users.manage')) {
+      $('usersPanel').hidden = true;
+      usersStatus('info', st.user ? 'Only a Quality Dashboard admin can manage users.' : 'Sign in as a Quality Dashboard admin to manage users.');
+      return;
+    }
+    usersStatus('', '');
+    $('usersPanel').hidden = false;
+    loadUsers();
+  }
+
+  function wireUsersTab() {
+    renderSlotBoxes([]);
+    syncSlotField();
+    $('uRole').addEventListener('change', syncSlotField);
+    $('userForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = $('uSave');
+      btn.disabled = true;
+      try {
+        const email = await QDAuth.saveUser({
+          code: $('uCode').value,
+          displayName: $('uName').value,
+          role: $('uRole').value,
+          active: $('uActive').value === 'true',
+          slots: Array.from($('uSlots').querySelectorAll('input:checked')).map(i => i.value)
+        });
+        userMessage('success', '✓ Saved ' + email.replace(QD_EMPLOYEE_EMAIL_DOMAIN, '').toUpperCase());
+        loadUsers();
+      } catch (err) {
+        userMessage('error', '⚠ ' + (err && err.message ? err.message : String(err)));
+      } finally {
+        btn.disabled = false;
+      }
+    });
+    if (typeof QDAuth !== 'undefined') QDAuth.onChange(refreshUsersTab);
+    refreshUsersTab();
+  }
+
   // ---- Init ---------------------------------------------------------------
 
   function init() {
@@ -119,6 +221,7 @@
 
     renderStaticLists();
     loadTargets();
+    wireUsersTab();
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

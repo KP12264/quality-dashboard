@@ -1,0 +1,7 @@
+# Test tooling (tests/) — dependencies and emulator logs are never committed
+tests/node_modules/
+*-debug.log
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+tests/e2e/artifacts-*.png

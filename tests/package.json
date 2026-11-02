@@ -1,0 +1,19 @@
+{
+  "name": "quality-dashboard-tests",
+  "private": true,
+  "description": "Unit, Firestore-rules (emulator), browser e2e (emulator) and regression tests for the Quality Dashboard. Never touches the real Firebase project.",
+  "scripts": {
+    "test:unit": "node --test unit/*.test.js",
+    "test:rules": "firebase emulators:exec --config ../emulator/firebase.json --project demo-quality-dashboard --only firestore,auth \"node --test rules/*.test.js\"",
+    "test:e2e": "firebase emulators:exec --config ../emulator/firebase.json --project demo-quality-dashboard --only firestore,auth \"node --test --test-concurrency=1 e2e/*.test.js\"",
+    "test:regression": "node --test --test-concurrency=1 regression/*.test.js",
+    "test": "npm run test:unit && npm run test:regression && npm run test:rules && npm run test:e2e"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^6.0.0",
+    "chart.js": "^4.5.0",
+    "firebase": "^13.1.0",
+    "firebase-compat": "npm:firebase@^10.13.0",
+    "firebase-tools": "^15.34.2"
+  }
+}
