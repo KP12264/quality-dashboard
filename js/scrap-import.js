@@ -1348,6 +1348,20 @@
     msgEl.className = 'qd-form-message';
     msgEl.textContent = '';
 
+    // Sign-in enforced: mark every slot first, so a partly failed import can never be confirmed
+    // by Shift Close (no-op with sign-in "off").
+    try {
+      await ScrapDataAdapter.beginImport(window.qdDb, validEntries, importBatchId);
+    } catch (e) {
+      console.error('Quality Dashboard: import could not start:', e);
+      btn.textContent = 'Import Valid Rows';
+      btn.disabled = false;
+      msgEl.className = 'qd-form-message error';
+      msgEl.textContent = `Import not started, nothing was saved: ${e && e.message ? e.message : e}`;
+      msgEl.style.display = 'block';
+      return;
+    }
+
     const chunks = chunk(validEntries, 200);
     let succeeded = 0;
     const failures = [];
@@ -1373,6 +1387,15 @@
         console.error(`Quality Dashboard: import batch ${i + 1}/${chunks.length} failed or timed out:`, e);
         c.forEach(entry => failures.push({ entry, error: e }));
       }
+    }
+
+    let importMarkerNote = '';
+    try {
+      const fin = await ScrapDataAdapter.finishImport(window.qdDb, importBatchId, validEntries, failures.map(f => f.entry));
+      if (fin.kept.length) importMarkerNote = ` ${fin.kept.length} shift${fin.kept.length > 1 ? 's' : ''} stay marked "import incomplete" and cannot be closed until an Admin checks them.`;
+    } catch (e) {
+      console.error('Quality Dashboard: could not clear import markers:', e);
+      importMarkerNote = ' The imported shifts stay marked "import incomplete" until an Admin checks them.';
     }
 
     const totalSec = ((Date.now() - importStartedAt) / 1000).toFixed(1);
@@ -1412,7 +1435,7 @@
       msgEl.textContent = `Imported ${succeeded} record${succeeded > 1 ? 's' : ''} into scrapLogs in ${totalSec}s (batch ${importBatchId}). Check Scrap Detail to review them.${mappingSaveNote}`;
     } else {
       msgEl.className = 'qd-form-message error';
-      msgEl.textContent = `Imported ${succeeded} record${succeeded > 1 ? 's' : ''}, but ${failures.length} failed: ${failures[0].error && failures[0].error.message ? failures[0].error.message : 'unknown error'}${mappingSaveNote}`;
+      msgEl.textContent = `Imported ${succeeded} record${succeeded > 1 ? 's' : ''}, but ${failures.length} failed: ${failures[0].error && failures[0].error.message ? failures[0].error.message : 'unknown error'}${mappingSaveNote}${importMarkerNote}`;
     }
     msgEl.style.display = 'block';
   }

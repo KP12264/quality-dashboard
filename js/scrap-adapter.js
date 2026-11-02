@@ -141,7 +141,7 @@
       throw new Error("addScrapEntry is missing/invalid: " + missing.join(", "));
     }
     // Sign-in gate (js/firebase-init.js): {} when sign-in is off, so the write is unchanged.
-    const who = typeof qdGuardWrite === "function" ? qdGuardWrite("scrap.write", { line, shift }) : {};
+    const who = typeof qdGuardWrite === "function" ? qdGuardWrite("scrap.write", { line, shift, date }) : {};
     const data = {
       date, shift, line, model, defectType,
       scrapQty: num(scrapQty),
@@ -178,7 +178,7 @@
       throw new Error("updateScrapEntry is missing/invalid: " + missing.join(", "));
     }
     // Client check covers the new Line/Shift; the rules also check the record's current one.
-    const who = typeof qdGuardWrite === "function" ? qdGuardWrite("scrap.write", { line, shift }) : {};
+    const who = typeof qdGuardWrite === "function" ? qdGuardWrite("scrap.write", { line, shift, date }) : {};
     const patch = {
       date, shift, line, model, defectType,
       scrapQty: num(scrapQty),
@@ -339,7 +339,23 @@
     }
   }
 
+  // Import marker (Phase 3, ledger mode only — with sign-in "off" these do nothing).
+  // beginImport marks every slot the import will write BEFORE any row is written; finishImport
+  // clears the marker of each slot whose rows all succeeded. See js/scrap-ledger.js.
+  async function beginImport(db, entries, importId) {
+    if (!ledgerOn()) return { slots: [] };
+    const who = qdGuardWrite("scrap.import", {});
+    return ScrapLedger.markImport(db, entries, importId, ledgerOpts(who));
+  }
+  async function finishImport(db, importId, entries, failedEntries) {
+    if (!ledgerOn()) return { cleared: [], kept: [] };
+    const who = qdGuardWrite("scrap.import", {});
+    return ScrapLedger.finishImport(db, importId, entries, failedEntries, ledgerOpts(who));
+  }
+
   window.ScrapDataAdapter = {
+    beginImport,
+    finishImport,
     normalizeScrapRecord,
     getScrapData,
     addScrapEntry,

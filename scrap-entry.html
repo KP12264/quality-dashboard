@@ -13,6 +13,7 @@
 <!-- V5 look: shared shell/sidebar (dashboard-v5.css) + this page (scrap-entry-v5.css). Both scoped to body.qd-v5. -->
 <link rel="stylesheet" href="css/dashboard-v5.css?v=20261016-f1">
 <link rel="stylesheet" href="css/scrap-entry-v5.css?v=20261016-k1">
+<link rel="stylesheet" href="css/shift-close.css?v=20261102-p3">
 
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
@@ -89,6 +90,8 @@
       <button data-tab="import" role="tab">Import Excel</button>
     </div>
 
+    <!-- Shift Scrap Close (Phase 3). Hidden unless sign-in is enforced (local emulator test mode). -->
+    <section class="sc-card" id="shiftClosePanel" aria-label="Shift Scrap Close" hidden></section>
     <section class="se-card qd-entry-tab-section" id="tab-manual" aria-labelledby="seFormTitle">
       <div class="se-card-head">
         <span class="se-card-ico" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></span>
@@ -244,15 +247,17 @@
   </main>
 </div>
 
-<script src="js/config.js?v=20261102-p1"></script>
+<script src="js/config.js?v=20261102-p3"></script>
 <script src="js/firebase-init.js?v=20261102-p1"></script>
-<script src="js/qd-auth.js?v=20261102-p2"></script>
+<script src="js/qd-auth.js?v=20261102-p3"></script>
 <script src="js/data-adapter.js"></script>
-<script src="js/scrap-ledger.js?v=20261102-p2"></script>
-<script src="js/scrap-adapter.js?v=20261102-p2"></script>
+<script src="js/scrap-ledger.js?v=20261102-p3"></script>
+<script src="js/scrap-adapter.js?v=20261102-p3"></script>
 <script src="js/scrap-model-mapping-adapter.js?v=20261102-p1"></script>
-<script src="js/scrap-entry-page.js?v=20261016-en1"></script>
-<script src="js/scrap-import.js"></script>
+<script src="js/shift-close.js?v=20261102-p3"></script>
+<script src="js/shift-close-ui.js?v=20261102-p3"></script>
+<script src="js/scrap-entry-page.js?v=20261102-p3"></script>
+<script src="js/scrap-import.js?v=20261102-p3"></script>
 <script src="js/nav.js"></script>
 <script>
   document.getElementById('entryTabs').addEventListener('click', function (e) {

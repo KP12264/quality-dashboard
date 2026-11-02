@@ -32,6 +32,7 @@
   // assigned Line_Shift slots. Mirrored by emulator/firestore.rules.
   const PERMISSIONS = {
     "scrap.write":        { admin: true, leader: "slot", viewer: false },   // add / edit / delete one scrap log
+    "shift.close":        { admin: true, leader: "slot", viewer: false },   // close / reconfirm a Line_Shift slot
     "scrap.import":       { admin: true, leader: false,  viewer: false },   // Excel import (batch, many slots)
     "mapping.write":      { admin: true, leader: false,  viewer: false },   // Excel model mapping
     "targetMaster.write": { admin: true, leader: false,  viewer: false },
@@ -42,6 +43,7 @@
 
   const ACTION_LABEL = {
     "scrap.write": "save scrap records",
+    "shift.close": "close this shift",
     "scrap.import": "import scrap from Excel",
     "mapping.write": "save model mappings",
     "targetMaster.write": "change targets",
@@ -52,6 +54,15 @@
 
   function slotKey(line, shift) { return `${line}_${shift}`; }
 
+  // "YYYY-MM-DD" arithmetic in UTC (dates only, no time zone involved).
+  function dayNumber(d) { const [y, m, dd] = d.split("-").map(Number); return Date.UTC(y, m - 1, dd) / 86400000; }
+  function localToday() { const t = new Date(); return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`; }
+  // A Leader may touch a production date from (today - windowDays) up to today (or later, for scrap
+  // only — closing a future shift is never allowed, see canRole).
+  function withinWindow(date, today, windowDays) {
+    return dayNumber(today) - dayNumber(date) <= windowDays;
+  }
+
   function codeToEmail(code, domain) {
     return String(code || "").trim().toLowerCase().replace(/\s+/g, "") + (domain || "@prodv2.local");
   }
@@ -59,13 +70,18 @@
   // ctx for "slot" actions: { line, shift } and, when a record moves, { fromLine, fromShift }.
   // Without a slot (e.g. delete by id) a Leader with any slot passes here; the rules check the
   // stored record.
+  // ctx.date / ctx.today ("YYYY-MM-DD") apply the Leader date window and the "no future close" rule;
+  // ctx.windowDays defaults to 7 (QD_LEADER_EDIT_WINDOW_DAYS in the browser).
   function canRole(profile, action, ctx) {
     if (!profile || profile.active !== true || !ROLES.includes(profile.role)) return false;
     const rule = PERMISSIONS[action];
     if (!rule) return false;
     const allowed = rule[profile.role];
+    const today = (ctx && ctx.today) || localToday();
+    if (action === "shift.close" && ctx && ctx.date && dayNumber(ctx.date) > dayNumber(today)) return false;   // nobody closes a future date
     if (allowed === true) return true;
     if (allowed !== "slot") return false;
+    if (ctx && ctx.date && !withinWindow(ctx.date, today, ctx.windowDays == null ? 7 : ctx.windowDays)) return false;
     const slots = Array.isArray(profile.slots) ? profile.slots : [];
     if (!ctx || !ctx.line || !ctx.shift) return slots.length > 0;
     const needed = [slotKey(ctx.line, ctx.shift)];
@@ -82,7 +98,7 @@
     return `${role}${slots.length ? " · " + slots.join(", ") : " · no line assigned"}`;
   }
 
-  const pure = { ROLES, ALL_SLOTS, PERMISSIONS, canRole, codeToEmail, slotKey, describeProfile };
+  const pure = { ROLES, ALL_SLOTS, PERMISSIONS, canRole, codeToEmail, slotKey, describeProfile, withinWindow, localToday };
   if (typeof module !== "undefined" && module.exports) module.exports = pure;
   if (typeof window === "undefined") return;
 
@@ -148,14 +164,18 @@
     if (state.checking) throw permissionError("Your role is still being checked. Try again in a moment.");
     if (state.profileError) throw permissionError(state.profileError + " Try again, or sign out and sign in.");
     if (!state.profile) throw permissionError(`Your account has no Quality Dashboard role yet, so you cannot ${what}. Ask a Quality Dashboard admin.`);
-    if (!canRole(state.profile, action, ctx)) {
-      const where = ctx && ctx.line && ctx.shift ? ` for Door ${ctx.line} · ${ctx.shift === "DAY" ? "Day" : "Night"}` : "";
+    const full = Object.assign({ windowDays: typeof QD_LEADER_EDIT_WINDOW_DAYS === "number" ? QD_LEADER_EDIT_WINDOW_DAYS : 7 }, ctx || {});
+    if (!canRole(state.profile, action, full)) {
+      const where = (ctx && ctx.line && ctx.shift ? ` for Door ${ctx.line} · ${ctx.shift === "DAY" ? "Day" : "Night"}` : "")
+        + (ctx && ctx.date ? ` on ${ctx.date}` : "");
+      if (ctx && ctx.date && state.profile.role === "leader" && canRole(state.profile, action, Object.assign({}, full, { date: localToday() })))
+        throw permissionError(`Leaders can change data only for the last ${full.windowDays} days${where ? " (" + where.trim() + ")" : ""}. Ask an admin.`);
       throw permissionError(`Your role (${describeProfile(state.profile)}) cannot ${what}${where}.`);
     }
     return { email: state.email };
   }
 
-  function can(action, ctx) { return !enforce() || canRole(state.profile, action, ctx); }
+  function can(action, ctx) { return !enforce() || canRole(state.profile, action, Object.assign({ windowDays: typeof QD_LEADER_EDIT_WINDOW_DAYS === "number" ? QD_LEADER_EDIT_WINDOW_DAYS : 7 }, ctx || {})); }
 
   // ---- Admin: qdUsers management (rules: admin only) ----
   async function listUsers() {

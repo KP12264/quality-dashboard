@@ -184,7 +184,65 @@
     return chunks;
   }
 
-  const api = { applyOps, chunkBySlot, slotIdOf, planSlots, auditView, MAX_LOGS_PER_TRANSACTION, SLOT_COLLECTION };
+  // ---- Import marker (Phase 3) ----------------------------------------------------------------
+  // Before an Excel import writes anything, every slot it will touch gets
+  //   importPending: { importId, rows, at, by }
+  // and the marker is cleared only when ALL of that slot's rows were saved. A slot whose rows
+  // partly failed (or whose import was abandoned) keeps the marker, and a slot with a marker
+  // cannot be closed (shows CONFLICT) until an Admin checks it and clears it.
+  async function markImport(db, entries, importId, opts) {
+    const rows = new Map();
+    entries.forEach(e => { const id = slotIdOf(e); rows.set(id, (rows.get(id) || 0) + 1); });
+    const ts = opts.serverTimestamp;
+    const marked = [];
+    for (const [id, n] of rows) {
+      const ref = db.collection(SLOT_COLLECTION).doc(id);
+      const [date, line, shift] = id.split("_");
+      let legacy = null;
+      if (!(await ref.get()).exists) legacy = (await db.collection(LOG_COLLECTION).where("date", "==", date).where("line", "==", line).where("shift", "==", shift).get()).size;
+      await db.runTransaction(async tx => {
+        const snap = await tx.get(ref);
+        const marker = { importId, rows: n, at: ts(), by: opts.email };
+        if (snap.exists) {
+          const cur = snap.data().importPending;
+          if (cur && cur.importId !== importId) {
+            const e = new Error(`Slot ${id} still has an unfinished import (${cur.importId}). An Admin must check and clear it before importing again.`);
+            e.code = "qd/import-pending"; throw e;
+          }
+          tx.update(ref, { importPending: marker, updatedAt: ts(), updatedBy: opts.email });
+        } else {
+          if (legacy === null) throw new Error("The slot changed while preparing the import. Please try again.");
+          tx.set(ref, { date, line, shift, logVersion: 0, liveLogCount: legacy, legacyCount: legacy, importPending: marker, updatedAt: ts(), updatedBy: opts.email });
+        }
+      });
+      marked.push(id);
+    }
+    return { slots: marked };
+  }
+  async function clearImportMarker(db, slotId, opts, importId) {
+    const ref = db.collection(SLOT_COLLECTION).doc(slotId);
+    return db.runTransaction(async tx => {
+      const snap = await tx.get(ref);
+      const cur = snap.exists ? snap.data().importPending : null;
+      if (!cur || (importId && cur.importId !== importId)) return false;
+      tx.update(ref, { importPending: null, updatedAt: opts.serverTimestamp(), updatedBy: opts.email });
+      return true;
+    });
+  }
+  // Clears the marker of every slot whose rows ALL succeeded; slots with any failed row keep it.
+  async function finishImport(db, importId, entries, failedEntries, opts) {
+    const bad = new Set((failedEntries || []).map(slotIdOf));
+    const all = new Set(entries.map(slotIdOf));
+    const cleared = [], kept = [];
+    for (const id of all) {
+      if (bad.has(id)) { kept.push(id); continue; }
+      try { if (await clearImportMarker(db, id, opts, importId)) cleared.push(id); }
+      catch (e) { kept.push(id); }
+    }
+    return { cleared, kept };
+  }
+
+  const api = { applyOps, chunkBySlot, slotIdOf, planSlots, auditView, markImport, finishImport, clearImportMarker, MAX_LOGS_PER_TRANSACTION, SLOT_COLLECTION };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   if (typeof window !== "undefined") window.ScrapLedger = api;
 })(this);

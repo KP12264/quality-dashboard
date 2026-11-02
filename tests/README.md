@@ -38,3 +38,22 @@ ledger are refused; `tests/rules/ledger-load.test.js` measures logs per transact
 concurrent writers and an Excel-size import, and checks after each that the version, the events
 and the stored logs agree. `tests/support/compat-shim.js` lets the real ledger module run on the
 emulator's Firestore in Node.
+
+## Shift Scrap Close (Phase 3)
+
+`js/shift-close.js` derives the status of a Date + Line + Shift from the scrap logs actually
+stored (PENDING / SUBMITTED / CONFIRMED_ZERO / NO_PRODUCTION / CHANGED / CONFLICT) and writes a
+close or reconfirm as one transaction (close fields on the slot + audit event `events/c{revision}`).
+`js/shift-close-ui.js` draws the panel on Scrap Entry and the matrix on `daily-confirmation.html`.
+Both appear only in sign-in mode (`?qdEmulator=1` locally); with sign-in "off" they stay hidden.
+
+- `tests/unit/shift-close.test.js` — status rules, fingerprint, shift end, Leader date window,
+  config window == rules window, `QD_AUTH_MODE` still "off".
+- `tests/rules/shift-close.test.js` — who may close, the 7-day window, CHANGED → reconfirm,
+  duplicate and simultaneous closes, edits racing a close, partly failed imports (import marker),
+  legacy logs and writes made around the ledger.
+- `tests/e2e/shift-close.e2e.test.js` — the panel, confirm sheet, matrix, conflict, phone width,
+  and the "off" mode staying hidden.
+
+By hand: seed as above, then open `scrap-entry.html?qdEmulator=1&date=<yesterday>&line=A&shift=DAY`
+or `daily-confirmation.html?qdEmulator=1`.

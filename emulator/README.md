@@ -11,3 +11,7 @@
   only inside the emulator; nothing here can read or write the real project.
 - The tests in `../tests` start the emulator, seed demo users and data, and tear
   everything down. See `../tests/README.md`.
+- Phase 3 adds to the draft: the Leader date window (`qdLeaderWindowDays()` = 7, same as
+  `QD_LEADER_EDIT_WINDOW_DAYS` in `js/config.js`), the close / reconfirm path on `scrapSlots`
+  with audit events `c{n}`, and the Excel import marker (`importPending`). Still draft, still
+  emulator only.

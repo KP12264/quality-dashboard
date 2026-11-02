@@ -24,6 +24,8 @@
   const shiftLabel = code => (SHIFTS.find(s => s.code === code) || {}).label || code;
 
   let saving = false;                 // double-submit guard
+  let refreshClose = () => {};        // Shift Scrap Close panel (js/shift-close-ui.js; enforce mode only)
+  let lastSavedCtx = null;            // panel keeps showing the shift just saved after Line is cleared
   const modelCache = new Map();       // "date|shift|line" -> { names, error }
   let modelRequestSeq = 0;
 
@@ -160,7 +162,9 @@
       if (failed.length === 0 && succeeded.length === 1) {
         const summary = `${lineLabel(entry.line)} · ${shiftLabel(entry.shift)} · ${entry.date} · ${entry.model} · ${entry.defectType} · ${entry.scrapQty} pcs`;
         clearItemFields();
+        lastSavedCtx = { date: entry.date, line: entry.line, shift: entry.shift };
         if (mode === 'save') setLine('');   // finished: Line must be picked again for the next record
+        refreshClose();
         await loadModels();
         showMessage('success', `✓ Saved: ${summary}`);
         if (mode === 'another') $('fModel').focus();
@@ -198,15 +202,26 @@
       const b = $('connectionBanner');
       b.className = 'qd-banner error'; b.textContent = '⚠ ' + window.qdFirebaseError; b.style.display = 'flex';
     }
-    $('ctxDate').value = todayStr();
+    // ?date=YYYY-MM-DD&line=A&shift=DAY presets the context (link from Daily Confirmation).
+    const qs = new URLSearchParams(location.search);
+    $('ctxDate').value = /^\d{4}-\d{2}-\d{2}$/.test(qs.get('date') || '') ? qs.get('date') : todayStr();
+    if (['DAY', 'NIGHT'].includes(qs.get('shift'))) document.querySelectorAll('input[name="ctxShift"]').forEach(r => { r.checked = r.value === qs.get('shift'); });
+    if (['A', 'B', 'C'].includes(qs.get('line'))) setLine(qs.get('line'));
+    if (window.ShiftCloseUI && $('shiftClosePanel')) {
+      refreshClose = ShiftCloseUI.mountPanel($('shiftClosePanel'), () => {
+        const ctx = { date: $('ctxDate').value, line: getLine(), shift: getShift() };
+        if (!ctx.line && lastSavedCtx && lastSavedCtx.date === ctx.date && lastSavedCtx.shift === ctx.shift) return lastSavedCtx;
+        return ctx;
+      });
+    }
     $('fDefect').innerHTML = '<option value="">Select Defect Type</option>' +
       DEFECT_TYPES.map(d => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join('');
     loadModels();
 
     // Plan (and its Model roster) is per date + shift + line.
-    $('ctxDate').addEventListener('change', () => { setError('date', ''); loadModels(); });
-    document.querySelectorAll('input[name="ctxShift"]').forEach(r => r.addEventListener('change', loadModels));
-    document.querySelectorAll('input[name="ctxLine"]').forEach(r => r.addEventListener('change', () => { setError('line', ''); loadModels(); }));
+    $('ctxDate').addEventListener('change', () => { setError('date', ''); loadModels(); refreshClose(); });
+    document.querySelectorAll('input[name="ctxShift"]').forEach(r => r.addEventListener('change', () => { loadModels(); refreshClose(); }));
+    document.querySelectorAll('input[name="ctxLine"]').forEach(r => r.addEventListener('change', () => { setError('line', ''); loadModels(); refreshClose(); }));
     $('fModel').addEventListener('change', () => setError('model', ''));
     $('fDefect').addEventListener('change', () => setError('defect', ''));
     $('fQty').addEventListener('input', () => setError('qty', ''));

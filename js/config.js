@@ -53,6 +53,17 @@ const FIREBASE_APP_NAME = "qualityDashboardReadOnly";
 const QD_AUTH_MODE = "off";
 const QD_EMPLOYEE_EMAIL_DOMAIN = "@prodv2.local";   // same convention as Production V2 (production-v2/js/auth-v2.js)
 const QD_USERS_COLLECTION = "qdUsers";
+// Leaders may add / edit / delete scrap and close a shift only for production dates up to this
+// many days back (Admins: any date). Initial policy; emulator/firestore.rules has the same number
+// in qdLeaderWindowDays() — tests/unit checks that the two stay equal.
+const QD_LEADER_EDIT_WINDOW_DAYS = 7;
+// When a shift ends (local time). A shift can be closed only after this. DAY ends the same day,
+// NIGHT ends the next morning (it stays on its original production date). Initial values: to be
+// confirmed with Production. Checked in the browser only; the rules refuse future dates.
+const QD_SHIFT_END = {
+  DAY:   { dayOffset: 0, time: "20:00" },
+  NIGHT: { dayOffset: 1, time: "08:00" }
+};
 const QD_EMULATOR = {
   projectId: "demo-quality-dashboard",   // "demo-" projects exist only in the emulator
   firestoreHost: "127.0.0.1", firestorePort: 8080,

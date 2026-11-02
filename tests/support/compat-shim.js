@@ -1,6 +1,6 @@
 // Minimal shim: lets js/scrap-ledger.js (written for the Firebase *compat* API used by the pages)
 // run on the *modular* Firestore instances that @firebase/rules-unit-testing hands out.
-// Only what scrap-ledger.js uses: collection().doc(), ref.get(), ref.collection(), where().get(),
+// Only what scrap-ledger.js and shift-close.js use: collection().doc(), ref.get(), ref.collection(), where().get(),
 // db.runTransaction(tx.get / tx.set / tx.update / tx.delete).
 const { doc, collection, getDoc, getDocs, query, where, runTransaction } = require('firebase/firestore');
 
@@ -16,7 +16,7 @@ function wrapQuery(q, constraints) {
   };
 }
 function wrapCol(c) {
-  return { doc: id => wrapRef(id ? doc(c, id) : doc(c)), where: (f, op, v) => wrapQuery(c, [where(f, op, v)]) };
+  return { doc: id => wrapRef(id ? doc(c, id) : doc(c)), where: (f, op, v) => wrapQuery(c, [where(f, op, v)]), get: () => wrapQuery(c, []).get() };
 }
 function compatDb(fs) {
   return {
