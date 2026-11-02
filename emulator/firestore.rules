@@ -103,14 +103,15 @@ service cloud.firestore {
     function qdNotFuture(d) {
       return qdDayStart(d) <= qdBkkNow();
     }
-    // Shift end in hours after the production date's midnight (Thailand time): DAY 20:00 the same
-    // day, NIGHT 08:00 the next day. BLOCKED: values not confirmed by Production yet. Keep equal to
-    // QD_SHIFT_END in js/config.js (tests/unit checks it).
-    function qdShiftEndHours(shift) {
-      return shift == 'DAY' ? 20 : 32;
+    // Shift end in MINUTES after the production date's midnight (Thailand time), Door Line,
+    // confirmed in Phase 5: DAY 19:50 the same day (1190), NIGHT 08:00 the next day (1920). The
+    // NIGHT shift belongs to the date it started on. Keep equal to QD_SHIFT_END in js/config.js
+    // (tests/unit checks it). request.time is the server clock: a device clock cannot move it.
+    function qdShiftEndMinutes(shift) {
+      return shift == 'DAY' ? 1190 : 1920;
     }
     function qdShiftEnded(d, shift) {
-      return qdBkkNow() >= qdDayStart(d) + duration.value(qdShiftEndHours(shift), 'h');
+      return qdBkkNow() >= qdDayStart(d) + duration.value(qdShiftEndMinutes(shift), 'm');
     }
     function qdValidSlot(line, shift) {
       return line in ['A', 'B', 'C'] && shift in ['DAY', 'NIGHT'];
@@ -306,6 +307,37 @@ service cloud.firestore {
         && qdNotFuture(n.date) && qdInWindow(n.date) && qdShiftEnded(n.date, n.shift)
         && existsAfter(qdCloseEventPath(slotId, n.closeRevision));
     }
+    // ---- Ledger baseline (Phase 5 migration) ----
+    // Before go-live an Admin creates every slot that already has scrap logs ("baseline": logVersion 0,
+    // legacyCount = the logs counted by the migration, audit event b1), then sets
+    // qdConfig/ledger.baselineComplete. From then on a slot can only be CREATED with legacyCount 0, so
+    // a client can no longer state how many old logs a slot has: that number comes only from the
+    // Admin-run, audited baseline. (Status is still always re-checked against the stored logs.)
+    function qdBaselineDone() {
+      return exists(/databases/$(database)/documents/qdConfig/ledger)
+        && get(/databases/$(database)/documents/qdConfig/ledger).data.baselineComplete == true;
+    }
+    function qdLegacyCountOk(n) {
+      return n.legacyCount == 0 || !qdBaselineDone();
+    }
+    function qdValidBaselineEvent(slotId, eventId, e) {
+      return eventId == 'b1'
+        && e.keys().hasOnly(['type', 'migrationId', 'legacyCount', 'scrapQty', 'logIds', 'fingerprint', 'at', 'by'])
+        && e.type == 'BASELINE'
+        && e.migrationId is string && e.migrationId.size() > 0
+        && e.legacyCount == getAfter(qdSlotPath(slotId)).data.legacyCount
+        && getAfter(qdSlotPath(slotId)).data.logVersion == 0
+        && e.logIds is list && e.logIds.size() == e.legacyCount
+        && e.scrapQty is number && e.fingerprint is string;
+    }
+    match /qdConfig/{id} {
+      allow read: if qdActive();
+      allow write: if qdAdmin() && id == 'ledger'
+        && request.resource.data.keys().hasOnly(['baselineComplete', 'migrationId', 'at', 'by'])
+        && request.resource.data.baselineComplete is bool
+        && request.resource.data.at == request.time && request.resource.data.by == qdEmail();
+    }
+
     function qdSlotBaseKeys() {
       return ['date', 'line', 'shift', 'logVersion', 'liveLogCount', 'legacyCount', 'updatedAt', 'updatedBy'];
     }
@@ -326,24 +358,34 @@ service cloud.firestore {
         && request.resource.data.updatedAt == request.time
         && qdSummaryOk(request.resource.data)
         && (
-          // (a) first ledger write: v1 with its event. legacyCount = logs saved before the ledger.
+          // (a) first ledger write: v1 with its event. legacyCount = logs saved before the ledger
+          //     (must be 0 once the baseline is complete).
           (request.resource.data.keys().hasOnly(qdSlotBaseKeys())
             && request.resource.data.logVersion == 1
             && existsAfter(qdEventPath(slotId, 1))
             && request.resource.data.liveLogCount == request.resource.data.legacyCount + qdEventDelta(getAfter(qdEventPath(slotId, 1)).data)
-            && request.resource.data.liveLogCount >= 0)
+            && request.resource.data.liveLogCount >= 0
+            && qdLegacyCountOk(request.resource.data))
           // (b) import marker on a slot without a ledger yet (admin only)
           || (qdAdmin()
             && request.resource.data.keys().hasOnly(qdSlotBaseKeys().concat(['importPending', 'markerRevision']))
             && request.resource.data.logVersion == 0
             && request.resource.data.liveLogCount == request.resource.data.legacyCount
-            && qdMarkerChangeOk(slotId, null, request.resource.data))
+            && qdMarkerChangeOk(slotId, null, request.resource.data)
+            && qdLegacyCountOk(request.resource.data))
           // (c) close of a slot without a ledger yet (no scrap written through the ledger)
           || (request.resource.data.keys().hasOnly(qdSlotBaseKeys().concat(qdCloseKeys()))
             && request.resource.data.logVersion == 0
             && request.resource.data.liveLogCount == request.resource.data.legacyCount
             && request.resource.data.closeRevision == 1
-            && qdCloseFieldsOk(slotId, request.resource.data))
+            && qdCloseFieldsOk(slotId, request.resource.data)
+            && qdLegacyCountOk(request.resource.data))
+          // (d) migration baseline (admin only): logs saved before the ledger, audited as event b1
+          || (qdAdmin()
+            && request.resource.data.keys().hasOnly(qdSlotBaseKeys())
+            && request.resource.data.logVersion == 0
+            && request.resource.data.liveLogCount == request.resource.data.legacyCount
+            && existsAfter(/databases/$(database)/documents/scrapSlots/$(slotId)/events/b1))
         );
 
       allow update: if qdCanWriteSlot(resource.data.line, resource.data.shift)
@@ -382,7 +424,8 @@ service cloud.firestore {
           && request.resource.data.at == request.time
           && (eventId.matches('v[0-9]+') ? qdValidLedgerEvent(slotId, eventId, request.resource.data)
               : eventId.matches('c[0-9]+') ? qdValidCloseEvent(slotId, eventId, request.resource.data)
-              : eventId.matches('m[0-9]+') && qdAdmin() && qdValidMarkerEvent(slotId, eventId, request.resource.data));
+              : eventId.matches('m[0-9]+') ? qdAdmin() && qdValidMarkerEvent(slotId, eventId, request.resource.data)
+              : qdAdmin() && !exists(qdSlotPath(slotId)) && qdValidBaselineEvent(slotId, eventId, request.resource.data));
         allow update, delete: if false;
       }
     }

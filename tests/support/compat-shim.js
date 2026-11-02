@@ -2,12 +2,12 @@
 // run on the *modular* Firestore instances that @firebase/rules-unit-testing hands out.
 // Only what scrap-ledger.js and shift-close.js use: collection().doc(), ref.get(), ref.collection(), where().get(),
 // db.runTransaction(tx.get / tx.set / tx.update / tx.delete).
-const { doc, collection, getDoc, getDocs, query, where, runTransaction } = require('firebase/firestore');
+const { doc, collection, getDoc, getDocs, query, where, runTransaction, setDoc } = require('firebase/firestore');
 
 const snapOf = s => ({ exists: s.exists(), id: s.id, data: () => s.data() });
 
 function wrapRef(r) {
-  return { id: r.id, _r: r, get: async () => snapOf(await getDoc(r)), collection: n => wrapCol(collection(r, n)) };
+  return { id: r.id, _r: r, get: async () => snapOf(await getDoc(r)), set: d => setDoc(r, d), collection: n => wrapCol(collection(r, n)) };
 }
 function wrapQuery(q, constraints) {
   return {

@@ -18,3 +18,5 @@
 - Phase 4 adds: `scrapCloseSummary/{date}` (public read, written only together with the slot it
   mirrors, no e-mails), audited import marker events `m{n}`, rules-side shift end
   (`qdShiftEndHours`, BLOCKED: times not confirmed) and Thailand time (`qdBkkNow`, UTC+7).
+- Phase 5: confirmed shift ends at minute precision (`qdShiftEndMinutes`: DAY 19:50, NIGHT 08:00
+  next day), ledger baseline (`b1` events, `qdConfig/ledger.baselineComplete`). See `docs/phase5/`.

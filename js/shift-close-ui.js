@@ -35,13 +35,25 @@
     return `${b.getUTCFullYear()}-${p(b.getUTCMonth() + 1)}-${p(b.getUTCDate())} ${p(b.getUTCHours())}:${p(b.getUTCMinutes())}`;
   }
   function chip(status) { return `<span class="sc-chip sc-${esc(status)}" data-status="${esc(status)}">${esc(LABEL[status] || status)}</span>`; }
+  // Sign-in state that matters for what is shown. The auth listener fires several times while
+  // signing in (account, then role); reload only when this changes and the role read has finished.
+  function authKey() {
+    const st = QDAuth.getState();
+    if (st.checking) return null;
+    const p = st.profile;
+    return [st.email || "", p ? p.role : "", p ? p.active : "", p ? (p.slots || []).join(",") : ""].join("|");
+  }
+  function onAuthChange(fn) {
+    let last = authKey();
+    QDAuth.onChange(() => { const k = authKey(); if (k === null || k === last) return; last = k; fn(); });
+  }
   const opts = () => {
     const st = QDAuth.getState();
     return { email: st.email, serverTimestamp: () => firebase.firestore.FieldValue.serverTimestamp() };
   };
   function errorText(e) {
     const c = e && e.code ? String(e.code) : "";
-    if (/permission/i.test(c) && !c.startsWith("qd/")) return "The server refused this close (no permission for this Line/Shift or date, or the data changed). Nothing was saved.";
+    if (/permission/i.test(c) && !c.startsWith("qd/")) return "The server refused this close: no permission for this Line/Shift or date, the data changed, or the shift has not ended yet by server time (the device clock is not used). Nothing was saved.";
     return (e && e.message) || String(e);
   }
 
@@ -231,7 +243,7 @@
         host.innerHTML = `<div class="sc-head"><h2>Shift Scrap Close</h2></div><div class="sc-note err">Could not load the close status: ${esc(errorText(e))}</div>`;
       }
     }
-    if (window.QDAuth) QDAuth.onChange(() => refresh());
+    if (window.QDAuth) onAuthChange(() => refresh());
     refresh();
     return refresh;
   }
@@ -280,7 +292,7 @@
         host.innerHTML = `<div class="sc-note err">Could not load: ${esc(errorText(e))}</div>`;
       }
     }
-    if (window.QDAuth) QDAuth.onChange(() => refresh());
+    if (window.QDAuth) onAuthChange(() => refresh());
     refresh();
     return { refresh, setDate: d => { current = d; detailHost.hidden = true; return refresh(); } };
   }

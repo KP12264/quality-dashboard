@@ -74,3 +74,16 @@ date for that page only (emulator only).
 - `tests/e2e/target-close.e2e.test.js` — Dashboard vs Executive Report vs CSV on the same days,
   filters, READ ERROR, read counts, phone width, and an Excel import with a real CSV file
   (success, partial failure → Conflict, blocked second import).
+
+## Production readiness (Phase 5)
+
+- `tests/rules/shift-time.test.js` — shift end at minute precision on SERVER time (the harness
+  offsets only `qdBkkNow()`), NIGHT bound to its start date, Leader window by Thailand date.
+- `tests/rules/pv2-compat.test.js` — the same 450 requests against the Production V2 rules alone
+  and the combined draft; writes `docs/phase5/generated/rules-impact-matrix.md`.
+- `tests/rules/migration.test.js` — ledger baseline dry run + apply on synthetic data; writes
+  `docs/phase5/generated/migration-dry-run.md`.
+- `tests/rules/budget.test.js` — heaviest valid write paths vs the rules limits (run after every
+  rules change).
+- `tests/unit/no-ledger-bypass.test.js` — no code path writes scrap logs around the ledger.
+- Reports and runbook: `docs/phase5/`.

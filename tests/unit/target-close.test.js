@@ -135,18 +135,25 @@ test('config: QD_CLOSE_REQUIRED_FROM is null and QD_AUTH_MODE "off"', () => {
 });
 test('shift end and Thailand time agree with the rules', () => {
   const rules = fs.readFileSync(path.join(ROOT, 'emulator/firestore.rules'), 'utf8');
-  const m = rules.match(/function qdShiftEndHours\(shift\) \{\s*return shift == 'DAY' \? (\d+) : (\d+);/);
+  const m = rules.match(/function qdShiftEndMinutes\(shift\) \{\s*return shift == 'DAY' \? (\d+) : (\d+);/);
   const cfg = vmConfig();
-  const h = sh => cfg.QD_SHIFT_END[sh].dayOffset * 24 + Number(cfg.QD_SHIFT_END[sh].time.split(':')[0]) + Number(cfg.QD_SHIFT_END[sh].time.split(':')[1]) / 60;
-  assert.equal(h('DAY'), Number(m[1])); assert.equal(h('NIGHT'), Number(m[2]));
+  const mins = sh => cfg.QD_SHIFT_END[sh].dayOffset * 1440 + Number(cfg.QD_SHIFT_END[sh].time.split(':')[0]) * 60 + Number(cfg.QD_SHIFT_END[sh].time.split(':')[1]);
+  assert.equal(mins('DAY'), Number(m[1])); assert.equal(mins('NIGHT'), Number(m[2]));
+  assert.equal(mins('DAY'), 19 * 60 + 50); assert.equal(mins('NIGHT'), 24 * 60 + 8 * 60);
   assert.match(rules, /function qdBkkNow\(\) \{\s*return request\.time \+ duration\.value\((\d+), 'h'\);/);
   assert.equal(Number(rules.match(/request\.time \+ duration\.value\((\d+), 'h'\)/)[1]), cfg.QD_TZ_OFFSET_HOURS);
   // 18:00 UTC is already the next day in Thailand
   const QA = require('../../js/qd-auth.js');
   assert.equal(QA.localToday(new Date('2026-11-02T16:59:00Z')), '2026-11-02');
   assert.equal(QA.localToday(new Date('2026-11-02T17:00:00Z')), '2026-11-03');
-  // DAY of 2026-11-02 ends 20:00 Thailand = 13:00 UTC; NIGHT ends 2026-11-03 08:00 = 01:00 UTC
-  assert.equal(SC.shiftEnd('2026-11-02', 'DAY').toISOString(), '2026-11-02T13:00:00.000Z');
+  // DAY of 2026-11-02 ends 19:50 Thailand = 12:50 UTC; NIGHT ends 2026-11-03 08:00 = 01:00 UTC
+  assert.equal(SC.shiftEnd('2026-11-02', 'DAY').toISOString(), '2026-11-02T12:50:00.000Z');
+  // minute boundaries (client): DAY 19:49 no / 19:50 yes; NIGHT 07:59 no / 08:00 yes (next day)
+  assert.equal(SC.shiftEnded('2026-11-02', 'DAY', new Date('2026-11-02T12:49:59Z')), false);
+  assert.equal(SC.shiftEnded('2026-11-02', 'DAY', new Date('2026-11-02T12:50:00Z')), true);
+  assert.equal(SC.shiftEnded('2026-11-02', 'NIGHT', new Date('2026-11-03T00:59:59Z')), false);
+  assert.equal(SC.shiftEnded('2026-11-02', 'NIGHT', new Date('2026-11-03T01:00:00Z')), true);
+  assert.equal(SC.shiftEnded('2026-11-02', 'NIGHT', new Date('2026-11-02T12:50:00Z')), false);   // NIGHT belongs to its start date
   assert.equal(SC.shiftEnd('2026-11-02', 'NIGHT').toISOString(), '2026-11-03T01:00:00.000Z');
 });
 function vmConfig() {

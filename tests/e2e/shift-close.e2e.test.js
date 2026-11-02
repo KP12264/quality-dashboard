@@ -18,8 +18,9 @@ const AUTH = 'http://127.0.0.1:9099';
 const SDK = path.join(__dirname, '../node_modules/firebase-compat');
 const PASSWORD = 'test-password-1';
 const E = code => `${code.toLowerCase()}@prodv2.local`;
-const ymd = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-const D1 = ymd(new Date(Date.now() - 86400000));   // yesterday: both shifts have ended
+// Thailand dates (Asia/Bangkok, UTC+7), like the pages and the rules.
+const bkkDate = n => { const d = new Date(Date.now() + 7 * 3600000 - n * 86400000); return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`; };
+const D1 = bkkDate(2);   // two days ago: both shifts have ended
 let env, server, browser;
 
 async function authCall(method, url, body) {
@@ -176,11 +177,29 @@ describe('Shift Scrap Close in the browser (emulator)', () => {
 
   it('a shift that has not ended yet cannot be closed', async () => {
     const { page, context } = await newPage();
-    const today = ymd(new Date());
+    const today = bkkDate(0);
     await page.goto(`${BASE}/scrap-entry.html?qdEmulator=1&date=${today}&line=A&shift=NIGHT`);
     await signIn(page, 'ADMIN1');
     await waitChip(page, '#shiftClosePanel', 'PENDING');
     assert.match(await blockedText(page, /can be closed after it ends/), /can be closed after it ends/);
+    await context.close();
+  });
+
+  it('a device clock moved forward cannot close a shift early: the server time decides', async () => {
+    const { page, context } = await newPage();
+    const off = 7 * 3600000, b = new Date(Date.now() + off);
+    const today = `${b.getUTCFullYear()}-${String(b.getUTCMonth() + 1).padStart(2, '0')}-${String(b.getUTCDate()).padStart(2, '0')}`;
+    // the device thinks it is tomorrow 09:00 Thailand time: today's NIGHT (ends 08:00 tomorrow) looks ended
+    await page.clock.setFixedTime(new Date(Date.UTC(b.getUTCFullYear(), b.getUTCMonth(), b.getUTCDate() + 1, 2, 0)));
+    await page.goto(`${BASE}/scrap-entry.html?qdEmulator=1&date=${today}&line=A&shift=NIGHT`);
+    await signIn(page, 'ADMIN1');
+    await page.waitForSelector('#shiftClosePanel [data-action="CONFIRMED_ZERO"]', { timeout: 15000 });   // the page offers it
+    await page.click('#shiftClosePanel [data-action="CONFIRMED_ZERO"]');
+    await page.waitForSelector('.sc-sheet');
+    await page.click('#scConfirm');
+    await page.waitForSelector('#scSheetErr:not([hidden])', { timeout: 15000 });
+    assert.match(await page.textContent('#scSheetErr'), /server refused.*not ended yet by server time/);
+    assert.equal((await slot(`${today}_A_NIGHT`)), null);
     await context.close();
   });
 
@@ -264,6 +283,32 @@ describe('Shift Close stays hidden with sign-in "off" (live default)', () => {
     await page.waitForSelector('#dcMatrix .sc-note');
     assert.match(await page.textContent('#dcMatrix'), /not enabled yet/);
     assert.deepEqual(slotReads, []);
+    await context.close();
+  });
+});
+
+describe('network failure and retry (emulator)', () => {
+  it('saving or closing while offline fails cleanly (nothing half-written); after reconnecting it works', async () => {
+    await seed();
+    const { page, context } = await newPage();
+    await page.goto(`${BASE}/scrap-entry.html?qdEmulator=1&date=${D1}&line=A&shift=DAY`);
+    await signIn(page, 'LEADA');
+    await waitChip(page, '#shiftClosePanel', 'PENDING');
+    const before = await slot(`${D1}_A_DAY`);
+    await context.setOffline(true);
+    const offline = await page.evaluate(async d => {
+      const t = Date.now();
+      try { await ScrapDataAdapter.addScrapEntry(window.qdDb, { date: d, shift: 'DAY', line: 'A', model: 'M', defectType: 'Dent', scrapQty: 2 }); return 'saved'; }
+      catch (e) { return `${e.code || e.message} after ${Math.round((Date.now() - t) / 1000)}s`; }
+    }, D1);
+    assert.match(offline, /unavailable|offline|network|failed/i, offline);
+    await context.setOffline(false);
+    assert.deepEqual(await slot(`${D1}_A_DAY`), before, 'no ledger change while offline');
+    const online = await page.evaluate(async d => { await ScrapDataAdapter.addScrapEntry(window.qdDb, { date: d, shift: 'DAY', line: 'A', model: 'M', defectType: 'Dent', scrapQty: 2 }); return 'saved'; }, D1);
+    assert.equal(online, 'saved');
+    const s = await slot(`${D1}_A_DAY`);
+    assert.equal(s.liveLogCount, 2); assert.equal(s.logVersion, 1);
+    console.log('  offline save result:', offline);
     await context.close();
   });
 });

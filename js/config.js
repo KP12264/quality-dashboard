@@ -61,12 +61,12 @@ const QD_LEADER_EDIT_WINDOW_DAYS = 7;
 // whatever the device's own time zone is. emulator/firestore.rules uses the same fixed +7 hours.
 const QD_TIME_ZONE = "Asia/Bangkok";
 const QD_TZ_OFFSET_HOURS = 7;
-// When a shift ends (Thailand time). A shift can be closed only after this. DAY ends the same day,
-// NIGHT ends the next morning (it stays on its original production date).
-// BLOCKED: 20:00 / 08:00 are NOT confirmed by Production yet. emulator/firestore.rules holds the
-// same values in qdShiftEnded() (tests/unit checks they stay equal).
+// When a shift ends (Thailand time, Door Line). A shift can be closed only from this minute on.
+// CONFIRMED (Phase 5): DAY ends 19:50 on the production date; NIGHT ends 08:00 the next day and
+// stays on the production date it started on. emulator/firestore.rules holds the same values in
+// qdShiftEndMinutes() (minutes after the production date's midnight; tests/unit checks they agree).
 const QD_SHIFT_END = {
-  DAY:   { dayOffset: 0, time: "20:00" },
+  DAY:   { dayOffset: 0, time: "19:50" },
   NIGHT: { dayOffset: 1, time: "08:00" }
 };
 // First production date on which Shift Close is REQUIRED for the daily target (Phase 4).

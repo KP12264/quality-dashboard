@@ -119,6 +119,18 @@ const COUNT_READS = () => {
   const db = window.qdDb;
   window.qdDb = new Proxy(db, { get(t, p) { if (p === 'collection') return n => wrap(t.collection(n), n); const v = t[p]; return typeof v === 'function' ? v.bind(t) : v; } });
 };
+// Same counter, installed before the page's scripts run (counts the first render too).
+const COUNT_READS_FROM_START = () => {
+  const reads = window.__qdReads = {};
+  const wrap = (o, name) => new Proxy(o, { get(t, p) {
+    const v = t[p];
+    if (['where', 'orderBy', 'limit', 'doc', 'collection'].includes(p)) return (...a) => wrap(v.apply(t, a), p === 'collection' ? a[0] : name);
+    if (p === 'get') return async (...a) => { const s = await v.apply(t, a); reads[name] = (reads[name] || 0) + (typeof s.size === 'number' ? Math.max(1, s.size) : 1); return s; };
+    return typeof v === 'function' ? v.bind(t) : v;
+  } });
+  let real = null;
+  Object.defineProperty(window, 'qdDb', { configurable: true, get: () => real, set: v => { real = v ? new Proxy(v, { get(t, p) { if (p === 'collection') return n => wrap(t.collection(n), n); const x = t[p]; return typeof x === 'function' ? x.bind(t) : x; } }) : v; } });
+};
 async function dashboardStatuses(page, from, to) {
   await page.evaluate(({ from, to }) => {
     document.getElementById('dateFrom').value = from; document.getElementById('dateTo').value = to;
@@ -258,6 +270,26 @@ describe('Dashboard, Executive Report and CSV agree (emulator)', () => {
     assert.ok(!off.scrapCloseSummary);
     assert.ok(on.scrapCloseSummary >= 1 && on.scrapCloseSummary <= 8, 'summary: one document per close-required day at most');
     assert.ok(!on.scrapSlots && !on.qdUsers);
+  });
+
+  it('Firestore reads of Daily Confirmation and the Scrap Entry close panel (signed in)', async () => {
+    const run = async (url, ready) => {
+      const { page, context } = await newPage();
+      await page.addInitScript(COUNT_READS_FROM_START);
+      await page.goto(`${BASE}/${url}`);
+      await signIn(page, 'ADMIN1');
+      await page.waitForSelector(ready, { timeout: 20000 });
+      await page.waitForTimeout(1500);   // let any duplicate refresh finish
+      const r = await page.evaluate(() => window.__qdReads);
+      await context.close();
+      return r;
+    };
+    const dc = await run(`daily-confirmation.html?qdEmulator=1&date=${D.within}`, '[data-role="matrix"]');
+    const se = await run(`scrap-entry.html?qdEmulator=1&date=${D.within}&line=A&shift=DAY`, '#shiftClosePanel .sc-chip');
+    console.log('  reads after sign-in — Daily Confirmation:', JSON.stringify(dc), ' Scrap Entry:', JSON.stringify(se));
+    assert.ok(dc.scrapSlots <= 6, 'one load of the 6 slots (no duplicate refresh)');
+    assert.ok(dc.scrapLogs <= 2, 'one scrap-log query for the day');
+    assert.ok(se.scrapSlots <= 1, 'one slot read for the panel');
   });
 
   it('phone width: status, close line and detail fit without horizontal scroll', async () => {
