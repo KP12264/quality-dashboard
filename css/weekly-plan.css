@@ -1,0 +1,85 @@
+/* Weekly Plan V5 (weekly-plan.html) + the Dashboard "Scrap Budget" card. Scoped to body.qd-v5. */
+.qd-v5 .wp-main .sc-card { margin-bottom: 14px; }
+.qd-v5 .wp-rule { margin: 8px 0 0; font-size: 13px; color: #475569; }
+.qd-v5 .wp-note { color: #64748b; font-size: 12.5px; }
+.qd-v5 .wp-loading { color: #64748b; padding: 8px 0; }
+.qd-v5 .wp-warn { margin-top: 8px; padding: 6px 10px; border-radius: 8px; background: #fff7ed; color: #9a3412; font-size: 13px; }
+.qd-v5 .wp-month-head, .qd-v5 .wp-section-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 10px; }
+.qd-v5 .wp-month-head h2, .qd-v5 .wp-section-head h2, .qd-v5 #wpReview h2 { margin: 0; font-size: 17px; }
+.qd-v5 .wp-asof { color: #64748b; font-size: 13px; }
+.qd-v5 .wp-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.qd-v5 .wp-tile { border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px 12px; min-width: 0; }
+.qd-v5 .wp-tile-label { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: #64748b; }
+.qd-v5 .wp-tile-value { font-size: 24px; font-weight: 700; margin: 2px 0; }
+.qd-v5 .wp-tile-value small { font-size: 13px; font-weight: 500; color: #64748b; }
+.qd-v5 .wp-tile-sub { font-size: 12px; color: #64748b; overflow-wrap: anywhere; }
+.qd-v5 .wp-sofar { font-size: 11px; font-weight: 600; color: #b45309; margin-left: 4px; vertical-align: super; }
+.qd-v5 .wp-bar { position: relative; height: 10px; border-radius: 6px; background: #e2e8f0; margin: 12px 0 8px; }
+.qd-v5 .wp-bar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 6px; background: #0f766e; }
+.qd-v5 .wp-bar i.bad { background: #dc2626; }
+.qd-v5 .wp-bar b { position: absolute; top: -3px; bottom: -3px; width: 2px; background: #334155; }
+.qd-v5 .wp-data { font-size: 13px; color: #334155; margin: 4px 0 0; }
+.qd-v5 .wp-chip { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.qd-v5 .wp-chip.good { background: #dcfce7; color: #166534; }
+.qd-v5 .wp-chip.bad { background: #fee2e2; color: #991b1b; }
+.qd-v5 .wp-chip.warn { background: #fef3c7; color: #92400e; }
+.qd-v5 .wp-chip.neutral { background: #f1f5f9; color: #475569; }
+.qd-v5 .wp-scroll { overflow-x: auto; max-width: 100%; }
+.qd-v5 .wp-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.qd-v5 .wp-table caption { text-align: left; font-weight: 600; padding: 6px 0; }
+.qd-v5 .wp-table th, .qd-v5 .wp-table td { padding: 6px 8px; border-bottom: 1px solid #e2e8f0; text-align: left; white-space: nowrap; }
+.qd-v5 .wp-table .n { text-align: right; font-variant-numeric: tabular-nums; }
+.qd-v5 .wp-table thead th { font-size: 12px; color: #64748b; font-weight: 600; }
+.qd-v5 .wp-table tfoot th, .qd-v5 .wp-table tfoot td, .qd-v5 .wp-table tr.total th, .qd-v5 .wp-table tr.total td { font-weight: 700; border-top: 2px solid #cbd5e1; }
+.qd-v5 #wpWeeksTable tbody tr { cursor: pointer; }
+.qd-v5 #wpWeeksTable tbody tr.selected { background: #f0fdfa; }
+.qd-v5 #wpWeeksTable tbody tr:focus-visible { outline: 2px solid #0f766e; outline-offset: -2px; }
+.qd-v5 .wp-ov { font-size: 11px; color: #92400e; }
+.qd-v5 .wp-unknown { color: #94a3b8; }
+.qd-v5 .wp-grid2 { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 16px; }
+.qd-v5 .wp-defects { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.qd-v5 .wp-defect { border: 1px solid #e2e8f0; border-radius: 10px; padding: 8px 10px; }
+.qd-v5 .wp-defect-main { display: flex; align-items: center; gap: 10px; }
+.qd-v5 .wp-rank { width: 22px; height: 22px; border-radius: 50%; background: #0f766e; color: #fff; font-size: 12px; display: inline-flex; align-items: center; justify-content: center; flex: none; }
+.qd-v5 .wp-defect-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.qd-v5 .wp-defect-qty { white-space: nowrap; font-weight: 700; }
+.qd-v5 .wp-defect-qty small { font-weight: 500; color: #64748b; }
+.qd-v5 .wp-defect-lines { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 0 32px; }
+.qd-v5 .wp-line { font-size: 12px; background: #f1f5f9; border-radius: 6px; padding: 1px 8px; }
+.qd-v5 .wp-line.zero { color: #94a3b8; }
+.qd-v5 .wp-causes { margin: 6px 0 0 32px; font-size: 13px; }
+.qd-v5 .wp-causes summary { cursor: pointer; color: #0f766e; }
+.qd-v5 .wp-goal { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 16px; margin: 8px 0; }
+.qd-v5 .wp-goal dt { font-size: 12px; color: #64748b; }
+.qd-v5 .wp-goal dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
+.qd-v5 #wpGoal summary { cursor: pointer; }
+.qd-v5 #wpReviewText { width: 100%; box-sizing: border-box; font: inherit; }
+.qd-v5 .wp-review-text { white-space: pre-wrap; }
+.qd-v5 .wp-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 8px; }
+.qd-v5 .wp-dialog { max-width: min(520px, calc(100vw - 32px)); border: 0; border-radius: 14px; padding: 18px; box-shadow: 0 20px 50px rgba(15, 23, 42, .25); }
+.qd-v5 .wp-dialog label { display: block; font-size: 13px; margin: 10px 0 4px; }
+.qd-v5 .wp-dialog input { width: 100%; box-sizing: border-box; font: inherit; padding: 6px 8px; }
+.qd-v5 .wp-history { font-size: 12.5px; padding-left: 18px; max-height: 180px; overflow: auto; }
+
+/* Dashboard card */
+.qd-v5 .v5-budget { padding: 14px 16px; }
+.qd-v5 .v5-budget-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin-bottom: 10px; }
+.qd-v5 .v5-budget-head h2 { margin: 0; font-size: 16px; }
+.qd-v5 .v5-budget-head .v5-budget-link { margin-left: auto; font-size: 13px; font-weight: 600; color: #0f766e; text-decoration: none; }
+.qd-v5 .v5-budget-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.qd-v5 .v5-budget-half { border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px 12px; min-width: 0; }
+.qd-v5 .v5-budget-half h3 { margin: 0 0 4px; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: #64748b; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.qd-v5 .v5-budget-nums { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 13px; color: #334155; }
+.qd-v5 .v5-budget-nums b { font-size: 18px; color: #0f172a; }
+.qd-v5 .v5-budget-data { font-size: 12px; color: #64748b; margin-top: 4px; overflow-wrap: anywhere; }
+
+@media (max-width: 900px) {
+  .qd-v5 .wp-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .qd-v5 .wp-grid2 { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 640px) {
+  .qd-v5 .v5-budget-grid { grid-template-columns: minmax(0, 1fr); }
+  .qd-v5 .v5-budget-head .v5-budget-link { margin-left: 0; width: 100%; }
+  .qd-v5 .wp-goal { grid-template-columns: minmax(0, 1fr); }
+  .qd-v5 .wp-tile-value { font-size: 20px; }
+}

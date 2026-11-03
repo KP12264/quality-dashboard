@@ -8,7 +8,7 @@ const fs = require('fs');
 const path = require('path');
 const ROOT = path.join(__dirname, '../..');
 
-const WRITERS = { 'scrap-adapter.js': 'scrapLogs', 'improvement-adapter.js': 'improvements', 'target-adapter.js': 'targetMaster', 'scrap-model-mapping-adapter.js': 'scrapModelMappings', 'scrap-plan-adapter.js': 'scrapWeeklyPlans', 'admin-page.js': 'qdUsers/targetMaster', 'scrap-import.js': 'scrapLogs (Excel)', 'scrap-entry-page.js': 'scrapLogs (form)', 'scrap-detail-page.js': 'scrapLogs (edit/delete)', 'improvement-page.js': 'improvements', 'plan-tracking-page.js': 'scrapWeeklyPlans', 'ops-console.js': 'scrapSlots / qdConfig / qdOpsLog (Operations, admin)' };
+const WRITERS = { 'scrap-adapter.js': 'scrapLogs', 'improvement-adapter.js': 'improvements', 'target-adapter.js': 'targetMaster', 'scrap-model-mapping-adapter.js': 'scrapModelMappings', 'scrap-plan-adapter.js': 'scrapWeeklyPlans', 'admin-page.js': 'qdUsers/targetMaster', 'scrap-import.js': 'scrapLogs (Excel)', 'scrap-entry-page.js': 'scrapLogs (form)', 'scrap-detail-page.js': 'scrapLogs (edit/delete)', 'improvement-page.js': 'improvements', 'plan-tracking-page.js': 'scrapWeeklyPlans', 'ops-console.js': 'scrapSlots / qdConfig / qdOpsLog (Operations, admin)', 'weekly-plan-data.js': 'scrapWeeklyPlans + history / scrapWeeklyReviews (admin)' };
 const pages = fs.readdirSync(ROOT).filter(f => f.endsWith('.html')).concat(fs.readdirSync(path.join(ROOT, 'js')).filter(f => f.endsWith('.html')).map(f => 'js/' + f));
 function inspect(p) {
   const html = fs.readFileSync(path.join(ROOT, p), 'utf8');
@@ -36,9 +36,9 @@ test('scrap is saved only on pages that load the ledger', () => {
 test('no inline script writes to Firestore', () => {
   for (const r of rows) assert.equal(r.inlineWrites, false, r.page);
 });
-test('the three old copies are retired and point to the current pages', () => {
+test('the old copies are retired and point to the current pages (Weekly Plan V5: the two old plan pages too)', () => {
   const retired = Object.fromEntries(rows.filter(r => r.retired).map(r => [r.page, fs.readFileSync(path.join(ROOT, r.page), 'utf8').match(/data-to="([^"]+)"/)[1]]));
-  assert.deepEqual(retired, { 'dashboard.html': 'scrap-entry.html', 'dashboard-classic.html': 'index.html', 'js/scrap-entry.html': '../scrap-entry.html' });
+  assert.deepEqual(retired, { 'dashboard.html': 'scrap-entry.html', 'dashboard-classic.html': 'index.html', 'js/scrap-entry.html': '../scrap-entry.html', 'plan-tracking.html': 'weekly-plan.html', 'weekly-review.html': 'weekly-plan.html' });
 });
 test.after(() => {
   const yes = b => (b ? 'yes' : '—');

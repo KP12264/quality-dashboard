@@ -233,25 +233,28 @@ describe('retired pages: deep links (Phase 9)', () => {
   });
 });
 
-describe('plan-tracking.html and weekly-review.html (Phase 8, P7-2 evidence)', () => {
-  // Finding: commit 3c28849 (2026-10-16) removed SCRAP_WEEKLY_PLAN_COLLECTION / MONTHLY_REDUCTION_GOAL
-  // from js/config.js, so both pages cannot read weekly plans under ANY rules (the adapter's
-  // ReferenceError is caught and shown as "could not be read"). Recorded, not fixed (P7-2 decision).
+describe('plan-tracking.html and weekly-review.html → weekly-plan.html (Weekly Plan V5)', () => {
+  // History: commit 3c28849 removed the config constants these two pages needed, so they could not
+  // read weekly plans under any rules (recorded in Phase 8, P7-2). Weekly Plan V5 replaces them: both
+  // are retired (files kept) and redirect to weekly-plan.html, which works under both rule sets —
+  // under today's production rules (scrapWeeklyPlans denied) it shows the default plan and says so.
   for (const rules of ['production', 'candidate']) {
-    it(`load under ${rules} rules (public): pages open, weekly plans unreadable (config constant missing)`, async () => {
+    it(`under ${rules} rules (public): old pages redirect; weekly-plan.html opens${rules === 'production' ? ' with the default plan (plans not readable)' : ''}`, async () => {
       await useRules(rules); await seed();
       for (const page of ['plan-tracking.html', 'weekly-review.html']) {
         const { context, page: pg } = await newPage();
         const errors = [];
         pg.on('pageerror', e => errors.push(e.message));
-        await pg.goto(`${BASE}/${page}?qdEmulator=1&qdAuthMode=off`);
-        await pg.waitForTimeout(2500);
-        const st = await pg.evaluate(() => ({ constant: typeof SCRAP_WEEKLY_PLAN_COLLECTION, goal: typeof MONTHLY_REDUCTION_GOAL, banner: (document.getElementById('connectionBanner') || {}).textContent || '' }));
+        await pg.goto(`${BASE}/${page}?qdEmulator=1&qdAuthMode=off&ym=2026-10`);
+        await pg.waitForURL(/weekly-plan\.html\?qdEmulator=1&qdAuthMode=off&ym=2026-10/, { timeout: 15000 });
+        await pg.waitForFunction(() => window.__qdWeeklyPlan && window.__qdWeeklyPlan.month, null, { timeout: 20000 });
+        const st = await pg.evaluate(() => ({ budget: window.__qdWeeklyPlan.month.budget, plansFailed: !!window.__qdWeeklyPlan.data.plans.error, banner: (document.getElementById('connectionBanner') || {}).textContent || '' }));
         await context.close();
         assert.deepEqual(errors, [], page);
-        assert.equal(st.constant, 'undefined');
-        assert.match(st.banner, /could not be read/);
-        summary.push(`${rules} :: ${page} (public) :: opens; weekly plans unreadable because SCRAP_WEEKLY_PLAN_COLLECTION is missing from config.js (since 3c28849)`);
+        assert.equal(st.budget, 50 * 31);
+        assert.equal(st.plansFailed, rules === 'production');
+        if (rules === 'production') assert.match(st.banner, /Weekly plans could not be read — the default plan/);
+        summary.push(`${rules} :: ${page} (public) :: retired → weekly-plan.html; ${rules === 'production' ? 'plans not readable under production rules: default plan 50 × days shown with a notice' : 'plans readable'}`);
       }
     });
   }

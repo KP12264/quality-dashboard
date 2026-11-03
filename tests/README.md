@@ -130,3 +130,16 @@ date for that page only (emulator only).
   write; forged / expired / borrowed runs; concurrent operations. Writes
   `docs/phase9/generated/ops-security-matrix.md`.
 - `tests/support/ops-helper.js` — opens a qdOpsLog run for tests (the rules require one).
+
+## Weekly Plan V5
+
+- `tests/unit/weekly-plan.test.js` — `js/weekly-plan-calc.js`: weeks Mon–Sun inside the month
+  (28/29/30/31-day months, a week across a month end counted once), plan / override (≤ 50 × days),
+  monthly budget = Σ weekly plans, actual / remaining / used, Door A/B/C × DAY/NIGHT scope, Line × Shift
+  sums, no data ≠ 0, finality from the real Shift Close status, reduction goal (confirmed only when the
+  previous month is final), Improve Top 5 by defect only.
+- `tests/rules/weekly-plan.test.js` — plan numbers public; Admin-only changes, always with their
+  immutable history entry (from / to / reason / by / server time); history and review notes signed-in only.
+- `tests/e2e/weekly-plan.e2e.test.js` — weekly-plan.html vs an independent count, Dashboard card = page,
+  Firestore reads (queries and documents), Admin override with reason + history, Leader / Viewer / public,
+  reduction goal on demand, 390 px, old plan pages redirect.

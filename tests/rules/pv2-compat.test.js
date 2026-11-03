@@ -48,6 +48,8 @@ const PATHS = [
   ['qd', 'improvements/i1'],
   ['qd', 'scrapModelMappings/m1'],
   ['qd', 'scrapWeeklyPlans/w1'],
+  ['qd', 'scrapWeeklyPlans/w1/history/1'],
+  ['qd', 'scrapWeeklyReviews/2026-11_W1'],
   ['other', 'someOtherCollection/x1']
 ];
 const OPS = ['get', 'list', 'create', 'update', 'delete'];
@@ -99,7 +101,7 @@ async function runVariant(name) {
 const CLOSED_OK = new Set();   // "path|identity|op" that production allows and the candidate refuses
 for (const p of ['scrapLogs/s1', 'targetMaster/t1', 'improvements/i1', 'scrapModelMappings/m1'])
   for (const id of Object.keys(IDS)) for (const op of ['create', 'update', 'delete']) CLOSED_OK.add(`${p}|${id}|${op}`);
-const OPENED_OK = path_ => ['qdUsers/', 'qdConfig/', 'scrapSlots/', 'scrapCloseSummary/', 'scrapWeeklyPlans/'].some(x => path_.startsWith(x));
+const OPENED_OK = path_ => ['qdUsers/', 'qdConfig/', 'scrapSlots/', 'scrapCloseSummary/', 'scrapWeeklyPlans/', 'scrapWeeklyReviews/'].some(x => path_.startsWith(x));
 const diffs = () => {
   const opened = [], closed = [];
   for (const [, p] of PATHS) for (const id of Object.keys(IDS)) for (const op of OPS) {
@@ -141,7 +143,7 @@ describe('rules compatibility: production snapshot vs candidate vs bridge', () =
   it('production today: the four QD collections are writable by ANYONE (no sign-in) — the gap the candidate closes', () => {
     for (const p of ['scrapLogs/s1', 'targetMaster/t1', 'improvements/i1', 'scrapModelMappings/m1'])
       for (const op of ['create', 'update', 'delete']) assert.equal(results.production[p].anonymous[op], 'ALLOW', `${p} ${op}`);
-    for (const p of ['qdUsers/' + E('QDLEAD'), 'scrapSlots/2026-06-10_A_DAY', 'scrapCloseSummary/2026-06-10', 'scrapWeeklyPlans/w1', 'qdConfig/ledger'])
+    for (const p of ['qdUsers/' + E('QDLEAD'), 'scrapSlots/2026-06-10_A_DAY', 'scrapCloseSummary/2026-06-10', 'scrapWeeklyPlans/w1', 'scrapWeeklyPlans/w1/history/1', 'scrapWeeklyReviews/2026-11_W1', 'qdConfig/ledger'])
       for (const id of Object.keys(IDS)) for (const op of OPS) assert.equal(results.production[p][id][op], 'deny', `${p} ${id} ${op}`);
   });
   it('every permission the candidate closes or opens is in the reviewed list', () => {

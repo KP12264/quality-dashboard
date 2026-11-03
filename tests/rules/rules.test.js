@@ -223,7 +223,12 @@ describe('admin', () => {
     await assertSucceeds(addDoc(collection(db, 'improvements'), { problem: 'p', defectType: 'Dent' }));
     await assertSucceeds(updateDoc(doc(db, 'improvements', 'i1'), { status: 'Controlled' }));
     await assertSucceeds(deleteDoc(doc(db, 'improvements', 'i1')));
-    await assertSucceeds(setDoc(doc(db, 'scrapWeeklyPlans', '2026-11_W1'), { ym: '2026-11', week: 1 }, { merge: true }));
+    // Weekly Plan V5: a plan change is accepted only together with its history entry (tests/rules/weekly-plan.test.js)
+    await assertFails(setDoc(doc(db, 'scrapWeeklyPlans', '2026-11_W1'), { ym: '2026-11', week: 1 }, { merge: true }));
+    const wb = writeBatch(db);
+    wb.set(doc(db, 'scrapWeeklyPlans', '2026-11_W1'), { ym: '2026-11', week: 'W1', planOverride: 40, historyRev: 1, updatedAt: serverTimestamp() });
+    wb.set(doc(db, 'scrapWeeklyPlans', '2026-11_W1', 'history', '1'), { from: null, to: 40, reason: 'rules test', at: serverTimestamp(), by: E('admin') });
+    await assertSucceeds(wb.commit());
   });
   it('manages roles with server time and own email; bad role documents are refused', async () => {
     const db = as('admin');

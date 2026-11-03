@@ -71,6 +71,6 @@ async function expected(from,to,shift,line){
     trend,trendTotal:scrap,trendAvg:logged?Math.round(scrap/logged):null,
     over:dayU.length?{n:cnt(dayU,'OVER TARGET'),ev:cnt(dayU,'OVER TARGET')+cnt(dayU,'WITHIN TARGET'),inc:cnt(dayU,'INCOMPLETE'),nd:cnt(dayU,'NO DATA'),unit:'day'}:{n:cnt(shU,'OVER TARGET'),ev:cnt(shU,'OVER TARGET')+cnt(shU,'WITHIN TARGET'),unit:'shift'},
     recurring:recAll.length,recurringABC:recABC.length,recurringNonABC:recAll.filter(k=>!LINES.includes(k.split('|')[0])),
-    reads:{prod:dates.reduce((a,d)=>a+3*(d>=CUT?2:act.length),0),scrap:from===to?2:1,target:dates.some(d=>d<CUT)?act.length:0,imp:1}};
+    reads:{prod:dates.reduce((a,d)=>a+3*(d>=CUT?2:act.length),0),scrap:from===to?2:(from>to.slice(0,8)+'01'?2:1),target:dates.some(d=>d<CUT)?act.length:0,imp:1}};
 }
 module.exports={expected,range};

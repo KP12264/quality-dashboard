@@ -12,6 +12,7 @@
 (function () {
   const NAV_ITEMS = [
     { key: "dashboard", label: "Dashboard", href: "index.html" },
+    { key: "weekly-plan", label: "Weekly Plan", href: "weekly-plan.html" },
     { key: "scrap-entry", label: "Scrap Entry", href: "scrap-entry.html" },
     { key: "scrap-detail", label: "Scrap Detail", href: "scrap-detail.html" },
     { key: "improvement", label: "Improvement", href: "improvement.html" },

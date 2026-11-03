@@ -87,6 +87,19 @@ const QD_SCRAP_PRIVATE_COLLECTION = "scrapLogPrivate";
 // step exists. (Local emulator test mode may unlock it with ?qdOpsWrite=1; nothing else can.)
 const QD_OPS_WRITE_ENABLED = false;
 const QD_IMPROVEMENT_OWNERS_COLLECTION = "improvementOwners";
+// Weekly Plan V5 (weekly-plan.html + the Dashboard "Scrap Budget" card, js/weekly-plan-calc.js).
+// Plan NUMBERS are public (scrapWeeklyPlans/{ym}_{W#}); every override change writes an
+// immutable history entry (who, reason — signed-in only); review notes are signed-in only.
+// Weekly plan = DAILY_TARGET_PCS x days of the week in the month (Admin may set a lower plan);
+// monthly budget = sum of the weekly plans. Replaces the constants removed in 3c28849.
+const QD_WEEKLY_PLAN_COLLECTION = "scrapWeeklyPlans";
+const QD_WEEKLY_PLAN_HISTORY = "history";
+const QD_WEEKLY_REVIEW_COLLECTION = "scrapWeeklyReviews";
+// Previous-month reduction goal (shown apart from the daily operational limit): this month's
+// scrap <= previous month x (1 - goal). Confirmed only when every previous day is final.
+const QD_MONTHLY_REDUCTION_GOAL = 0.5;
+// "Improve" on weekly-plan.html: Top N defects, all lines together (one row per defect).
+const QD_IMPROVE_TOP_N = 5;
 const QD_EMULATOR = {
   projectId: "demo-quality-dashboard",   // "demo-" projects exist only in the emulator
   firestoreHost: "127.0.0.1", firestorePort: 8080,

@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Weekly Plan · Quality System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- Page text: IBM Plex Sans Thai 400–700 (Thai defect names still need Thai glyphs). Page header: IBM Plex Sans Thai Looped 400/700, the Dashboard header face. -->
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=IBM+Plex+Sans+Thai+Looped:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="css/dashboard-v5.css?v=20261016-f1">
+<link rel="stylesheet" href="css/scrap-entry-v5.css?v=20261016-k1">
+<link rel="stylesheet" href="css/shift-close.css?v=20261102-p3">
+<link rel="stylesheet" href="css/weekly-plan.css?v=20261103-p10">
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+</head>
+<body class="qd-v5 se-v5">
+<div class="qd-dashboard-shell">
+  <aside class="qd-dashboard-sidebar" id="dashboardSidebar">
+    <div class="qd-dashboard-sidebar-brand">
+      <span class="qd-dashboard-sidebar-logo">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="3" y="12" width="4" height="9" rx="1" fill="currentColor"/><rect x="10" y="7" width="4" height="14" rx="1" fill="currentColor"/><rect x="17" y="3" width="4" height="18" rx="1" fill="currentColor"/></svg>
+      </span>
+      <div>
+        <div class="qd-dashboard-sidebar-title">QUALITY SYSTEM</div>
+        <div class="qd-dashboard-sidebar-subtitle">Production &amp; Scrap Management</div>
+      </div>
+    </div>
+    <nav class="qd-dashboard-sidebar-nav">
+      <a href="index.html" class="qd-dashboard-sidebar-link">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        Dashboard
+      </a>
+      <a href="weekly-plan.html" class="qd-dashboard-sidebar-link active">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/><polyline points="7 15 10 17 16 12"/></svg>
+        Weekly Plan
+      </a>
+      <a href="scrap-entry.html" class="qd-dashboard-sidebar-link">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+        Scrap Entry
+      </a>
+      <a href="scrap-detail.html" class="qd-dashboard-sidebar-link">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="16" x2="13" y2="16"/></svg>
+        Scrap Detail
+      </a>
+      <a href="improvement.html" class="qd-dashboard-sidebar-link">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="14 7 21 7 21 14"/></svg>
+        Improvement
+      </a>
+      <a href="executive-report.html" class="qd-dashboard-sidebar-link">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>
+        Executive Report
+      </a>
+      <a href="admin.html" class="qd-dashboard-sidebar-link">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        Admin
+      </a>
+    </nav>
+  </aside>
+  <button type="button" class="qd-dashboard-mobile-toggle" id="dashboardMobileToggle" aria-label="Toggle menu" aria-controls="dashboardSidebar" aria-expanded="false">☰</button>
+  <div class="qd-dashboard-sidebar-overlay" id="dashboardSidebarOverlay"></div>
+  <main class="qd-dashboard-main se-main wp-main">
+    <header class="qd-dashboard-header">
+      <div class="qd-dashboard-header-left">
+        <h1>Weekly Plan</h1>
+        <span class="qd-dashboard-subtitle">Scrap budget · Door A+B+C · Day + Night</span>
+      </div>
+      <nav class="se-crumbs" aria-label="Breadcrumb"><a href="index.html">Home</a><span aria-hidden="true">›</span><span>Weekly Plan</span></nav>
+    </header>
+    <div id="connectionBanner" class="qd-banner" style="display:none;"></div>
+    <section class="sc-card wp-toolbar" aria-label="Month">
+      <div class="sc-daybar">
+        <label for="wpMonthInput"><b>Month</b></label>
+        <input type="month" id="wpMonthInput">
+        <button type="button" class="sc-btn" id="wpPrev" aria-label="Previous month">‹ Prev</button>
+        <button type="button" class="sc-btn" id="wpNext" aria-label="Next month">Next ›</button>
+        <button type="button" class="sc-btn" id="wpReload">Reload</button>
+      </div>
+      <p class="wp-rule" id="wpRule"></p>
+    </section>
+    <section class="sc-card" id="wpMonth" aria-label="Month summary" aria-live="polite"></section>
+    <section class="sc-card" id="wpWeeks" aria-label="Weeks"></section>
+    <section class="sc-card" id="wpWeekDetail" aria-label="Selected week"></section>
+    <section class="sc-card" id="wpImprove" aria-label="Improve"></section>
+    <section class="sc-card">
+      <details id="wpGoal">
+        <summary><b>Previous-month reduction goal (−50 %)</b> <span class="wp-note">reads the previous month when opened</span></summary>
+        <div id="wpGoalBody"></div>
+      </details>
+    </section>
+    <section class="sc-card" id="wpReview" aria-label="Review note" hidden></section>
+  </main>
+</div>
+<dialog id="wpEditDialog" class="wp-dialog" aria-labelledby="wpEditTitle">
+  <h2 id="wpEditTitle">Weekly plan</h2>
+  <p>Default plan: <b id="wpEditBase"></b></p>
+  <label for="wpEditInput">Plan override (pcs) — blank = default, never above the default (≤50/day)</label>
+  <input type="number" id="wpEditInput" min="0" step="1" inputmode="numeric">
+  <label for="wpEditReason">Reason (required)</label>
+  <input type="text" id="wpEditReason" maxlength="200">
+  <p id="wpEditMsg" class="wp-note" role="status"></p>
+  <div class="wp-actions">
+    <button type="button" class="sc-btn primary" id="wpEditSave">Save</button>
+    <button type="button" class="sc-btn" id="wpEditClear">Reset to default</button>
+    <button type="button" class="sc-btn" id="wpEditCancel">Cancel</button>
+  </div>
+  <h3>History (signed-in only)</h3>
+  <ol id="wpEditHistory" class="wp-history"></ol>
+</dialog>
+<script src="js/config.js?v=20261103-p10"></script>
+<script src="js/firebase-init.js?v=20261103-p8b"></script>
+<script src="js/qd-auth.js?v=20261102-p4"></script>
+<script src="js/scrap-adapter.js?v=20261103-p8"></script>
+<script src="js/quality-adapter.js?v=20261015-3"></script>
+<script src="js/shift-close.js?v=20261102-p4"></script>
+<script src="js/target-evaluator.js?v=20261102-p4"></script>
+<script src="js/weekly-plan-calc.js?v=20261103-p10"></script>
+<script src="js/weekly-plan-data.js?v=20261103-p10"></script>
+<script src="js/weekly-plan-page.js?v=20261103-p10"></script>
+</body>
+</html>

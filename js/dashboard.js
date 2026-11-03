@@ -235,7 +235,12 @@
     renderScrapTrend(trendPoints, trendTargetLine(dates), shiftEvals, loggedDates);
 
     // ---- Attention Required: re-runs on every render() so it follows the range ----
-    renderAttentionRequired(scrapResult);
+    // One date: the 30-day look-back query (started once, shared with the Scrap Budget card).
+    const lookback = isMultiDay() ? null : loadLookback();
+    renderAttentionRequired(scrapResult, lookback);
+
+    // ---- Scrap Budget card (Weekly Plan V5): built from the scrap already loaded above ----
+    renderPlanCard(scrapResult, lookback, dates, closeContext);
 
     // Same moment as before (new Date()); only the layout changed: time on line 1, date on line 2.
     // The data-source note that used to share this chip stays in the page footer.
@@ -260,6 +265,7 @@
   }
 
   function renderEmpty() {
+    if ($('planCard')) $('planCard').innerHTML = '';   // Scrap Budget card: nothing from a previous range lingers
     renderKpis(null, [], []);
     $('targetPerfSingle').hidden = true;
     $('targetPerfRange').hidden = false;
@@ -1279,7 +1285,27 @@
   // only (e.g. Door In Door scrap is left out). The shared QualityAdapter definition —
   // also used by Scrap Detail and the Executive Report — is unchanged.
   const recurringScope = records => records.filter(r => ALL_LINE_CODES.includes(r.line));
-  async function fetchRecurringProblems(rangeScrapResult) {
+  // The look-back query for one date. Weekly Plan V5: its start is moved back to the 1st of the
+  // month when that is earlier (31-day months: at most ONE extra day), so the Scrap Budget card
+  // needs no scrap query of its own. Recurring problems still use exactly the 30 days.
+  function loadLookback() {
+    const lookbackDates = ProductionDataAdapter.dateRange(state.dateTo, 30);
+    const recurringFrom = lookbackDates[0], to = lookbackDates[lookbackDates.length - 1];
+    const monthStart = state.dateTo.slice(0, 8) + '01';
+    const from = monthStart < recurringFrom ? monthStart : recurringFrom;
+    if (window.qdFirebaseError || !window.qdDb) return Promise.resolve({ from, to, recurringFrom, result: { records: [], error: new Error('no connection') } });
+    return ScrapDataAdapter.getScrapData(window.qdDb, { startDate: from, endDate: to })
+      .then(result => ({ from, to, recurringFrom, result }), error => ({ from, to, recurringFrom, result: { records: [], error } }));
+  }
+  function renderPlanCard(scrapResult, lookback, dates, closeContext) {
+    if (typeof PlanCard === 'undefined' || !$('planCard')) return;
+    const seq = renderSeq;
+    PlanCard.render($('planCard'), {
+      db: window.qdDb, dateFrom: state.dateFrom, dateTo: state.dateTo, isCurrent: () => seq === renderSeq,
+      range: { from: state.dateFrom, to: state.dateTo, result: scrapResult }, lookback, rangeDates: dates, closeContext
+    });
+  }
+  async function fetchRecurringProblems(rangeScrapResult, lookback) {
     if (window.qdFirebaseError) return { error: true };
     try {
       if (isMultiDay()) {
@@ -1287,10 +1313,10 @@
         const groups = QualityAdapter.buildRecurringProblems(recurringScope(rangeScrapResult.records), RECURRING_THRESHOLD_DISTINCT_DATES).filter(g => g.recurring);
         return { error: false, groups, scope: 'range' };
       }
-      const lookbackDates = ProductionDataAdapter.dateRange(state.dateTo, 30);
-      const scrapResult = await ScrapDataAdapter.getScrapData(window.qdDb, { startDate: lookbackDates[0], endDate: lookbackDates[lookbackDates.length - 1] });
-      if (scrapResult.error) return { error: true };
-      const groups = QualityAdapter.buildRecurringProblems(recurringScope(scrapResult.records), RECURRING_THRESHOLD_DISTINCT_DATES).filter(g => g.recurring);
+      const lb = await (lookback || loadLookback());
+      if (lb.result.error) return { error: true };
+      const last30 = lb.result.records.filter(r => r.date >= lb.recurringFrom);   // unchanged 30-day window
+      const groups = QualityAdapter.buildRecurringProblems(recurringScope(last30), RECURRING_THRESHOLD_DISTINCT_DATES).filter(g => g.recurring);
       return { error: false, groups, scope: '30d' };
     } catch (e) {
       console.error('Quality Dashboard: failed to load recurring problems:', e);
@@ -1320,12 +1346,12 @@
   const ATTN_ACTION_STATUSES = ['Not Effective', 'Recurring'];
   const ATTN_ARROW = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>';
 
-  async function renderAttentionRequired(rangeScrapResult) {
+  async function renderAttentionRequired(rangeScrapResult, lookback) {
     const seq = renderSeq;
     const container = $('attentionSummary');
     container.innerHTML = '<div class="v5-attn-loading">Loading…</div>';
 
-    const [impResult, recResult] = await Promise.all([fetchImprovementStatusCounts(), fetchRecurringProblems(rangeScrapResult)]);
+    const [impResult, recResult] = await Promise.all([fetchImprovementStatusCounts(), fetchRecurringProblems(rangeScrapResult, lookback)]);
     if (seq !== renderSeq) return;   // a newer render() owns this panel now
 
     // ---- Recurring Problems card ----
