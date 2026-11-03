@@ -217,6 +217,22 @@ describe('retired page copies (Phase 7)', () => {
   }
 });
 
+describe('retired pages: deep links (Phase 9)', () => {
+  it('a bookmarked old URL keeps its date / line / shift and hash on the current page', async () => {
+    await useRules('candidate'); await seed();
+    const { context, page } = await newPage();
+    await page.goto(`${BASE}/dashboard.html?qdEmulator=1&date=${DAY}&line=B&shift=NIGHT#import`);
+    await page.waitForURL(u => u.pathname.endsWith('/scrap-entry.html'), { timeout: 10000 });
+    const u = new URL(page.url());
+    assert.equal(u.searchParams.get('date'), DAY); assert.equal(u.searchParams.get('line'), 'B'); assert.equal(u.hash, '#import');
+    await page.waitForFunction(() => window.qdDb, null, { timeout: 15000 });
+    assert.equal(await page.inputValue('#ctxDate'), DAY);
+    assert.equal(await page.isChecked('input[name="ctxLine"][value="B"]'), true);
+    await context.close();
+    summary.push(`candidate :: deep link dashboard.html?date&line&shift#hash :: lands on scrap-entry.html with the same date / line / shift / hash`);
+  });
+});
+
 describe('plan-tracking.html and weekly-review.html (Phase 8, P7-2 evidence)', () => {
   // Finding: commit 3c28849 (2026-10-16) removed SCRAP_WEEKLY_PLAN_COLLECTION / MONTHLY_REDUCTION_GOAL
   // from js/config.js, so both pages cannot read weekly plans under ANY rules (the adapter's

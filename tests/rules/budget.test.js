@@ -11,6 +11,7 @@ const { doc, setDoc, writeBatch, serverTimestamp } = require('firebase/firestore
 const Ledger = require('../../js/scrap-ledger.js');
 const SC = require('../../js/shift-close.js');
 const MB = require('../../tools/migration/ledger-baseline.js');
+const { op } = require('../support/ops-helper.js');
 const { compatDb } = require('../support/compat-shim.js');
 
 const E = c => `${c.toLowerCase()}@prodv2.local`;
@@ -63,10 +64,27 @@ describe('heaviest valid paths stay within the rules limits', () => {
     const logs = Array.from({ length: 450 }, (_, k) => Object.assign({ id: `${bkk(5)}_C_DAY_${k}` }, row(bkk(5), 'C', 'DAY')));
     const plan = MB.planBaseline(logs, []);
     let r;
-    assert.ok(await measure('baseline b1 with 450 log ids', async () => { r = await MB.applyBaseline(a.db, plan, Object.assign({ migrationId: 'm' }, a.opts)); if (r.failed.length) throw new Error(r.failed[0].error); }));
-    await MB.markComplete(a.db, 'm', a.opts);
+    assert.ok(await measure('baseline b1 with 450 log ids', async () => { r = await MB.applyBaseline(a.db, plan, Object.assign({ migrationId: 'm' }, await op(a, 'BASELINE_APPLY'))); if (r.failed.length) throw new Error(r.failed[0].error); }));
+    await MB.markComplete(a.db, 'm', await op(a, 'BASELINE_GATE'));
     assert.ok(await measure('after baselineComplete: ledger v1 of 450 logs on a new slot', () => creates(a, Array.from({ length: 450 }, () => row(bkk(6), 'C', 'NIGHT')))));
     assert.ok(await measure('after baselineComplete: close of the 450-log baseline slot', () => SC.closeSlot(a.db, { date: bkk(5), line: 'C', shift: 'DAY', state: 'SUBMITTED' }, a.opts)));
+  });
+  it('Phase 9 paths: reconcile of a 450-log slot and a privacy strip, each under an operation run', async () => {
+    const OPS = require('../../tools/ops/bridge-ops.js');
+    const a = actor('admin');
+    await legacy(bkk(7), 'A', 'NIGHT', 450);
+    // after baselineComplete (set above) a slot with old logs gets its baseline first, as in production
+    const oldLogs = Array.from({ length: 450 }, (_, k) => Object.assign({ id: `${bkk(7)}_A_NIGHT_${k}` }, row(bkk(7), 'A', 'NIGHT')));
+    const bres = await MB.applyBaseline(a.db, MB.planBaseline(oldLogs, []), Object.assign({ migrationId: 'm2' }, await op(a, 'BASELINE_APPLY')));
+    assert.equal(bres.created.length, 1);
+    await creates(a, [row(bkk(7), 'A', 'NIGHT')]);   // ledger slot: 450 baseline + 1
+    await env.withSecurityRulesDisabled(async ctx => { await setDoc(doc(ctx.firestore(), 'scrapLogs', 'strayR'), row(bkk(7), 'A', 'NIGHT')); });
+    assert.ok(await measure('reconcile, 452 log ids (RECONCILE + run check)', async () => OPS.reconcileSlot(a.db, `${bkk(7)}_A_NIGHT`, 'budget', await op(a, 'RECONCILE'))));
+    await env.withSecurityRulesDisabled(async ctx => { await setDoc(doc(ctx.firestore(), 'scrapLogs', 'pr1'), row(bkk(7), 'A', 'NIGHT', { recordedBy: 'KP1' })); });
+    const PM = require('../../tools/migration/privacy-migration.js');
+    const { deleteField } = require('firebase/firestore');
+    const plan = { logs: [{ id: 'pr1', recordedBy: 'KP1' }], improvements: [] };
+    assert.ok(await measure('privacy strip of one log (sidecar + run check)', async () => { const r = await PM.apply(a.db, plan, Object.assign({ fieldValue: { delete: () => deleteField() } }, await op(a, 'PRIVACY_MIGRATION'))); if (r.logs.migrated !== 1) throw new Error(JSON.stringify(r)); }));
   });
   it('a move between two slots (2 slots in one transaction) with the mirror', async () => {
     const a = actor('admin');

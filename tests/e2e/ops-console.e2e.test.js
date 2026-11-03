@@ -141,7 +141,9 @@ describe('Operations tab', () => {
     const st = (await SC.loadSlot(actor('ADMIN1').db, DAY, 'A', 'DAY')).info.status;
     assert.equal(st, 'CHANGED');
     const logs = await raw(async db => { const o = []; (await getDocs(collection(db, 'qdOpsLog'))).forEach(d => o.push(d.data())); return o; });
-    assert.equal(logs.length, 1); assert.equal(logs[0].action, 'RECONCILE'); assert.equal(logs[0].approvalRef, 'CHG-2'); assert.equal(logs[0].by, E('ADMIN1'));
+    assert.deepEqual(logs.map(l => l.stage).sort(), ['RESULT', 'START']);   // the run is opened before the write and closed after
+    const start = logs.find(l => l.stage === 'START');
+    assert.equal(start.action, 'RECONCILE'); assert.equal(start.approvalRef, 'CHG-2'); assert.equal(start.by, E('ADMIN1'));
   });
   it('baseline: dry run, apply, gate → baselineComplete; each write step logged', async () => {
     const { context, page } = await openOps('&qdOpsWrite=1');
@@ -155,12 +157,35 @@ describe('Operations tab', () => {
     assert.match(await page.textContent('#opsBaselineOut'), /"complete":true/);
     await context.close();
     assert.equal((await raw(async db => (await getDoc(doc(db, 'qdConfig', 'ledger'))).data())).baselineComplete, true);
-    const actions = await raw(async db => { const o = []; (await getDocs(collection(db, 'qdOpsLog'))).forEach(d => o.push(d.data().action)); return o.sort(); });
+    const actions = await raw(async db => { const o = []; (await getDocs(collection(db, 'qdOpsLog'))).forEach(d => { if (d.data().stage === 'START') o.push(d.data().action); }); return o.sort(); });
     assert.deepEqual(actions, ['BASELINE_APPLY', 'BASELINE_GATE', 'RECONCILE']);
+  });
+  it('privacy migration: dry run, apply refused until the backup is downloaded, then apply + verify', async () => {
+    await raw(async db => {
+      await setDoc(doc(db, 'scrapLogs', 'pmOld'), { date: bkk(6), line: 'B', shift: 'NIGHT', model: 'M', defectType: 'Dent', scrapQty: 1, remark: '', createdAt: 1, recordedBy: 'KP4242' });
+      await setDoc(doc(db, 'improvements', 'pmImp'), { problem: 'p', defectType: 'Dent', status: 'Monitoring', actions: [{ action: 'x', owner: 'Somchai' }] });
+    });
+    const { context, page } = await openOps('&qdOpsWrite=1');
+    await page.fill('#opsConfirm', 'demo-quality-dashboard/(default)'); await page.fill('#opsApproval', 'CHG-4'); await page.fill('#opsReason', 'privacy migration');
+    await page.click('#opsPrivacyDryBtn');
+    assert.match(await msg(page, 'opsPrivacyOut'), /Dry run — nothing written.*1 scrap record.*1 improvement/);
+    await page.click('#opsPrivacyBtn');
+    await page.waitForFunction(() => /Failed|Done/.test(document.getElementById('opsPrivacyOut').textContent), null, { timeout: 15000 });
+    assert.match(await page.textContent('#opsPrivacyOut'), /Download the backup first/);
+    const [dl] = await Promise.all([page.waitForEvent('download'), page.click('#opsPrivacyBackupBtn')]);
+    const bak = JSON.parse(fs.readFileSync(await dl.path(), 'utf8'));
+    assert.deepEqual(bak.scrapLogs, [{ id: 'pmOld', recordedBy: 'KP4242' }]);
+    await page.click('#opsPrivacyBtn');
+    await page.waitForFunction(() => /Done|Failed: [^D]/.test(document.getElementById('opsPrivacyOut').textContent) && !/Download the backup/.test(document.getElementById('opsPrivacyOut').textContent), null, { timeout: 20000 });
+    assert.match(await page.textContent('#opsPrivacyOut'), /Done.*"clean":true/);
+    await context.close();
+    const pub = await raw(async db => JSON.stringify((await getDoc(doc(db, 'scrapLogs', 'pmOld'))).data()) + JSON.stringify((await getDoc(doc(db, 'improvements', 'pmImp'))).data()));
+    assert.doesNotMatch(pub, /KP4242|Somchai/);
+    assert.equal((await raw(async db => (await getDoc(doc(db, 'scrapLogPrivate', 'pmOld'))).data())).recordedBy, 'KP4242');
   });
   it('the operations log cannot be written by a Leader or changed by anyone', async () => {
     const L = env.authenticatedContext('uid-l', { email: E('LEADA') }).firestore();
-    await assert.rejects(addDoc(collection(L, 'qdOpsLog'), { action: 'RECONCILE', projectId: 'x', database: '(default)', approvalRef: 'abc', reason: 'abc', summary: '', at: serverTimestamp(), by: E('LEADA') }));
+    await assert.rejects(addDoc(collection(L, 'qdOpsLog'), { action: 'RECONCILE', stage: 'START', projectId: 'x', database: '(default)', approvalRef: 'abc', reason: 'abc', summary: '', at: serverTimestamp(), by: E('LEADA') }));
     const A = env.authenticatedContext('uid-a', { email: E('ADMIN1') }).firestore();
     const ids = await raw(async db => { const o = []; (await getDocs(collection(db, 'qdOpsLog'))).forEach(d => o.push(d.id)); return o; });
     await assert.rejects(updateDoc(doc(A, 'qdOpsLog', ids[0]), { approvalRef: 'changed' }));

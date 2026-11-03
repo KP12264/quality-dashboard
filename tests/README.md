@@ -120,3 +120,13 @@ date for that page only (emulator only).
   read-only by default, write lock + typed project/database + approval, qdOpsLog, post-candidate audit.
 - `tests/e2e/rules-transition.e2e.test.js` — also the cutover message and plan-tracking /
   weekly-review evidence.
+
+## Hardening & data migration (Phase 9)
+
+- `tests/rules/privacy-migration.test.js` — old public recordedBy / owners → private sidecars:
+  dry run, backup, interrupted run + resume, idempotency, verify. Writes
+  `docs/phase9/generated/privacy-migration-report.md`.
+- `tests/rules/ops-security.test.js` — direct SDK calls by every identity against every go-live
+  write; forged / expired / borrowed runs; concurrent operations. Writes
+  `docs/phase9/generated/ops-security-matrix.md`.
+- `tests/support/ops-helper.js` — opens a qdOpsLog run for tests (the rules require one).

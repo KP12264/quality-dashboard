@@ -14,6 +14,7 @@ const Ledger = require('../../js/scrap-ledger.js');
 const SC = require('../../js/shift-close.js');
 const MB = require('../../tools/migration/ledger-baseline.js');
 const OPS = require('../../tools/ops/bridge-ops.js');
+const { op } = require('../support/ops-helper.js');
 const { compatDb } = require('../support/compat-shim.js');
 
 const ROOT = path.join(__dirname, '../..');
@@ -71,23 +72,23 @@ describe('migration gate (candidate rules)', () => {
     const existing = await raw(async db => { const o = []; (await getDocs(collection(db, 'scrapSlots'))).forEach(d => o.push(d.id)); return o; });
     plan = MB.planBaseline(await allLogs(), existing);
     // 1st run fails at the 5th slot
-    const r1 = await MB.applyBaseline(failingAt(A.db, 5), plan, Object.assign({ migrationId: 'gate-1' }, A.opts));
+    const r1 = await MB.applyBaseline(failingAt(A.db, 5), plan, Object.assign({ migrationId: 'gate-1' }, await op(A, 'BASELINE_APPLY')));
     assert.equal(r1.failed.length, 1);
-    const gate1 = await MB.completeIfClean(A.db, plan, 'gate-1', A.opts, await allLogs());
+    const gate1 = await MB.completeIfClean(A.db, plan, 'gate-1', await op(A, 'BASELINE_GATE'), await allLogs());
     assert.equal(gate1.complete, false);   // the missing slot keeps the gate closed
     // Leaders save during the migration: into a planned slot not yet created, and into a new day
     const L = actor('leaderA'), LB = actor('leaderB');
     const failedSlot = r1.failed[0].slotId;
     const [fd, fl, fs_] = failedSlot.split('_');
     await Promise.all([
-      MB.applyBaseline(A.db, plan, Object.assign({ migrationId: 'gate-1' }, A.opts)),
+      MB.applyBaseline(A.db, plan, Object.assign({ migrationId: 'gate-1' }, await op(A, 'BASELINE_APPLY'))),
       save(fl === 'A' ? L : fl === 'B' ? LB : A, row(fd, fl, fs_, 5)),
       save(L, row(bkk(2), 'A', 'NIGHT', 1)),
       save(LB, row(bkk(4), 'B', 'DAY', 2))
     ]);
-    const again = await MB.applyBaseline(A.db, plan, Object.assign({ migrationId: 'gate-1' }, A.opts));   // re-run: idempotent
+    const again = await MB.applyBaseline(A.db, plan, Object.assign({ migrationId: 'gate-1' }, await op(A, 'BASELINE_APPLY')));   // re-run: idempotent
     assert.equal(again.created.length, 0); assert.equal(again.failed.length, 0);
-    const gate = await MB.completeIfClean(A.db, plan, 'gate-1', A.opts, await allLogs());
+    const gate = await MB.completeIfClean(A.db, plan, 'gate-1', await op(A, 'BASELINE_GATE'), await allLogs());
     assert.deepEqual(gate, { complete: true }, JSON.stringify(gate));
     const after = totals(await allLogs());
     assert.equal(after.logs, before0.logs + 2 + 3); assert.equal(after.qty, before0.qty + 3 + 4 + 5 + 1 + 2);
@@ -136,7 +137,7 @@ describe('bridge period: old pages writing around the ledger', () => {
     await assert.rejects(require('firebase/firestore').addDoc(collection(anonDb(), 'scrapLogs'), row(day, 'A', 'DAY', 1)), /permission/i);
     const A = actor('admin'), L = actor('leaderA');
     await assert.rejects(OPS.reconcileSlot(L.db, `${day}_A_DAY`, 'bridge clean-up', L.opts), /permission/i);
-    for (const s of ['DAY', 'NIGHT']) await OPS.reconcileSlot(A.db, `${day}_A_${s}`, 'bridge clean-up: records saved by old pages', A.opts);
+    for (const s of ['DAY', 'NIGHT']) await OPS.reconcileSlot(A.db, `${day}_A_${s}`, 'bridge clean-up: records saved by old pages', await op(A, 'RECONCILE'));
     assert.equal(await statusOf(A, day, 'A', 'DAY'), 'CHANGED');                // must be reconfirmed
     assert.equal(await statusOf(A, day, 'A', 'NIGHT'), 'PENDING');
     await SC.closeSlot(L.db, { date: day, line: 'A', shift: 'DAY', state: 'SUBMITTED' }, L.opts);
@@ -154,9 +155,10 @@ describe('bridge period: old pages writing around the ledger', () => {
     const id = `${day}_A_NIGHT`, db = env.authenticatedContext('uid-admin', { email: E('admin') }).firestore();
     const cur = await raw(async d => (await require('firebase/firestore').getDoc(doc(d, 'scrapSlots', id))).data());
     const { writeBatch } = require('firebase/firestore');
+    const opId = (await op(actor('admin'), 'RECONCILE')).opId;   // a valid run, so the refusals below are about the forgery itself
     const attempt = async (count, ev) => { const b = writeBatch(db); const v = cur.logVersion + 1;
       b.update(doc(db, 'scrapSlots', id), { logVersion: v, liveLogCount: count, updatedAt: serverTimestamp(), updatedBy: E('admin') });
-      b.set(doc(db, 'scrapSlots', id, 'events', 'v' + v), Object.assign({ type: 'RECONCILE', version: v, at: serverTimestamp(), by: E('admin'), logIds: ['a', 'b'], fingerprint: 'f', scrapQty: 3, before: cur.liveLogCount, reason: 'fix' }, ev));
+      b.set(doc(db, 'scrapSlots', id, 'events', 'v' + v), Object.assign({ type: 'RECONCILE', version: v, at: serverTimestamp(), by: E('admin'), opId, logIds: ['a', 'b'], fingerprint: 'f', scrapQty: 3, before: cur.liveLogCount, reason: 'fix' }, ev));
       b.set(doc(db, 'scrapCloseSummary', day), { date: day, slots: { A_NIGHT: Ledger.publicView(Object.assign({}, cur, { logVersion: v, liveLogCount: count })) }, updatedAt: serverTimestamp() }, { merge: true });
       return b.commit(); };
     await assert.rejects(attempt(5, {}), /permission/i);              // count != listed ids

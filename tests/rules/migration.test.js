@@ -14,6 +14,7 @@ const { doc, getDoc, getDocs, setDoc, collection, serverTimestamp, writeBatch } 
 const Ledger = require('../../js/scrap-ledger.js');
 const SC = require('../../js/shift-close.js');
 const MB = require('../../tools/migration/ledger-baseline.js');
+const { op } = require('../support/ops-helper.js');
 const { compatDb } = require('../support/compat-shim.js');
 
 const ROOT = path.join(__dirname, '../..');
@@ -94,10 +95,10 @@ describe('baseline migration on synthetic data (emulator)', () => {
   });
   it('apply as Admin: slots, audit event b1 and public mirror; scrap logs untouched; idempotent', async () => {
     const A = actor('admin');
-    applied = await MB.applyBaseline(A.db, plan, Object.assign({ migrationId: 'mig-test-1' }, A.opts));
+    applied = await MB.applyBaseline(A.db, plan, Object.assign({ migrationId: 'mig-test-1' }, await op(A, 'BASELINE_APPLY')));
     assert.equal(applied.failed.length, 0, JSON.stringify(applied.failed.slice(0, 3)));
     assert.equal(applied.created.length, plan.slots.length);
-    applied2 = await MB.applyBaseline(A.db, plan, Object.assign({ migrationId: 'mig-test-1' }, A.opts));
+    applied2 = await MB.applyBaseline(A.db, plan, Object.assign({ migrationId: 'mig-test-1' }, await op(A, 'BASELINE_APPLY')));
     assert.equal(applied2.created.length, 0); assert.equal(applied2.skipped.length, plan.slots.length);
     mism = await MB.verifyApplied(A.db, plan);
     assert.deepEqual(mism, []);
@@ -132,7 +133,7 @@ describe('baseline migration on synthetic data (emulator)', () => {
   });
   it('after baselineComplete: a client cannot state legacyCount; stray logs around the ledger are caught', async () => {
     const A = actor('admin'), L = actor('leaderA');
-    await MB.markComplete(A.db, 'mig-test-1', A.opts);
+    await MB.markComplete(A.db, 'mig-test-1', await op(A, 'BASELINE_GATE'));
     // a record saved with sign-in "off" AFTER the migration, on a slot that has no ledger yet
     const day = bkk(3);
     await raw(async db => { await setDoc(doc(db, 'scrapLogs', 'stray1'), { date: day, line: 'A', shift: 'DAY', model: 'M', defectType: 'Dent', scrapQty: 2, remark: '', createdAt: 1 }); });
@@ -147,7 +148,7 @@ describe('baseline migration on synthetic data (emulator)', () => {
     assert.equal((await SC.loadSlot(A.db, s.date, s.line, s.shift)).info.status, 'CONFLICT');
     // recovery for the stray slot: Admin baselines it (audited), then it is a normal ledger slot
     const fix = MB.planBaseline((await allLogs()).filter(l => l.date === day && l.line === 'A' && l.shift === 'DAY'), []);
-    const r = await MB.applyBaseline(A.db, fix, Object.assign({ migrationId: 'mig-fix-1' }, A.opts));
+    const r = await MB.applyBaseline(A.db, fix, Object.assign({ migrationId: 'mig-fix-1' }, await op(A, 'BASELINE_APPLY')));
     assert.equal(r.created.length, 1);
     await SC.closeSlot(L.db, { date: day, line: 'A', shift: 'DAY', state: 'SUBMITTED' }, L.opts);
     report.push('After baselineComplete: a ledger write or close that would need legacyCount > 0 is refused (stray "off"-mode record surfaced); a stray record on a migrated slot shows CONFLICT; Admin re-baselines a stray slot (audited b1), after which it closes normally.');

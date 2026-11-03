@@ -63,7 +63,7 @@
       const version = cur.logVersion + 1;
       const fields = { logVersion: version, liveLogCount: ids.length, updatedAt: ts(), updatedBy: opts.email };
       tx.update(ref, fields);
-      tx.set(ref.collection('events').doc('v' + version), { type: 'RECONCILE', version, at: ts(), by: opts.email, logIds: ids, fingerprint: fp, scrapQty: qty, before: cur.liveLogCount, reason });
+      tx.set(ref.collection('events').doc('v' + version), { type: 'RECONCILE', version, at: ts(), by: opts.email, opId: opts.opId || '', logIds: ids, fingerprint: fp, scrapQty: qty, before: cur.liveLogCount, reason });
       L.writeSummaries(tx, db, sums, new Map([[slotId, L.publicView(Object.assign({}, cur, fields))]]), ts);
       return { slotId, version, before: cur.liveLogCount, after: ids.length };
     });
@@ -96,7 +96,23 @@
     return { checked: recent.length, offLedger };
   }
 
-  const api = { bridgeAudit, reconcileSlot, offLedgerSince };
+  /**
+   * startOp / finishOp (Phase 9). Every go-live WRITE step runs under an operation that the admin
+   * opens first: qdOpsLog/{opId} { action, stage: "START", approvalRef, reason, … }. The rules accept
+   * a reconcile / baseline / gate / privacy-migration write only when it names such a START record
+   * of the same admin and action, opened within 12 hours. finishOp adds the RESULT record.
+   * meta: { approvalRef, reason, projectId, database }
+   */
+  async function startOp(db, action, meta, opts) {
+    const ref = db.collection('qdOpsLog').doc();
+    await ref.set({ action, stage: 'START', projectId: meta.projectId || '', database: meta.database || '(default)', approvalRef: meta.approvalRef, reason: meta.reason, summary: '', at: opts.serverTimestamp(), by: opts.email });
+    return ref.id;
+  }
+  async function finishOp(db, opId, action, summary, meta, opts) {
+    await db.collection('qdOpsLog').doc().set({ action, stage: 'RESULT', runOf: opId, projectId: meta.projectId || '', database: meta.database || '(default)', approvalRef: meta.approvalRef, reason: meta.reason, summary: JSON.stringify(summary).slice(0, 4000), at: opts.serverTimestamp(), by: opts.email });
+  }
+
+  const api = { bridgeAudit, reconcileSlot, offLedgerSince, startOp, finishOp };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   if (typeof window !== 'undefined') window.BridgeOps = api;
 })(this);

@@ -18,7 +18,7 @@
   const $ = id => document.getElementById(id);
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const DATABASE = '(default)';
-  let lastAudit = null, lastPlan = null, lastReport = {};
+  let lastAudit = null, lastPlan = null, lastReport = {}, privacyPlan = null, privacyBackup = null, backupSaved = false;
 
   const projectId = () => (window.qdDb && window.qdDb.app && window.qdDb.app.options && window.qdDb.app.options.projectId) || '?';
   const opts = () => ({ email: QDAuth.getState().email, serverTimestamp: () => firebase.firestore.FieldValue.serverTimestamp() });
@@ -34,18 +34,16 @@
     if ($('opsReason').value.trim().length < 3) return 'Enter the reason.';
     return null;
   }
-  async function logOp(action, summary) {
-    await window.qdDb.collection('qdOpsLog').add({
-      action, projectId: projectId(), database: DATABASE, approvalRef: $('opsApproval').value.trim(), reason: $('opsReason').value.trim(),
-      summary: JSON.stringify(summary).slice(0, 4000), at: firebase.firestore.FieldValue.serverTimestamp(), by: QDAuth.getState().email
-    });
-  }
-  function download() {
-    const blob = new Blob([JSON.stringify(Object.assign({ projectId: projectId(), database: DATABASE, generatedAt: new Date().toISOString() }, lastReport), null, 2)], { type: 'application/json' });
+  // Every write step runs under an operation: a START record first (the rules require it for the
+  // write itself), then a RESULT record. See tools/ops/bridge-ops.js startOp / finishOp.
+  const opMeta = () => ({ approvalRef: $('opsApproval').value.trim(), reason: $('opsReason').value.trim(), projectId: projectId(), database: DATABASE });
+  function saveJson(obj, name) {
+    const blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json' });
     const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob); a.download = `qd-ops-report_${projectId()}_${Date.now()}.json`;
+    a.href = URL.createObjectURL(blob); a.download = name;
     document.body.appendChild(a); a.click(); a.remove();
   }
+  function download() { saveJson(Object.assign({ projectId: projectId(), database: DATABASE, generatedAt: new Date().toISOString() }, lastReport), `qd-ops-report_${projectId()}_${Date.now()}.json`); }
 
   // ---- read only ----
   async function runAudit() {
@@ -86,32 +84,68 @@
   async function guarded(outId, action, fn) {
     const why = writeCheck();
     if (why) return out(outId, '🔒 ' + esc(why), 'error');
-    try { const summary = await fn(); await logOp(action, summary); lastReport[action] = summary; out(outId, `<b>Done.</b> ${esc(JSON.stringify(summary).slice(0, 600))}`, 'success'); }
-    catch (e) { try { await logOp(action, { error: e.message }); } catch (x) { /* logging failed too */ } out(outId, 'Failed: ' + esc(e.message), 'error'); }
+    let opId = null;
+    try {
+      opId = await BridgeOps.startOp(window.qdDb, action, opMeta(), opts());
+      const summary = await fn(Object.assign({ opId }, opts()));
+      await BridgeOps.finishOp(window.qdDb, opId, action, summary, opMeta(), opts());
+      lastReport[action] = summary; out(outId, `<b>Done.</b> ${esc(JSON.stringify(summary).slice(0, 600))}`, 'success');
+    } catch (e) {
+      if (opId) { try { await BridgeOps.finishOp(window.qdDb, opId, action, { error: e.message }, opMeta(), opts()); } catch (x) { /* logging failed too */ } }
+      out(outId, 'Failed: ' + esc(e.message), 'error');
+    }
   }
-  const reconcileApply = () => guarded('opsReconcileOut', 'RECONCILE', async () => {
+  const reconcileApply = () => guarded('opsReconcileOut', 'RECONCILE', async o => {
     const res = [];
     for (const id of selectedSlots()) {
       const [d, l, s] = id.split('_');
       const cur = await ShiftClose.loadSlot(window.qdDb, d, l, s);
-      if (cur.slot && cur.slot.importPending) { await ScrapLedger.clearImportMarker(window.qdDb, id, opts()); res.push({ slotId: id, clearedImportMarker: true }); }
+      if (cur.slot && cur.slot.importPending) { await ScrapLedger.clearImportMarker(window.qdDb, id, o); res.push({ slotId: id, clearedImportMarker: true }); }
       const now = await ShiftClose.loadSlot(window.qdDb, d, l, s);
-      if (now.slot && now.slot.liveLogCount !== now.logs.length) res.push(await BridgeOps.reconcileSlot(window.qdDb, id, $('opsReason').value.trim(), opts()));
+      if (now.slot && now.slot.liveLogCount !== now.logs.length) res.push(await BridgeOps.reconcileSlot(window.qdDb, id, $('opsReason').value.trim(), o));
     }
     return { slots: res };
   });
-  const baselineApply = () => guarded('opsBaselineOut', 'BASELINE_APPLY', async () => {
+  const baselineApply = () => guarded('opsBaselineOut', 'BASELINE_APPLY', async o => {
     if (!lastPlan) throw new Error('Run the baseline dry run first.');
-    const r = await LedgerBaseline.applyBaseline(window.qdDb, lastPlan, Object.assign({ migrationId: $('opsApproval').value.trim() }, opts()));
+    const r = await LedgerBaseline.applyBaseline(window.qdDb, lastPlan, Object.assign({ migrationId: $('opsApproval').value.trim() }, o));
     return { created: r.created.length, skipped: r.skipped.length, failed: r.failed };
   });
-  const baselineGate = () => guarded('opsBaselineOut', 'BASELINE_GATE', async () => {
+  const baselineGate = () => guarded('opsBaselineOut', 'BASELINE_GATE', async o => {
     if (!lastPlan) throw new Error('Run the baseline dry run first.');
     const logs = []; (await window.qdDb.collection('scrapLogs').get()).forEach(d => logs.push(Object.assign({ id: d.id }, d.data())));
-    const g = await LedgerBaseline.completeIfClean(window.qdDb, lastPlan, $('opsApproval').value.trim(), opts(), logs);
+    const g = await LedgerBaseline.completeIfClean(window.qdDb, lastPlan, $('opsApproval').value.trim(), o, logs);
     if (!g.complete) throw new Error('Gate closed: ' + g.problems.slice(0, 10).join('; '));
     return g;
   });
+
+  // ---- privacy migration (Phase 9) ----
+  async function privacyDryRun() {
+    out('opsPrivacyOut', 'Reading scrap logs and improvements…');
+    privacyPlan = await PrivacyMigration.scan(window.qdDb);
+    privacyBackup = PrivacyMigration.backup(privacyPlan, { projectId: projectId(), database: DATABASE });
+    backupSaved = false;
+    lastReport.privacyDryRun = { totals: privacyPlan.totals, exceptions: privacyPlan.exceptions };
+    const t = privacyPlan.totals;
+    out('opsPrivacyOut', `<b>Dry run — nothing written.</b> ${t.logs} scrap record(s) with recordedBy · ${t.improvements} improvement(s) with owners · ${t.exceptions} exception(s)${privacyPlan.exceptions.length ? `<ul>${privacyPlan.exceptions.map(x => `<li>${esc(x.kind)}/${esc(x.id)}: ${esc(x.problem)}</li>`).join('')}</ul>` : ''} · download the backup before applying.`, t.exceptions ? 'error' : 'success');
+  }
+  function privacyBackupDownload() {
+    if (!privacyBackup) return out('opsPrivacyOut', 'Run the dry run first.', 'error');
+    saveJson(privacyBackup, `qd-privacy-backup_${projectId()}_${Date.now()}.json`);
+    backupSaved = true;
+  }
+  const privacyApply = () => guarded('opsPrivacyOut', 'PRIVACY_MIGRATION', async o => {
+    if (!privacyPlan) throw new Error('Run the dry run first.');
+    if (!backupSaved) throw new Error('Download the backup first.');
+    const r = await PrivacyMigration.apply(window.qdDb, privacyPlan, Object.assign({ fieldValue: { delete: () => firebase.firestore.FieldValue.delete() } }, o));
+    const v = await PrivacyMigration.verify(window.qdDb, privacyBackup);
+    return { result: r, verify: v };
+  });
+  async function privacyVerify() {
+    const v = await PrivacyMigration.verify(window.qdDb, privacyBackup);
+    lastReport.privacyVerify = v;
+    out('opsPrivacyOut', v.clean ? '<b>Verified:</b> no personal data left on public documents; sidecars hold the backed-up values.' : `<b>Not clean:</b> ${esc(v.problems.concat(v.exceptions.map(x => x.kind + '/' + x.id + ': ' + x.problem)).slice(0, 20).join('; '))}`, v.clean ? 'success' : 'error');
+  }
 
   function render() {
     const tabBtn = document.querySelector('#adminTabs button[data-tab="ops"]'), sec = $('tab-ops');
@@ -147,7 +181,13 @@
       <button type="button" class="mini-add-btn" id="opsBaselineDryBtn">Dry run (reads every scrap log)</button>
       <button type="button" class="qd-submit-btn" id="opsBaselineBtn" style="width:auto;">Apply baseline</button>
       <button type="button" class="qd-submit-btn" id="opsGateBtn" style="width:auto;">Run gate (set baselineComplete)</button>
-      <div id="opsBaselineOut" class="qd-form-message" style="display:none;"></div>`;
+      <div id="opsBaselineOut" class="qd-form-message" style="display:none;"></div>
+      <h3>5. Privacy migration (old public recordedBy / owners → private)</h3>
+      <button type="button" class="mini-add-btn" id="opsPrivacyDryBtn">Dry run</button>
+      <button type="button" class="mini-add-btn" id="opsPrivacyBackupBtn">Download backup (JSON)</button>
+      <button type="button" class="qd-submit-btn" id="opsPrivacyBtn" style="width:auto;">Apply privacy migration</button>
+      <button type="button" class="mini-add-btn" id="opsPrivacyVerifyBtn">Verify</button>
+      <div id="opsPrivacyOut" class="qd-form-message" style="display:none;"></div>`;
     $('opsAuditBtn').onclick = runAudit;
     $('opsDownloadBtn').onclick = download;
     $('opsReconcileDryBtn').onclick = reconcileDryRun;
@@ -155,6 +195,10 @@
     $('opsBaselineDryBtn').onclick = baselineDryRun;
     $('opsBaselineBtn').onclick = baselineApply;
     $('opsGateBtn').onclick = baselineGate;
+    $('opsPrivacyDryBtn').onclick = privacyDryRun;
+    $('opsPrivacyBackupBtn').onclick = privacyBackupDownload;
+    $('opsPrivacyBtn').onclick = privacyApply;
+    $('opsPrivacyVerifyBtn').onclick = privacyVerify;
   }
 
   function init() {

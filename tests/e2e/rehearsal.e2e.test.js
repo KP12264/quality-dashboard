@@ -19,6 +19,7 @@ const Ledger = require('../../js/scrap-ledger.js');
 const SC = require('../../js/shift-close.js');
 const MB = require('../../tools/migration/ledger-baseline.js');
 const OPS = require('../../tools/ops/bridge-ops.js');
+const { op } = require('../support/ops-helper.js');
 const { compatDb } = require('../support/compat-shim.js');
 
 const ROOT = path.join(__dirname, '../..');
@@ -262,7 +263,7 @@ describe('final rehearsal: the whole rollout in order', () => {
     const A = actor('ADMIN1');
     await scenario('S6', 'Admin reconciles + clears the import marker; audit = 0 problems', async () => {
       await Ledger.clearImportMarker(A.db, `${bkk(3)}_C_NIGHT`, A.opts);
-      for (const p of (await OPS.bridgeAudit(A.db, { from: bkk(9), to: bkk(0) })).problems) await OPS.reconcileSlot(A.db, p.slotId, 'post-bridge clean-up', A.opts);
+      for (const p of (await OPS.bridgeAudit(A.db, { from: bkk(9), to: bkk(0) })).problems) await OPS.reconcileSlot(A.db, p.slotId, 'post-bridge clean-up', await op(A, 'RECONCILE'));
       const again = await OPS.bridgeAudit(A.db, { from: bkk(9), to: bkk(0) });
       if (again.problems.length) throw new Error(JSON.stringify(again.problems));
       return 'reconciled; A Day = ' + await statusOf(DAY, 'A', 'DAY');
@@ -281,9 +282,9 @@ describe('final rehearsal: the whole rollout in order', () => {
       const existing = []; (await raw(async db => getDocs(collection(db, 'scrapSlots')))).forEach(d => existing.push(d.id));
       const plan = MB.planBaseline(logs, existing);
       if (MB.verifyPlan(plan).length) throw new Error('plan');
-      await Promise.all([MB.applyBaseline(A.db, plan, Object.assign({ migrationId: 'rehearsal' }, A.opts)), sdkSave(actor('LEADC'), row('C', 'DAY', 1))]);
+      await Promise.all([MB.applyBaseline(A.db, plan, Object.assign({ migrationId: 'rehearsal' }, await op(A, 'BASELINE_APPLY'))), sdkSave(actor('LEADC'), row('C', 'DAY', 1))]);
       const now = []; (await raw(async db => getDocs(collection(db, 'scrapLogs')))).forEach(d => now.push(Object.assign({ id: d.id }, d.data())));
-      const gate = await MB.completeIfClean(A.db, plan, 'rehearsal', A.opts, now);
+      const gate = await MB.completeIfClean(A.db, plan, 'rehearsal', await op(A, 'BASELINE_GATE'), now);
       if (!gate.complete) throw new Error(JSON.stringify(gate.problems));
       return `${plan.slots.length} slots baselined, ${plan.skipped.length} already in the ledger, baselineComplete`;
     }, 1);
@@ -348,7 +349,7 @@ describe('final rehearsal: the whole rollout in order', () => {
     await scenario('R', 'After a rollback: audit lists what the old tab saved around the ledger; reconcile → 0 problems', async () => {
       const A = actor('ADMIN1');
       const a = await OPS.bridgeAudit(A.db, { from: bkk(9), to: bkk(0) });
-      for (const p of a.problems) await OPS.reconcileSlot(A.db, p.slotId, 'clean-up after rollback', A.opts);
+      for (const p of a.problems) await OPS.reconcileSlot(A.db, p.slotId, 'clean-up after rollback', await op(A, 'RECONCILE'));
       const b = await OPS.bridgeAudit(A.db, { from: bkk(9), to: bkk(0) });
       if (b.problems.length) throw new Error(JSON.stringify(b.problems));
       return `${a.problems.length} slot(s) reconciled: ${a.problems.map(p => p.slotId).join(', ')}`;

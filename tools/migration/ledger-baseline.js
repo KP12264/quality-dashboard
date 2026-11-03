@@ -77,12 +77,19 @@
           if (snap.exists) return false;                                   // created meanwhile: leave it
           const slot = { date: s.date, line: s.line, shift: s.shift, logVersion: 0, liveLogCount: s.count, legacyCount: s.count, updatedAt: ts(), updatedBy: opts.email };
           tx.set(ref, slot);
-          tx.set(ref.collection("events").doc("b1"), { type: "BASELINE", migrationId: opts.migrationId, legacyCount: s.count, scrapQty: s.qty, logIds: s.logIds, fingerprint: s.fingerprint, at: ts(), by: opts.email });
+          tx.set(ref.collection("events").doc("b1"), { type: "BASELINE", migrationId: opts.migrationId, opId: opts.opId || "", legacyCount: s.count, scrapQty: s.qty, logIds: s.logIds, fingerprint: s.fingerprint, at: ts(), by: opts.email });
           L.writeSummaries(tx, db, sums, new Map([[s.slotId, L.publicView(slot)]]), ts);
           return true;
         });
         (made ? out.created : out.skipped).push(s.slotId);
-      } catch (e) { out.failed.push({ slotId: s.slotId, error: (e && (e.code || e.message)) || String(e) }); }
+      } catch (e) {
+        // A concurrent run (or a Leader's first save) may have created the slot first; under contention
+        // the rules answer permission-denied instead of a retryable abort. If the slot exists now, it
+        // was not created by us: skipped, not failed.
+        const now = await ref.get().catch(() => null);
+        if (now && now.exists) out.skipped.push(s.slotId);
+        else out.failed.push({ slotId: s.slotId, error: (e && (e.code || e.message)) || String(e) });
+      }
     }
     return out;
   }
@@ -123,7 +130,7 @@
   }
 
   async function markComplete(db, migrationId, opts) {
-    await db.collection("qdConfig").doc("ledger").set({ baselineComplete: true, migrationId, at: opts.serverTimestamp(), by: opts.email });
+    await db.collection("qdConfig").doc("ledger").set({ baselineComplete: true, migrationId, opId: opts.opId || "", at: opts.serverTimestamp(), by: opts.email });
   }
 
   const api = { planBaseline, verifyPlan, applyBaseline, verifyApplied, completeIfClean, markComplete };
