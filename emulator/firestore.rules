@@ -1,21 +1,27 @@
 rules_version = '2';
 // =============================================================================
-//  COMBINED FIRESTORE RULES — DRAFT FOR THE FIREBASE EMULATOR ONLY
-//  Quality Dashboard (Shift Scrap Close, Phase 1) + Production V2
+//  COMBINED FIRESTORE RULES CANDIDATE — FOR THE FIREBASE EMULATOR ONLY (Phase 6)
+//  Production rules snapshot + Quality Dashboard (Shift Scrap Close)
 //
-//  DO NOT PUBLISH OR DEPLOY THIS FILE.
-//  * The rules actually deployed on daily-production-report-46b60 are NOT
-//    VERIFIED (Phase 0, item G1). The Production V2 part below is copied
-//    verbatim from KP12264/daily-production-report @ 431836a
-//    production-v2/firestore.rules, which is known to differ from what is live.
-//  * Publishing this file would replace the live rules of BOTH systems.
+//  DO NOT PUBLISH OR DEPLOY THIS FILE (approval required, see docs/phase6/).
+//  * Baseline: emulator/production.firestore.rules.snapshot — the rules copied
+//    from the Firebase Console of daily-production-report-46b60 (sha256 in
+//    production.firestore.rules.snapshot.meta.json; database and publish time
+//    still UNCONFIRMED, item G1).
+//  * The Production V2 block below is that snapshot's PV2 + legacy part,
+//    unchanged (tests/rules/rules.test.js checks it character by character).
+//  * The snapshot's public read/write blocks for scrapLogs, targetMaster,
+//    improvements and scrapModelMappings are REPLACED by the Quality Dashboard
+//    block (sign-in + roles + ledger). That closes public write — see
+//    docs/phase6/compatibility.md. emulator/firestore.rules.bridge keeps them
+//    for a zero-downtime transition.
 //  * This folder's .firebaserc points at "demo-quality-dashboard", a project
 //    that exists only in the emulator.
 // =============================================================================
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ===== BEGIN Production V2 (verbatim, production-v2/firestore.rules @ 431836a) =====
+    // ===== BEGIN Production V2 (verbatim from emulator/production.firestore.rules.snapshot, lines 28-59) =====
     // ── Legacy system — UNCHANGED. Stays exactly as open as it is today so the
     // original site keeps working with no login, forever. Production V2 never
     // writes here (enforced client-side too, in firebase-v2.js).

@@ -20,3 +20,7 @@
   (`qdShiftEndHours`, BLOCKED: times not confirmed) and Thailand time (`qdBkkNow`, UTC+7).
 - Phase 5: confirmed shift ends at minute precision (`qdShiftEndMinutes`: DAY 19:50, NIGHT 08:00
   next day), ledger baseline (`b1` events, `qdConfig/ledger.baselineComplete`). See `docs/phase5/`.
+- Phase 6: `production.firestore.rules.snapshot` (+ `.meta.json`) = rules copied from the Firebase
+  Console (database / publish time unconfirmed). `firestore.rules` is now the candidate built on it
+  (PV2 part identical, test-checked); `firestore.rules.bridge` is the generated transition set.
+  Neither may be published without approval (docs/phase6/).

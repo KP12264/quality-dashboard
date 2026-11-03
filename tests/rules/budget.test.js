@@ -30,7 +30,7 @@ const creates = (a, rows) => Ledger.applyOps(a.db, rows.map(r => ({ op: 'create'
 async function measure(name, fn) { const t = Date.now(); try { await fn(); report.push(`${name}: accepted (${Date.now() - t} ms)`); return true; } catch (e) { report.push(`${name}: REFUSED ${e.code || e.message}`); return false; } }
 
 before(async () => {
-  env = await initializeTestEnvironment({ projectId: 'demo-quality-dashboard', firestore: { rules: fs.readFileSync(path.join(__dirname, '../../emulator/firestore.rules'), 'utf8'), host: '127.0.0.1', port: 8080 } });
+  env = await initializeTestEnvironment({ projectId: 'demo-quality-dashboard', firestore: { rules: fs.readFileSync(path.join(__dirname, '../..', process.env.QD_RULES_FILE || 'emulator/firestore.rules'), 'utf8'), host: '127.0.0.1', port: 8080 } });
   await env.clearFirestore();
   await env.withSecurityRulesDisabled(async ctx => {
     const u = (role, slots) => ({ role, active: true, displayName: role, slots, updatedAt: 1, updatedBy: E('admin') });

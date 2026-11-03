@@ -69,6 +69,23 @@ async function seed() {
 }
 
 describe('combined rules file', () => {
+  it('production snapshot is intact (sha256 = metadata) and the PV2 block of the candidate equals its PV2 part', () => {
+    const crypto = require('crypto');
+    const prodPath = path.join(__dirname, '../../emulator/production.firestore.rules.snapshot');
+    const meta = JSON.parse(fs.readFileSync(prodPath + '.meta.json', 'utf8'));
+    const buf = fs.readFileSync(prodPath);
+    assert.equal(crypto.createHash('sha256').update(buf).digest('hex'), meta.sha256);
+    assert.equal(meta.sha256, meta.sha256ProvidedByOwner);
+    assert.equal(buf.length, meta.bytes);
+    const prod = buf.toString('utf8');
+    const live = prod.slice(prod.indexOf('    // ── Legacy system'), prod.indexOf('    // ── Quality Dashboard (separate app')).trim();
+    const combined = fs.readFileSync(RULES, 'utf8');
+    const begin = combined.indexOf('// ===== BEGIN Production V2'), end = combined.indexOf('// ===== END Production V2');
+    assert.equal(combined.slice(combined.indexOf('\n', begin) + 1, end).trim(), live);
+    // the bridge is generated from the candidate + the snapshot and must be up to date
+    const { build } = require('../../tools/rules/build-bridge.js');
+    assert.equal(fs.readFileSync(path.join(__dirname, '../../emulator/firestore.rules.bridge'), 'utf8'), build());
+  });
   it('Production V2 block is a verbatim copy of production-v2/firestore.rules @ 431836a', () => {
     const combined = fs.readFileSync(RULES, 'utf8');
     const begin = combined.indexOf('// ===== BEGIN Production V2'), end = combined.indexOf('// ===== END Production V2');

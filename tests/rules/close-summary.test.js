@@ -43,7 +43,7 @@ async function assertMirror(date) {
 }
 
 before(async () => {
-  env = await initializeTestEnvironment({ projectId: 'demo-quality-dashboard', firestore: { rules: fs.readFileSync(path.join(__dirname, '../../emulator/firestore.rules'), 'utf8'), host: '127.0.0.1', port: 8080 } });
+  env = await initializeTestEnvironment({ projectId: 'demo-quality-dashboard', firestore: { rules: fs.readFileSync(path.join(__dirname, '../..', process.env.QD_RULES_FILE || 'emulator/firestore.rules'), 'utf8'), host: '127.0.0.1', port: 8080 } });
 });
 after(async () => { if (env) await env.cleanup(); });
 beforeEach(async () => {

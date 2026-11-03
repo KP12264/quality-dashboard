@@ -44,6 +44,9 @@ window.qdCloseRequiredFrom = null;
       ? Object.assign({}, FIREBASE_CONFIG, { projectId: QD_EMULATOR.projectId, apiKey: "demo-api-key", authDomain: "localhost" })
       : FIREBASE_CONFIG;
     if (window.qdEmulator) window.qdAuthMode = "enforce";
+    // Local test mode only: ?qdAuthMode=off runs the page exactly as the live site does today
+    // (sign-in off) against the emulator, to test the old behaviour under each rules version.
+    if (window.qdEmulator && new URLSearchParams(location.search).get("qdAuthMode") === "off") window.qdAuthMode = "off";
 
     // Named app instance so this never collides with any other Firebase
     // app instance that might be running on the same page/browser.

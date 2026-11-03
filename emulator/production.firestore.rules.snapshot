@@ -1,0 +1,85 @@
+rules_version = '2';
+// Production V2 — permanent Firestore Security Rules
+// Replaces the temporary test rule that expires 2026-09-14.
+//
+// HOW TO DEPLOY:
+// Firebase Console > (project daily-production-report-46b60) > Firestore Database
+// > Rules tab > paste this entire file, replacing what's there > Publish.
+//
+// BEFORE PUBLISHING, you must also:
+// 1. Authentication > Sign-in method > enable "Email/Password".
+// 2. Authentication > Users > Add user, for each employee who should be able to
+//    save Entry / Plan / Loss / Master data. (There is no self-signup in the app.)
+//    The login screen asks for a short "รหัสพนักงาน" (employee code) instead of a
+//    real email — when creating the user here, set the Email field to
+//    "<code>@prodv2.local" in lowercase (e.g. code "KP001" -> kp001@prodv2.local).
+//    Nothing is ever sent to that address; it's just an identifier.
+// 3. Firestore Database > Data > create a collection named exactly
+//    prodV2_authorizedUsers, and add ONE document per authorized employee,
+//    using that same "<code>@prodv2.local" string as the Document ID (any
+//    field/value inside is fine, e.g. {active: true} — only the document's
+//    existence matters). A user who can sign in but has no matching document
+//    here can read everything but cannot save anything — this is what keeps
+//    write access limited to employees even if someone finds another way to
+//    create a Firebase Auth account.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Legacy system — UNCHANGED. Stays exactly as open as it is today so the
+    // original site keeps working with no login, forever. Production V2 never
+    // writes here (enforced client-side too, in firebase-v2.js).
+    match /productionLogs/{doc} {
+      allow read, write: if true;
+    }
+
+    // ── Production V2 — Dashboard must be viewable by anyone with no login,
+    // so all prodV2_* collections are publicly readable. Writing requires the
+    // caller to be signed in AND present in the prodV2_authorizedUsers allowlist.
+    match /prodV2_authorizedUsers/{email} {
+      allow read: if true;
+      // Never writable from the app — only an admin editing directly in the
+      // Firebase Console (which bypasses these rules) can add/remove entries.
+      allow write: if false;
+    }
+
+    match /{collection}/{doc}
+      // Matches any collection literally named prodV2_* (and its subcollections
+      // if any are ever added under a document, e.g. .../subcol/{doc=**}).
+      // Explicitly excludes prodV2_authorizedUsers — Firestore rules are OR'd
+      // across every matching block, so without this exclusion this generic
+      // "allowed employee" rule would override the stricter allow-write:false
+      // rule above for that one collection.
+      {
+      allow read: if collection.matches('prodV2_.*');
+      allow write: if collection.matches('prodV2_.*')
+        && collection != 'prodV2_authorizedUsers'
+        && request.auth != null
+        && request.auth.token.email != null
+        && exists(/databases/$(database)/documents/prodV2_authorizedUsers/$(request.auth.token.email.lower()));
+    }
+    // ── Quality Dashboard (separate app: scrap tracking, targets,
+    // improvements) — public read/write, same openness as productionLogs
+    // above, for the same reason: no login system built for this app yet.
+    // PIN/employee-login for this app is a planned later phase.
+    match /scrapLogs/{doc} {
+      allow read, write: if true;
+    }
+    match /targetMaster/{doc} {
+      allow read, write: if true;
+    }
+    match /improvements/{doc} {
+      allow read, write: if true;
+    }
+
+    match /scrapModelMappings/{doc} {
+      allow read, write: if true;
+    }
+
+
+
+    // ── Everything else — default deny.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

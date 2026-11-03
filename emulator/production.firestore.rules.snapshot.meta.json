@@ -1,0 +1,16 @@
+{
+  "file": "emulator/production.firestore.rules.snapshot",
+  "description": "Firestore Security Rules copied by the project owner from the Firebase Console. Stored byte-for-byte as received; this metadata file is kept separate so the rules text is never edited.",
+  "project": "daily-production-report-46b60",
+  "database": "UNCONFIRMED (expected \"(default)\")",
+  "lastPublished": "UNCONFIRMED",
+  "receivedAt": "2026-11-03",
+  "receivedVia": "file upload in the Claude Code session (production.firestore.rules.snapshot)",
+  "sha256": "0967944bcf8bbe6f2051004424bd5819fd656018165b1aaca9982f13e3a22e2f",
+  "sha256ProvidedByOwner": "0967944bcf8bbe6f2051004424bd5819fd656018165b1aaca9982f13e3a22e2f",
+  "bytes": 3908,
+  "encoding": "UTF-8, LF line endings",
+  "baselineCommit": "6fae54b",
+  "g1Status": "OPEN until the owner confirms this is the published version of the (default) database",
+  "notDeployed": "This file is used only by the Firebase Emulator tests. Nothing here is published."
+}

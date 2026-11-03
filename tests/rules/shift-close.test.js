@@ -53,7 +53,7 @@ const eventsOf = id => raw(async db => { const out = {}; (await getDocs(collecti
 const code = e => e && (e.code || e.message);
 
 before(async () => {
-  env = await initializeTestEnvironment({ projectId: 'demo-quality-dashboard', firestore: { rules: fs.readFileSync(path.join(__dirname, '../../emulator/firestore.rules'), 'utf8'), host: '127.0.0.1', port: 8080 } });
+  env = await initializeTestEnvironment({ projectId: 'demo-quality-dashboard', firestore: { rules: fs.readFileSync(path.join(__dirname, '../..', process.env.QD_RULES_FILE || 'emulator/firestore.rules'), 'utf8'), host: '127.0.0.1', port: 8080 } });
 });
 after(async () => { if (env) await env.cleanup(); });
 beforeEach(async () => {
