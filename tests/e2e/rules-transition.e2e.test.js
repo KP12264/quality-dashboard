@@ -186,3 +186,34 @@ describe('old site (sign-in off) and new site (sign-in on) under each rules vers
     assert.match(o.formText, /Save failed/);   // the old page tells the user; nothing is lost silently
   });
 });
+
+describe('retired page copies (Phase 7)', () => {
+  for (const [page, target] of [['dashboard.html', 'scrap-entry.html'], ['dashboard-classic.html', 'index.html'], ['js/scrap-entry.html', 'scrap-entry.html']]) {
+    it(`${page}: never connects to Firebase, shows a notice and opens ${target}`, async () => {
+      await useRules('bridge'); await seed();
+      const before = await logsOf();
+      // 1) with the redirect target blocked, the retired page itself has no database and shows the notice
+      const a = await newPage();
+      const firestoreCalls = [];
+      a.page.on('request', r => { if (r.url().startsWith('http://127.0.0.1:8080')) firestoreCalls.push(r.url()); });
+      await a.page.addInitScript(() => { window.QD_RETIRED_NO_REDIRECT = true; });   // test hook: stay on the page
+      await a.page.goto(`${BASE}/${page}?qdEmulator=1&qdAuthMode=off`);
+      await a.page.waitForTimeout(1500);
+      const st = await a.page.evaluate(() => ({ db: !window.qdDb, retired: window.QD_RETIRED_PAGE, err: window.qdFirebaseError, notice: document.body.innerText }));
+      await a.context.close();
+      assert.equal(st.db, true); assert.equal(st.retired, target === 'scrap-entry.html' && page.startsWith('js/') ? '../scrap-entry.html' : target);
+      assert.match(st.notice, /This page has moved/); if (st.err !== undefined) assert.match(st.err, /moved/);   // js/scrap-entry.html never even loads firebase-init (its paths were already broken)
+      assert.deepEqual(firestoreCalls, []);
+      // 2) normally it lands on the current page
+      const b = await newPage();
+      await b.page.goto(`${BASE}/${page}?qdEmulator=1&qdAuthMode=off`);
+      await b.page.waitForURL(u => u.pathname.endsWith('/' + target) && !u.pathname.endsWith('/js/' + target), { timeout: 10000 });
+      const url = b.page.url();
+      await b.context.close();
+      assert.match(url, /qdEmulator=1/);   // query string kept
+      assert.equal(await logsOf(), before);
+      summary.push(`bridge :: retired ${page} :: no Firebase connection, notice shown, redirected to ${target}`);
+    });
+  }
+});
+

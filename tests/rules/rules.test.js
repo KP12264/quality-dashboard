@@ -34,8 +34,8 @@ function ledger(code) {
   const db = compatDb(as(code)), email = E(code);
   const opts = { email, serverTimestamp };
   return {
-    create: async data => { const ref = db.collection('scrapLogs').doc(); await Ledger.applyOps(db, [{ op: 'create', ref, data: Object.assign({ createdBy: email }, data) }], opts); return ref.id; },
-    update: (id, patch) => Ledger.applyOps(db, [{ op: 'update', ref: db.collection('scrapLogs').doc(id), data: Object.assign({ updatedBy: email }, patch) }], opts),
+    create: async data => { const ref = db.collection('scrapLogs').doc(); await Ledger.applyOps(db, [{ op: 'create', ref, data: Object.assign({}, data) }], opts); return ref.id; },
+    update: (id, patch) => Ledger.applyOps(db, [{ op: 'update', ref: db.collection('scrapLogs').doc(id), data: Object.assign({}, patch) }], opts),
     del: id => Ledger.applyOps(db, [{ op: 'delete', ref: db.collection('scrapLogs').doc(id) }], opts),
     many: (ops) => Ledger.applyOps(db, ops.map(o => Object.assign({ ref: db.collection('scrapLogs').doc(o.id) }, o)), opts),
     db
@@ -59,8 +59,8 @@ async function seed() {
     await setDoc(doc(db, 'prodV2_authorizedUsers', E('admin')), { active: true });  // QD admin who is ALSO a PV2 writer
     await setDoc(doc(db, 'prodV2_actualLogs', `actual_${DAY}_A_DAY`), { actualByCell: { '0|||M1|||FR': 100 } });
     // Records saved before the ledger existed (no slot documents yet).
-    await setDoc(doc(db, 'scrapLogs', 'sA'), scrap({ createdBy: E('leaderA') }));
-    await setDoc(doc(db, 'scrapLogs', 'sB'), scrap({ line: 'B', createdBy: E('admin') }));
+    await setDoc(doc(db, 'scrapLogs', 'sA'), scrap());
+    await setDoc(doc(db, 'scrapLogs', 'sB'), scrap({ line: 'B' }));
     await setDoc(doc(db, 'scrapLogs', 'sLegacy'), scrap({ line: 'A', shift: 'NIGHT' }));
     await setDoc(doc(db, 'improvements', 'i1'), { problem: 'p', defectType: 'Dent', status: 'Monitoring' });
     await setDoc(doc(db, 'targetMaster', 't1'), { shift: 'DAY', targetQty: 30, effectiveDate: '2026-01-01' });
@@ -138,18 +138,24 @@ describe('leader (Door A, Day + Night)', () => {
   it('cannot save on another Line', async () => {
     await assertFails(ledger('leaderA').create(scrap({ line: 'B' })));
   });
-  it('cannot fake or omit createdBy', async () => {
-    await assertFails(ledger('leaderA').create(scrap({ createdBy: E('admin') })));
+  it('cannot put personal data (createdBy / updatedBy) on a public scrap log — who is in the audit event', async () => {
+    await assertFails(ledger('leaderA').create(scrap({ createdBy: E('leaderA') })));
+    await assertFails(ledger('leaderA').create(scrap({ updatedBy: E('leaderA') })));
     await assertFails(ledger('leaderA').create(scrap({ createdBy: null })));
+    const id = await ledger('leaderA').create(scrap({ scrapQty: 2, shift: 'NIGHT' }));
+    const slot = await slotDoc(`${DAY}_A_NIGHT`);
+    assert.equal((await eventDoc(`${DAY}_A_NIGHT`, slot.logVersion)).by, E('leaderA'));   // accountability kept, not public
+    const stored = await adminRead(async db => (await getDoc(doc(db, 'scrapLogs', id))).data());
+    assert.equal(JSON.stringify(stored).includes('@'), false);
   });
   it('invalid data is refused even on the assigned slot', async () => {
     for (const bad of [{ scrapQty: 0 }, { scrapQty: -1 }, { scrapQty: '3' }, { date: '02/11/2026' }, { model: '' }])
       await assertFails(ledger('leaderA').create(scrap(bad)));
   });
-  it('edits own-slot records (incl. records saved before sign-in) with updatedBy', async () => {
+  it('edits own-slot records (incl. records saved before sign-in) without adding personal data', async () => {
     await assertSucceeds(ledger('leaderA').update('sA', { scrapQty: 5 }));
     await assertSucceeds(ledger('leaderA').update('sLegacy', { scrapQty: 2 }));
-    await assertFails(ledger('leaderA').update('sA', { scrapQty: 6, updatedBy: E('admin') }));                   // fake updatedBy
+    await assertFails(ledger('leaderA').update('sA', { scrapQty: 6, updatedBy: E('leaderA') }));                 // adds personal data
     await assertFails(ledger('leaderA').update('sA', { createdBy: E('someoneelse') }));                           // rewrite creator
   });
   it('cannot move a record to another Line, nor touch another Line', async () => {
@@ -170,7 +176,7 @@ describe('leader (Door A, Day + Night)', () => {
     await assertFails(setDoc(doc(db, 'scrapModelMappings', 'm'), { excelModel: 'x', productionModel: 'y' }));
   });
   it('one row outside the slot fails the whole write', async () => {
-    await assertFails(ledger('leaderA').many([{ op: 'create', data: scrap({ createdBy: E('leaderA') }) }, { op: 'create', data: scrap({ line: 'C', createdBy: E('leaderA') }) }]));
+    await assertFails(ledger('leaderA').many([{ op: 'create', data: scrap() }, { op: 'create', data: scrap({ line: 'C' }) }]));
   });
   it('roles: reads own only, cannot promote self or list users', async () => {
     const db = as('leaderA');
@@ -186,7 +192,7 @@ describe('leader (Door A, Day + Night)', () => {
     const fs2 = env.authenticatedContext('uid-upper', { email: 'LEADERA@PRODV2.LOCAL' }).firestore();
     const db = compatDb(fs2);
     const ref = db.collection('scrapLogs').doc();
-    await assertSucceeds(Ledger.applyOps(db, [{ op: 'create', ref, data: scrap({ createdBy: E('leadera') }) }], { email: E('leadera'), serverTimestamp }));
+    await assertSucceeds(Ledger.applyOps(db, [{ op: 'create', ref, data: scrap() }], { email: E('leadera'), serverTimestamp }));
   });
 });
 
@@ -284,7 +290,7 @@ describe('slot ledger: every scrap write moves the version and leaves an audit e
     const a = await ledger('leaderA').create(scrap({ scrapQty: 2 }));
     const b = await ledger('leaderA').create(scrap({ scrapQty: 5 }));
     const v0 = (await slotDoc(SLOT_A)).logVersion;
-    await ledger('leaderA').many([{ op: 'update', id: a, data: { scrapQty: 5, updatedBy: E('leaderA') } }, { op: 'update', id: b, data: { scrapQty: 2, updatedBy: E('leaderA') } }]);
+    await ledger('leaderA').many([{ op: 'update', id: a, data: { scrapQty: 5 } }, { op: 'update', id: b, data: { scrapQty: 2 } }]);
     const s = await slotDoc(SLOT_A);
     assert.equal(s.logVersion, v0 + 1);
     assert.deepEqual((await eventDoc(SLOT_A, s.logVersion)).updates.sort(), [a, b].sort());
@@ -324,15 +330,15 @@ describe('slot ledger: writes that skip or fake the ledger are refused', () => {
   }
   const ev = (o = {}) => Object.assign({ type: 'LOG_WRITE', version: 1, at: serverTimestamp(), by: E('leaderA'), creates: ['n1'], updates: [], deletes: [], movesIn: [], movesOut: [], changes: [] }, o);
   const newSlot = (o = {}) => Object.assign({ date: DAY, line: 'A', shift: 'DAY', logVersion: 1, liveLogCount: 2, legacyCount: 1, updatedAt: serverTimestamp(), updatedBy: E('leaderA') }, o);
-  const log = (id, o) => ({ id, data: scrap(Object.assign({ createdBy: E('leaderA') }, o)) });
+  const log = (id, o) => ({ id, data: scrap(Object.assign({}, o)) });
 
   it('control: a correct hand-built ledger write is accepted', async () => {
     await assertSucceeds(handWrite('leaderA', { logs: [log('n1')], slot: newSlot(), event: ev(), eventId: 'v1' }));
   });
   it('scrap create / update / delete without any ledger write', async () => {
     const db = as('leaderA');
-    await assertFails(setDoc(doc(db, 'scrapLogs', 'x1'), scrap({ createdBy: E('leaderA') })));
-    await assertFails(updateDoc(doc(db, 'scrapLogs', 'n1'), { defectType: 'Other', updatedBy: E('leaderA') }));
+    await assertFails(setDoc(doc(db, 'scrapLogs', 'x1'), scrap()));
+    await assertFails(updateDoc(doc(db, 'scrapLogs', 'n1'), { defectType: 'Other' }));
     await assertFails(deleteDoc(doc(db, 'scrapLogs', 'n1')));
   });
   it('ledger bumped but no audit event', async () => {
@@ -364,7 +370,7 @@ describe('slot ledger: writes that skip or fake the ledger are refused', () => {
     const db = as('leaderA');
     await assertFails(updateDoc(doc(db, 'scrapSlots', SLOT_A), { line: 'B', updatedAt: serverTimestamp(), updatedBy: E('leaderA') }));
     await assertFails(deleteDoc(doc(db, 'scrapSlots', SLOT_A)));
-    await assertFails(handWrite('leaderB', { logs: [log('y1', { createdBy: E('leaderB') })], slot: { logVersion: 2, liveLogCount: 3, updatedAt: serverTimestamp(), updatedBy: E('leaderB') }, event: ev({ version: 2, creates: ['y1'], by: E('leaderB') }), eventId: 'v2' }));
+    await assertFails(handWrite('leaderB', { logs: [log('y1')], slot: { logVersion: 2, liveLogCount: 3, updatedAt: serverTimestamp(), updatedBy: E('leaderB') }, event: ev({ version: 2, creates: ['y1'], by: E('leaderB') }), eventId: 'v2' }));
   });
   it('audit events cannot be changed or deleted, even by an admin', async () => {
     const db = as('admin');

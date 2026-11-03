@@ -146,8 +146,7 @@
       date, shift, line, model, defectType,
       scrapQty: num(scrapQty),
       remark: remark || "",
-      createdAt: Date.now(),
-      ...(who.email ? { createdBy: who.email } : {})
+      createdAt: Date.now()   // (no e-mail on public documents: who did what is in the non-public audit trail / sign-in log)
     };
     if (ledgerOn()) {
       const ref = db.collection(SCRAP_COLLECTION).doc();
@@ -183,8 +182,7 @@
       date, shift, line, model, defectType,
       scrapQty: num(scrapQty),
       remark: remark || "",
-      updatedAt: Date.now(),
-      ...(who.email ? { updatedBy: who.email } : {})
+      updatedAt: Date.now()   // (no e-mail on public documents: who did what is in the non-public audit trail / sign-in log)
     };
     if (ledgerOn()) {
       return ScrapLedger.applyOps(db, [{ op: "update", ref: db.collection(SCRAP_COLLECTION).doc(id), data: patch }], ledgerOpts(who));
@@ -289,7 +287,6 @@
         date: e.date, shift: e.shift, line: e.line, model: e.model, defectType: e.defectType,
         scrapQty: num(e.scrapQty), remark: e.remark || "", createdAt: Date.now()
       };
-      if (who.email) doc.createdBy = who.email;
       OPTIONAL_SCRAP_FIELDS.forEach(f => { if (e[f] !== undefined) doc[f] = e[f]; });
       return doc;
     };
@@ -315,7 +312,6 @@
         date: e.date, shift: e.shift, line: e.line, model: e.model, defectType: e.defectType,
         scrapQty: num(e.scrapQty), remark: e.remark || "", createdAt: Date.now()
       };
-      if (who.email) doc.createdBy = who.email;
       // Carry through whichever optional fields this entry actually has
       // (see OPTIONAL_SCRAP_FIELDS above) — never write `undefined`
       // (Firestore rejects it); everything else is simply omitted from

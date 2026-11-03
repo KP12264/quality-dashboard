@@ -44,8 +44,8 @@ function actor(code) {
   const db = compatDb(env.authenticatedContext('uid-' + code, { email: E(code) }).firestore()), email = E(code), opts = { email, serverTimestamp };
   return {
     db, opts,
-    create: async (date, line, shift, qty) => { const ref = db.collection('scrapLogs').doc(); await Ledger.applyOps(db, [{ op: 'create', ref, data: { date, line, shift, model: 'M-100 FR', defectType: 'Dent', scrapQty: qty, remark: '', createdAt: 1, createdBy: email } }], opts); return ref.id; },
-    update: (id, patch) => Ledger.applyOps(db, [{ op: 'update', ref: db.collection('scrapLogs').doc(id), data: Object.assign({ updatedBy: email }, patch) }], opts),
+    create: async (date, line, shift, qty) => { const ref = db.collection('scrapLogs').doc(); await Ledger.applyOps(db, [{ op: 'create', ref, data: { date, line, shift, model: 'M-100 FR', defectType: 'Dent', scrapQty: qty, remark: '', createdAt: 1 } }], opts); return ref.id; },
+    update: (id, patch) => Ledger.applyOps(db, [{ op: 'update', ref: db.collection('scrapLogs').doc(id), data: Object.assign({}, patch) }], opts),
     close: (date, line, shift, state, reason) => SC.closeSlot(db, { date, line, shift, state, reason }, opts)
   };
 }

@@ -48,7 +48,7 @@
     if (!db) throw new Error('No Firestore connection.');
     const who = typeof qdGuardWrite === 'function' ? qdGuardWrite('weeklyPlan.write', {}) : {};
     const data = { ym, week, updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
-    if (who.email) data.updatedBy = who.email;
+    void who;   // (no e-mail on public documents: who did what is in the non-public audit trail / sign-in log)
     if ('planOverride' in patch) {
       const v = patch.planOverride;
       if (v !== null && !(Number.isFinite(v) && v >= 0)) throw new Error('Plan must be a number ≥ 0, or blank to use the default.');

@@ -102,7 +102,7 @@ async function save(page) {
 // Bypass every client-side check and write straight to Firestore from the page.
 const directWrite = async (page, line) => page.evaluate(async ({ line, email }) => {
   try {
-    await window.qdDb.collection('scrapLogs').add({ date: '2026-11-02', shift: 'DAY', line, model: 'M', defectType: 'Dent', scrapQty: 1, createdAt: Date.now(), createdBy: email });
+    await window.qdDb.collection('scrapLogs').add({ date: '2026-11-02', shift: 'DAY', line, model: 'M', defectType: 'Dent', scrapQty: 1, createdAt: Date.now() });
     return 'written';
   } catch (e) { return e.code || e.message; }
 }, { line, email: await page.evaluate(() => window.QDAuth.getState().email) });
@@ -158,8 +158,9 @@ describe('sign-in and roles in the browser (emulator)', () => {
     assert.match(await page.textContent('#qdAuthBox'), /Leader · A Day/);
     await fillScrapEntry(page, 'A', 3);
     assert.match(await save(page), /Saved/);
-    const mine = (await scrapDocs()).filter(r => r.createdBy === E('LEADA'));
+    const mine = (await scrapDocs()).filter(r => r.id !== 'seed1');
     assert.equal(mine.length, 1);
+    assert.equal(JSON.stringify(mine[0]).includes('@'), false);   // no e-mail on the public record (it is in the audit event)
     assert.equal(mine[0].line, 'A');
     await fillScrapEntry(page, 'B', 3);
     assert.match(await save(page), /cannot save scrap records for Door B · Day/);
@@ -285,7 +286,7 @@ describe('slot ledger through the pages (emulator)', () => {
     const { page, context, errors } = await newPage();
     await open(page, 'scrap-detail.html');
     await signIn(page, 'LEADA');
-    const id = (await scrapDocs()).find(r => r.createdBy === E('LEADA')).id;
+    const id = (await scrapDocs()).find(r => r.id !== 'seed1' && r.line === 'A').id;
     const r2 = await page.evaluate(async ({ id, date }) => {
       await ScrapDataAdapter.updateScrapEntry(window.qdDb, id, { date, shift: 'DAY', line: 'A', model: 'M-100 FR', defectType: 'Scratch', scrapQty: 6, remark: '' });
       await ScrapDataAdapter.deleteScrapEntry(window.qdDb, id);

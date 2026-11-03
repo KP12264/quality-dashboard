@@ -56,7 +56,7 @@ before(async () => {
   });
   // one slot already went through the ledger before the migration (it must be skipped)
   const A = actor('admin');
-  await Ledger.applyOps(A.db, [{ op: 'create', ref: A.db.collection('scrapLogs').doc('pre'), data: { date: bkk(20), line: 'C', shift: 'NIGHT', model: 'M', defectType: 'Dent', scrapQty: 4, remark: '', createdAt: 1, createdBy: E('admin') } }], A.opts);
+  await Ledger.applyOps(A.db, [{ op: 'create', ref: A.db.collection('scrapLogs').doc('pre'), data: { date: bkk(20), line: 'C', shift: 'NIGHT', model: 'M', defectType: 'Dent', scrapQty: 4, remark: '', createdAt: 1 } }], A.opts);
   logs0 = await allLogs();
 });
 after(async () => {
@@ -137,10 +137,10 @@ describe('baseline migration on synthetic data (emulator)', () => {
     const day = bkk(3);
     await raw(async db => { await setDoc(doc(db, 'scrapLogs', 'stray1'), { date: day, line: 'A', shift: 'DAY', model: 'M', defectType: 'Dent', scrapQty: 2, remark: '', createdAt: 1 }); });
     // the ledger would need legacyCount 1 for that slot → refused: the stray record is surfaced, not absorbed
-    await assert.rejects(Ledger.applyOps(L.db, [{ op: 'create', ref: L.db.collection('scrapLogs').doc(), data: { date: day, line: 'A', shift: 'DAY', model: 'M', defectType: 'Dent', scrapQty: 1, remark: '', createdAt: 1, createdBy: E('leaderA') } }], L.opts), /permission/i);
+    await assert.rejects(Ledger.applyOps(L.db, [{ op: 'create', ref: L.db.collection('scrapLogs').doc(), data: { date: day, line: 'A', shift: 'DAY', model: 'M', defectType: 'Dent', scrapQty: 1, remark: '', createdAt: 1 } }], L.opts), /permission/i);
     await assert.rejects(SC.closeSlot(L.db, { date: day, line: 'A', shift: 'DAY', state: 'SUBMITTED' }, L.opts), /permission/i);
     // a slot with no old records still works normally
-    await Ledger.applyOps(L.db, [{ op: 'create', ref: L.db.collection('scrapLogs').doc(), data: { date: day, line: 'A', shift: 'NIGHT', model: 'M', defectType: 'Dent', scrapQty: 1, remark: '', createdAt: 1, createdBy: E('leaderA') } }], L.opts);
+    await Ledger.applyOps(L.db, [{ op: 'create', ref: L.db.collection('scrapLogs').doc(), data: { date: day, line: 'A', shift: 'NIGHT', model: 'M', defectType: 'Dent', scrapQty: 1, remark: '', createdAt: 1 } }], L.opts);
     // a stray record on a migrated slot → CONFLICT
     const s = plan.slots.find(x => x.line === 'A');
     await raw(async db => { await setDoc(doc(db, 'scrapLogs', 'stray2'), { date: s.date, line: s.line, shift: s.shift, model: 'M', defectType: 'Dent', scrapQty: 2, remark: '', createdAt: 1 }); });

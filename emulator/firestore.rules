@@ -134,6 +134,16 @@ service cloud.firestore {
         && d.updatedBy == qdEmail()
         && d.updatedAt == request.time;
     }
+    // Public collections never receive personal data (Phase 7): who did what is kept in the
+    // non-public audit events (scrapSlots/{id}/events, "by"). A write may not ADD createdBy /
+    // updatedBy; values already on old documents are left exactly as they are.
+    function qdNoNewPersonal() {
+      return request.resource == null
+        || (resource == null
+              ? !request.resource.data.keys().hasAny(['createdBy', 'updatedBy'])
+              : request.resource.data.get('createdBy', null) == resource.data.get('createdBy', null)
+                && request.resource.data.get('updatedBy', null) == resource.data.get('updatedBy', null));
+    }
     function qdValidScrap(d) {
       return qdValidSlot(d.line, d.shift)
         && d.date is string && d.date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
@@ -188,15 +198,14 @@ service cloud.firestore {
       allow create: if qdCanWriteSlot(request.resource.data.line, request.resource.data.shift)
         && qdValidScrap(request.resource.data)
         && qdInWindow(request.resource.data.date)
-        && request.resource.data.createdBy == qdEmail()
+        && qdNoNewPersonal()
         && qdLedgerRecords(qdSlotId(request.resource.data), 'creates', id);
       // Both the stored Line/Shift/date and the new ones must be the writer's; who created it never changes.
       allow update: if qdCanWriteSlot(resource.data.line, resource.data.shift)
         && qdCanWriteSlot(request.resource.data.line, request.resource.data.shift)
         && qdValidScrap(request.resource.data)
         && qdInWindow(resource.data.date) && qdInWindow(request.resource.data.date)
-        && request.resource.data.get('createdBy', null) == resource.data.get('createdBy', null)
-        && request.resource.data.updatedBy == qdEmail()
+        && qdNoNewPersonal()
         && (qdSlotId(resource.data) == qdSlotId(request.resource.data)
               ? qdLedgerRecords(qdSlotId(resource.data), 'updates', id)
               : qdLedgerRecords(qdSlotId(resource.data), 'movesOut', id)
@@ -403,7 +412,10 @@ service cloud.firestore {
           (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['logVersion', 'liveLogCount', 'updatedAt', 'updatedBy'])
             && request.resource.data.logVersion == resource.data.logVersion + 1
             && existsAfter(qdEventPath(slotId, request.resource.data.logVersion))
-            && request.resource.data.liveLogCount == resource.data.liveLogCount + qdEventDelta(getAfter(qdEventPath(slotId, request.resource.data.logVersion)).data)
+            && (getAfter(qdEventPath(slotId, request.resource.data.logVersion)).data.type == 'RECONCILE'
+                  // admin reconcile (Phase 7): the count becomes the attested list of stored logs
+                  ? request.resource.data.liveLogCount == getAfter(qdEventPath(slotId, request.resource.data.logVersion)).data.logIds.size()
+                  : request.resource.data.liveLogCount == resource.data.liveLogCount + qdEventDelta(getAfter(qdEventPath(slotId, request.resource.data.logVersion)).data))
             && request.resource.data.liveLogCount >= 0)
           // (b) set or clear the import marker (admin only; version unchanged; audited as m{n})
           || (qdAdmin()
@@ -438,12 +450,23 @@ service cloud.firestore {
     function qdValidLedgerEvent(slotId, eventId, e) {
       return eventId == 'v' + string(getAfter(qdSlotPath(slotId)).data.logVersion)
         && getAfter(qdSlotPath(slotId)).data.logVersion == qdVersionBefore(slotId) + 1
-        && e.keys().hasOnly(['type', 'version', 'at', 'by', 'creates', 'updates', 'deletes', 'movesIn', 'movesOut', 'changes'])
-        && e.type == 'LOG_WRITE'
         && e.version == getAfter(qdSlotPath(slotId)).data.logVersion
-        && e.creates is list && e.updates is list && e.deletes is list
-        && e.movesIn is list && e.movesOut is list && e.changes is list
-        && (e.creates.size() + e.updates.size() + e.deletes.size() + e.movesIn.size() + e.movesOut.size()) > 0;
+        && (e.type == 'RECONCILE' ? qdValidReconcileEvent(e)
+            : e.keys().hasOnly(['type', 'version', 'at', 'by', 'creates', 'updates', 'deletes', 'movesIn', 'movesOut', 'changes'])
+              && e.type == 'LOG_WRITE'
+              && e.creates is list && e.updates is list && e.deletes is list
+              && e.movesIn is list && e.movesOut is list && e.changes is list
+              && (e.creates.size() + e.updates.size() + e.deletes.size() + e.movesIn.size() + e.movesOut.size()) > 0);
+    }
+    // Reconcile (Phase 7, Admin only): after the bridge period, a slot whose stored logs no longer
+    // match its count (records saved by old pages around the ledger) is re-counted from the logs
+    // actually stored. Audited with the full id list, fingerprint, previous count and a reason; it
+    // raises logVersion, so a closed shift becomes CHANGED and must be reconfirmed.
+    function qdValidReconcileEvent(e) {
+      return qdAdmin()
+        && e.keys().hasOnly(['type', 'version', 'at', 'by', 'logIds', 'fingerprint', 'scrapQty', 'before', 'reason'])
+        && e.logIds is list && e.fingerprint is string && e.scrapQty is number
+        && e.before is int && e.reason is string && e.reason.size() >= 3 && e.reason.size() <= 300;
     }
     function qdValidCloseEvent(slotId, eventId, e) {
       return eventId == 'c' + string(getAfter(qdSlotPath(slotId)).data.closeRevision)
@@ -471,19 +494,19 @@ service cloud.firestore {
     // ---- Other Quality Dashboard collections ----
     match /targetMaster/{id} {
       allow read: if true;
-      allow write: if qdAdmin();
+      allow write: if qdAdmin() && qdNoNewPersonal();
     }
     match /improvements/{id} {
       allow read: if true;
-      allow write: if qdAdmin();          // Leader / Viewer: read-only
+      allow write: if qdAdmin() && qdNoNewPersonal();          // Leader / Viewer: read-only
     }
     match /scrapModelMappings/{id} {
       allow read: if true;
-      allow write: if qdAdmin();
+      allow write: if qdAdmin() && qdNoNewPersonal();
     }
     match /scrapWeeklyPlans/{id} {
       allow read: if true;
-      allow write: if qdAdmin();          // Leader / Viewer: read-only
+      allow write: if qdAdmin() && qdNoNewPersonal();          // Leader / Viewer: read-only
     }
     // ===== END Quality Dashboard =====
 

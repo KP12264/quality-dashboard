@@ -94,17 +94,39 @@
       const cur = await SC.loadSlot(db, s.date, s.line, s.shift);
       if (!cur.slot) { mismatches.push({ slotId: s.slotId, problem: "slot missing" }); continue; }
       if (cur.slot.liveLogCount !== cur.logs.length) mismatches.push({ slotId: s.slotId, problem: `liveLogCount ${cur.slot.liveLogCount} != stored logs ${cur.logs.length}` });
-      if (cur.info.qty !== s.qty) mismatches.push({ slotId: s.slotId, problem: `scrap qty ${cur.info.qty} != planned ${s.qty}` });
+      // Untouched since the baseline: must still be exactly the planned records. Once a Leader has saved
+      // through the ledger (logVersion > 0) the plan is history; the ledger checks above apply.
+      if (cur.slot.logVersion === 0 && (cur.info.qty !== s.qty || cur.logs.length !== s.count)) mismatches.push({ slotId: s.slotId, problem: `scrap qty ${cur.info.qty} / ${cur.logs.length} logs != planned ${s.qty} / ${s.count}` });
       if (cur.info.status === "CONFLICT") mismatches.push({ slotId: s.slotId, problem: "status CONFLICT: " + cur.info.reasons.join(",") });
     }
     return mismatches;
+  }
+
+  /**
+   * completeIfClean(db, plan, migrationId, opts) — the migration gate (Phase 7). Sets
+   * baselineComplete ONLY when (1) every planned slot exists with a count equal to its stored logs
+   * and no CONFLICT, and (2) the logs stored NOW still match the plan (nothing was saved around the
+   * ledger since the plan was made). Otherwise nothing is written and the problems are returned.
+   * → { complete: true } | { complete: false, problems: [...] }
+   */
+  async function completeIfClean(db, plan, migrationId, opts, currentLogs) {
+    const problems = (await verifyApplied(db, plan)).map(m => `${m.slotId}: ${m.problem}`);
+    if (currentLogs) {
+      const existing = [];
+      (await db.collection("scrapSlots").get()).forEach(d => existing.push(d.id));
+      const again = planBaseline(currentLogs, existing);
+      again.slots.forEach(s => problems.push(`${s.slotId}: ${s.count} logs without a ledger slot (saved after the plan)`));
+    }
+    if (problems.length) return { complete: false, problems };
+    await markComplete(db, migrationId, opts);
+    return { complete: true };
   }
 
   async function markComplete(db, migrationId, opts) {
     await db.collection("qdConfig").doc("ledger").set({ baselineComplete: true, migrationId, at: opts.serverTimestamp(), by: opts.email });
   }
 
-  const api = { planBaseline, verifyPlan, applyBaseline, verifyApplied, markComplete };
+  const api = { planBaseline, verifyPlan, applyBaseline, verifyApplied, completeIfClean, markComplete };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   if (typeof window !== "undefined") window.LedgerBaseline = api;
 })(this);

@@ -26,7 +26,7 @@ async function legacy(date, line, shift, n) {
     for (let i = 0; i < n; i += 400) { const b = writeBatch(db); for (let k = i; k < Math.min(n, i + 400); k++) b.set(doc(db, 'scrapLogs', `${date}_${line}_${shift}_${k}`), row(date, line, shift)); await b.commit(); }
   });
 }
-const creates = (a, rows) => Ledger.applyOps(a.db, rows.map(r => ({ op: 'create', ref: a.db.collection('scrapLogs').doc(), data: Object.assign({ createdBy: a.opts.email }, r) })), a.opts);
+const creates = (a, rows) => Ledger.applyOps(a.db, rows.map(r => ({ op: 'create', ref: a.db.collection('scrapLogs').doc(), data: Object.assign({}, r) })), a.opts);
 async function measure(name, fn) { const t = Date.now(); try { await fn(); report.push(`${name}: accepted (${Date.now() - t} ms)`); return true; } catch (e) { report.push(`${name}: REFUSED ${e.code || e.message}`); return false; } }
 
 before(async () => {
@@ -71,8 +71,8 @@ describe('heaviest valid paths stay within the rules limits', () => {
   it('a move between two slots (2 slots in one transaction) with the mirror', async () => {
     const a = actor('admin');
     const ref = a.db.collection('scrapLogs').doc('mv1');
-    await Ledger.applyOps(a.db, [{ op: 'create', ref, data: Object.assign({ createdBy: E('admin') }, row(bkk(2), 'B', 'DAY')) }], a.opts);
-    assert.ok(await measure('move B Day → C Night (2 slots, one summary doc)', () => Ledger.applyOps(a.db, [{ op: 'update', ref, data: { line: 'C', shift: 'NIGHT', updatedBy: E('admin') } }], a.opts)));
-    assert.ok(await measure('move to another date (2 slots, 2 summary docs)', () => Ledger.applyOps(a.db, [{ op: 'update', ref, data: { date: bkk(1), updatedBy: E('admin') } }], a.opts)));
+    await Ledger.applyOps(a.db, [{ op: 'create', ref, data: Object.assign({}, row(bkk(2), 'B', 'DAY')) }], a.opts);
+    assert.ok(await measure('move B Day → C Night (2 slots, one summary doc)', () => Ledger.applyOps(a.db, [{ op: 'update', ref, data: { line: 'C', shift: 'NIGHT' } }], a.opts)));
+    assert.ok(await measure('move to another date (2 slots, 2 summary docs)', () => Ledger.applyOps(a.db, [{ op: 'update', ref, data: { date: bkk(1) } }], a.opts)));
   });
 });

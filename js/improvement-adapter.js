@@ -119,7 +119,7 @@
       updatedAt: now
     };
     const who = typeof qdGuardWrite === "function" ? qdGuardWrite("improvement.write", {}) : {};
-    if (who.email) { doc.createdBy = who.email; doc.updatedBy = who.email; }
+    void who;   // (no e-mail on public documents: who did what is in the non-public audit trail / sign-in log)
     return db.collection(IMPROVEMENT_COLLECTION).add(doc);
   }
 
@@ -137,8 +137,7 @@
     const who = typeof qdGuardWrite === "function" ? qdGuardWrite("improvement.write", {}) : {};
     return db.collection(IMPROVEMENT_COLLECTION).doc(id).update({
       ...patch,
-      updatedAt: Date.now(),
-      ...(who.email ? { updatedBy: who.email } : {})
+      updatedAt: Date.now()   // (no e-mail on public documents: who did what is in the non-public audit trail / sign-in log)
     });
   }
 

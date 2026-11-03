@@ -23,8 +23,8 @@ function actor(c) {
   const db = compatDb(fsOf(c)), email = E(c), opts = { email, serverTimestamp };
   return {
     db, opts,
-    create: async data => { const ref = db.collection('scrapLogs').doc(); await Ledger.applyOps(db, [{ op: 'create', ref, data: Object.assign({ createdBy: email, date: D2, shift: 'DAY', line: 'A', model: 'M', defectType: 'Dent', scrapQty: 3, remark: '', createdAt: 1 }, data) }], opts); return ref.id; },
-    update: (id, patch) => Ledger.applyOps(db, [{ op: 'update', ref: db.collection('scrapLogs').doc(id), data: Object.assign({ updatedBy: email }, patch) }], opts),
+    create: async data => { const ref = db.collection('scrapLogs').doc(); await Ledger.applyOps(db, [{ op: 'create', ref, data: Object.assign({ date: D2, shift: 'DAY', line: 'A', model: 'M', defectType: 'Dent', scrapQty: 3, remark: '', createdAt: 1 }, data) }], opts); return ref.id; },
+    update: (id, patch) => Ledger.applyOps(db, [{ op: 'update', ref: db.collection('scrapLogs').doc(id), data: Object.assign({}, patch) }], opts),
     close: req => SC.closeSlot(db, Object.assign({ date: D2, line: 'A', shift: 'DAY' }, req), opts)
   };
 }

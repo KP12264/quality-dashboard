@@ -118,8 +118,7 @@
       targetQty: num(targetQty),
       effectiveDate,
       note: note || "",
-      createdAt: Date.now(),
-      ...(who.email ? { createdBy: who.email } : {})
+      createdAt: Date.now()   // (no e-mail on public documents: who did what is in the non-public audit trail / sign-in log)
     });
   }
 

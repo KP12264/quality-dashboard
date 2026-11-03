@@ -68,8 +68,7 @@
         batch.set(ref, {
           excelModel: p.excelModel,
           productionModel: p.productionModel,
-          updatedAt: Date.now(),
-          ...(who.email ? { updatedBy: who.email } : {})
+          updatedAt: Date.now()   // (no e-mail on public documents: who did what is in the non-public audit trail / sign-in log)
         });
       });
       await batch.commit();

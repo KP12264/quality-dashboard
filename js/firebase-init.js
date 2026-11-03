@@ -34,6 +34,10 @@ window.qdCloseRequiredFrom = null;
 
 (function initFirebase() {
   try {
+    if (window.QD_RETIRED_PAGE) {   // retired page copy (js/retired-page.js): never connect
+      window.qdFirebaseError = "This page has moved: " + window.QD_RETIRED_PAGE;
+      return;
+    }
     if (typeof firebase === "undefined") {
       window.qdFirebaseError = "Firebase SDK failed to load (script blocked or offline).";
       return;

@@ -99,3 +99,15 @@ date for that page only (emulator only).
 - `tests/e2e/rules-transition.e2e.test.js` — today's site (`?qdAuthMode=off`, emulator only) and the
   new site under production / bridge / candidate rules; writes `docs/phase6/generated/transition-flows.md`.
 - Run selected suites against another rules file: `QD_RULES_FILE=emulator/firestore.rules.bridge`.
+
+## Deployment rehearsal (Phase 7)
+
+- `tests/e2e/rehearsal.e2e.test.js` — the whole rollout in order (production → bridge → admin →
+  sign-in site → audit → candidate → reconcile → baseline → Shift Close → rollback), an old tab open
+  throughout, Production V2 writing/reading continuously; every save checked against the stored
+  logs. Writes `docs/phase7/generated/rehearsal-report.md`.
+- `tests/rules/migration-gate.test.js` — baseline gate, migration under load / half-way failure /
+  re-run, bridge writes, audit and reconcile. Writes `docs/phase7/generated/migration-gate.md`.
+- `tests/unit/page-inventory.test.js` — every page that can write needs sign-in or is retired.
+- Tools: `tools/ops/bridge-ops.js` (bridgeAudit, reconcileSlot), `tools/migration/ledger-baseline.js`
+  (`completeIfClean`). Rules publishes inside one test use the emulator REST endpoint.

@@ -32,8 +32,8 @@ function actor(code) {
   const db = compatDb(fsOf(code)), email = E(code), opts = { email, serverTimestamp };
   return {
     db, email, opts,
-    create: async data => { const ref = db.collection('scrapLogs').doc(); await Ledger.applyOps(db, [{ op: 'create', ref, data: Object.assign({ createdBy: email }, data) }], opts); return ref.id; },
-    update: (id, patch) => Ledger.applyOps(db, [{ op: 'update', ref: db.collection('scrapLogs').doc(id), data: Object.assign({ updatedBy: email }, patch) }], opts),
+    create: async data => { const ref = db.collection('scrapLogs').doc(); await Ledger.applyOps(db, [{ op: 'create', ref, data: Object.assign({}, data) }], opts); return ref.id; },
+    update: (id, patch) => Ledger.applyOps(db, [{ op: 'update', ref: db.collection('scrapLogs').doc(id), data: Object.assign({}, patch) }], opts),
     del: id => Ledger.applyOps(db, [{ op: 'delete', ref: db.collection('scrapLogs').doc(id) }], opts),
     close: req => SC.closeSlot(db, Object.assign({ date: D1, line: 'A', shift: 'DAY' }, req), opts),
     load: (date = D1, line = 'A', shift = 'DAY') => SC.loadSlot(db, date, line, shift)
@@ -216,8 +216,12 @@ describe('scrap edited while closing', () => {
       }
     }
     const st = (await L.load()).info;
-    assert.ok([S.SUBMITTED, S.CHANGED].includes(st.status), st.status);
+    // Every close may lose its race (PENDING); a saved one is SUBMITTED, or CHANGED after a later edit.
+    assert.ok([S.SUBMITTED, S.CHANGED, S.PENDING].includes(st.status), st.status);
     console.log(`  edit-vs-close: ${closedOk} closes saved, ${refused} refused; final status ${st.status}`);
+    // with nobody editing, closing works at once
+    await L.close({ state: S.SUBMITTED, reconfirm: true });
+    assert.equal((await L.load()).info.status, S.SUBMITTED);
   });
 });
 
@@ -229,7 +233,7 @@ describe('Excel import partial failure (import marker)', () => {
     const failed = [];
     for (const chunk of Ledger.chunkBySlot(entries)) {
       if (failSlot && Ledger.slotIdOf(chunk[0]) === failSlot) { failed.push(...chunk); continue; }   // e.g. a network error on that chunk
-      const ops = chunk.map(e => ({ op: 'create', ref: A.db.collection('scrapLogs').doc(), data: Object.assign({ createdBy: A.email }, e) }));
+      const ops = chunk.map(e => ({ op: 'create', ref: A.db.collection('scrapLogs').doc(), data: Object.assign({}, e) }));
       try { await Ledger.applyOps(A.db, ops, A.opts); } catch (e) { failed.push(...chunk); }
     }
     return { failed, fin: await Ledger.finishImport(A.db, 'imp_t1', entries, failed, A.opts) };

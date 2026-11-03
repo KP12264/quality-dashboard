@@ -25,7 +25,7 @@ function writer(code) {
   return {
     db,
     apply: ops => Ledger.applyOps(db, ops.map(o => Object.assign({ ref: db.collection('scrapLogs').doc(o.id) }, o)), opts),
-    createMany: (rows, extra) => Ledger.applyOps(db, rows.map(r => ({ op: 'create', ref: db.collection('scrapLogs').doc(), data: Object.assign({ createdBy: email }, r) })), Object.assign({}, opts, extra))
+    createMany: (rows, extra) => Ledger.applyOps(db, rows.map(r => ({ op: 'create', ref: db.collection('scrapLogs').doc(), data: Object.assign({}, r) })), Object.assign({}, opts, extra))
   };
 }
 
@@ -110,9 +110,9 @@ describe('concurrent writers on the same slot', () => {
     await env.withSecurityRulesDisabled(async ctx => { (await getDocs(query(collection(ctx.firestore(), 'scrapLogs'), where('date', '==', DAY), where('line', '==', 'A')))).forEach(d => ids.push(d.id)); });
     const target = ids[0];
     const res = await Promise.allSettled([
-      writer('leadA1').apply([{ op: 'update', id: target, data: { defectType: 'Scratch', updatedBy: E('leadA1') } }]),
+      writer('leadA1').apply([{ op: 'update', id: target, data: { defectType: 'Scratch' } }]),
       writer('leadA2').apply([{ op: 'delete', id: target }]),
-      writer('leadA3').apply([{ op: 'update', id: target, data: { scrapQty: 9, updatedBy: E('leadA3') } }])
+      writer('leadA3').apply([{ op: 'update', id: target, data: { scrapQty: 9 } }])
     ]);
     const st = await checkSlot(slot);
     report.push(`update + delete + update of one record at once -> ${res.map(r => r.status === 'fulfilled' ? 'ok' : 'refused: ' + (r.reason.message || '').slice(0, 45)).join(' / ')}; logVersion ${st.version}, liveLogCount ${st.live}`);
