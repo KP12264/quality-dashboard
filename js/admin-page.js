@@ -94,7 +94,7 @@
       loadTargets();
     } catch (err) {
       console.error('Quality Dashboard: failed to save target:', err);
-      showTargetMessage('error', '⚠ Could not save: ' + (err && err.message ? err.message : String(err)));
+      showTargetMessage('error', '⚠ ' + ((typeof qdCutoverMessage === 'function' && qdCutoverMessage(err)) || 'Could not save: ' + (err && err.message ? err.message : String(err))));
     }
   });
 

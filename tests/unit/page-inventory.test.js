@@ -8,7 +8,7 @@ const fs = require('fs');
 const path = require('path');
 const ROOT = path.join(__dirname, '../..');
 
-const WRITERS = { 'scrap-adapter.js': 'scrapLogs', 'improvement-adapter.js': 'improvements', 'target-adapter.js': 'targetMaster', 'scrap-model-mapping-adapter.js': 'scrapModelMappings', 'scrap-plan-adapter.js': 'scrapWeeklyPlans', 'admin-page.js': 'qdUsers/targetMaster', 'scrap-import.js': 'scrapLogs (Excel)', 'scrap-entry-page.js': 'scrapLogs (form)', 'scrap-detail-page.js': 'scrapLogs (edit/delete)', 'improvement-page.js': 'improvements', 'plan-tracking-page.js': 'scrapWeeklyPlans' };
+const WRITERS = { 'scrap-adapter.js': 'scrapLogs', 'improvement-adapter.js': 'improvements', 'target-adapter.js': 'targetMaster', 'scrap-model-mapping-adapter.js': 'scrapModelMappings', 'scrap-plan-adapter.js': 'scrapWeeklyPlans', 'admin-page.js': 'qdUsers/targetMaster', 'scrap-import.js': 'scrapLogs (Excel)', 'scrap-entry-page.js': 'scrapLogs (form)', 'scrap-detail-page.js': 'scrapLogs (edit/delete)', 'improvement-page.js': 'improvements', 'plan-tracking-page.js': 'scrapWeeklyPlans', 'ops-console.js': 'scrapSlots / qdConfig / qdOpsLog (Operations, admin)' };
 const pages = fs.readdirSync(ROOT).filter(f => f.endsWith('.html')).concat(fs.readdirSync(path.join(ROOT, 'js')).filter(f => f.endsWith('.html')).map(f => 'js/' + f));
 function inspect(p) {
   const html = fs.readFileSync(path.join(ROOT, p), 'utf8');

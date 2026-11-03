@@ -27,6 +27,7 @@
   const SLOT_COLLECTION = "scrapSlots";
   const LOG_COLLECTION = "scrapLogs";
   const SUMMARY_COLLECTION = "scrapCloseSummary";   // public, email-free mirror (Phase 4)
+  const PRIVATE_COLLECTION = "scrapLogPrivate";      // non-public personal fields of a log (Phase 8)
   const AUDIT_FIELDS = ["date", "shift", "line", "model", "defectType", "scrapQty", "remark"];
   // Most logs written in one transaction for one slot. Kept well under Firestore's 500
   // writes per transaction; the rules-access limit was measured in tests/rules (see report).
@@ -197,10 +198,13 @@
       const sums = await readSummaries(tx, db, Array.from(plan.keys()).map(id => id.split("_")[0]));
       const views = new Map();
 
+      // o.private (Phase 8): personal fields of a new log (e.g. { recordedBy }) go to the non-public
+      // scrapLogPrivate/{logId} in the same transaction; a deleted log takes its private doc with it.
+      const privateRef = id => db.collection(PRIVATE_COLLECTION).doc(id);
       ops.forEach(o => {
-        if (o.op === "create") tx.set(o.ref, o.data);
+        if (o.op === "create") { tx.set(o.ref, o.data); if (o.private) tx.set(privateRef(o.ref.id), o.private); }
         else if (o.op === "update") tx.update(o.ref, o.data);
-        else tx.delete(o.ref);
+        else { tx.delete(o.ref); if (o.dropPrivate) tx.delete(privateRef(o.ref.id)); }
       });
 
       const out = [];

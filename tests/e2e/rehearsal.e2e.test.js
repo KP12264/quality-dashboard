@@ -251,7 +251,7 @@ describe('final rehearsal: the whole rollout in order', () => {
   it('S5 publish CANDIDATE while both pages are open (rules change during use)', async () => {
     await publish('candidate');
     await scenario('S5', 'New tab keeps saving without reload', async () => { const m = await formSave(newTab.page); if (!/Saved/.test(m)) throw new Error(m); return 'saved'; }, 1);
-    await scenario('S5', 'Old tab is refused, with a message (nothing silently lost)', async () => { const m = await formSave(oldTab.page); if (!/Save failed/.test(m)) throw new Error(m); return m.slice(0, 80); }, 0);
+    await scenario('S5', 'Old tab is refused, with the reload message (entry kept)', async () => { const m = await formSave(oldTab.page); if (!/out of date.*reload/.test(m)) throw new Error(m); return m.slice(0, 90); }, 0);
     await scenario('S5', 'Anonymous public write is closed', async () => {
       const r = await addDoc(collection(env.unauthenticatedContext().firestore(), 'scrapLogs'), row('A', 'DAY')).then(() => 'written', e => e.code);
       if (!/permission/.test(r)) throw new Error(r); return 'refused';

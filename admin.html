@@ -35,6 +35,7 @@
     <button data-tab="fourm">4M Master</button>
     <button data-tab="audit">Audit Log</button>
     <button data-tab="permission">Users &amp; Roles</button>
+    <button data-tab="ops" hidden>Operations</button>
   </div>
 
   <!-- Target Management: FUNCTIONAL -->
@@ -100,6 +101,9 @@
     <div class="qd-placeholder"><strong>Coming in a later phase</strong>No change history is recorded yet beyond each Improvement's own status field. A full audit trail (who changed what, when) isn't built.</div>
   </section>
 
+  <!-- Operations (Phase 8): Admins only, sign-in enforced only. Built by js/ops-console.js. -->
+  <section class="qd-panel qd-admin-section" id="tab-ops" style="display:none;"></section>
+
   <section class="qd-panel qd-admin-section" id="tab-permission" style="display:none;">
     <h2>Users &amp; Roles (Quality Dashboard)</h2>
     <div class="qd-panel-note">Employees sign in with the same employee code and password as Production V2. The role here applies to the Quality Dashboard only and is stored separately (qdUsers); it never changes what anyone may do in Production V2. Leaders can save scrap only for the Line and Shift ticked below.</div>
@@ -140,11 +144,16 @@
 
 </div>
 
-<script src="js/config.js?v=20261102-p5"></script>
-<script src="js/firebase-init.js?v=20261103-p7"></script>
+<script src="js/config.js?v=20261103-p8b"></script>
+<script src="js/firebase-init.js?v=20261103-p8b"></script>
 <script src="js/qd-auth.js?v=20261102-p4"></script>
 <script src="js/target-adapter.js?v=20261103-p7"></script>
-<script src="js/admin-page.js"></script>
+<script src="js/scrap-ledger.js?v=20261103-p8"></script>
+<script src="js/shift-close.js?v=20261102-p4"></script>
+<script src="tools/ops/bridge-ops.js?v=20261103-p8"></script>
+<script src="tools/migration/ledger-baseline.js?v=20261103-p8"></script>
+<script src="js/admin-page.js?v=20261103-p8"></script>
+<script src="js/ops-console.js?v=20261103-p8"></script>
 <script src="js/nav.js"></script>
 </body>
 </html>

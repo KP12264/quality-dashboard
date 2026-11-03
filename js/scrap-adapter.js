@@ -202,7 +202,9 @@
     if (!id) throw new Error("deleteScrapEntry requires an id.");
     const who = typeof qdGuardWrite === "function" ? qdGuardWrite("scrap.write", {}) : {};   // the rules check the stored Line/Shift
     if (ledgerOn()) {
-      return ScrapLedger.applyOps(db, [{ op: "delete", ref: db.collection(SCRAP_COLLECTION).doc(id) }], ledgerOpts(who));
+      const pref = db.collection(typeof QD_SCRAP_PRIVATE_COLLECTION === "string" ? QD_SCRAP_PRIVATE_COLLECTION : "scrapLogPrivate").doc(id);
+      const hasPrivate = await pref.get().then(s => s.exists, () => false);
+      return ScrapLedger.applyOps(db, [{ op: "delete", ref: db.collection(SCRAP_COLLECTION).doc(id), dropPrivate: hasPrivate }], ledgerOpts(who));
     }
     return db.collection(SCRAP_COLLECTION).doc(id).delete();
   }
@@ -295,7 +297,13 @@
       // rejects only that slot's rows; the rows of other slots are still saved.
       const succeeded = [];
       for (const chunk of ScrapLedger.chunkBySlot(valid)) {
-        const ops = chunk.map(e => ({ op: "create", ref: db.collection(SCRAP_COLLECTION).doc(), data: buildDoc(e) }));
+        // Personal fields (Excel "Emp. Ld" → recordedBy) never go on the public log: they are written
+        // to the non-public scrapLogPrivate/{logId} in the same transaction (Phase 8, policy pending G4).
+        const ops = chunk.map(e => {
+          const data = buildDoc(e), op = { op: "create", ref: db.collection(SCRAP_COLLECTION).doc(), data };
+          if (data.recordedBy !== undefined) { if (String(data.recordedBy).trim()) op.private = { recordedBy: String(data.recordedBy).trim().slice(0, 64) }; delete data.recordedBy; }
+          return op;
+        });
         try {
           await ScrapLedger.applyOps(db, ops, ledgerOpts(who));
           ops.forEach((o, i) => succeeded.push({ entry: chunk[i], id: o.ref.id }));
@@ -353,7 +361,16 @@
   // never marked as part of an import either).
   function isValidEntry(e) { return validateEntryFields(e).length === 0; }
 
+  // Signed-in only: the non-public "recorded by" of one log (Phase 8). null when none / not allowed.
+  async function getRecordedBy(db, id) {
+    try {
+      const s = await db.collection(typeof QD_SCRAP_PRIVATE_COLLECTION === "string" ? QD_SCRAP_PRIVATE_COLLECTION : "scrapLogPrivate").doc(id).get();
+      return s.exists ? s.data().recordedBy || null : null;
+    } catch (e) { return null; }
+  }
+
   window.ScrapDataAdapter = {
+    getRecordedBy,
     isValidEntry,
     beginImport,
     finishImport,

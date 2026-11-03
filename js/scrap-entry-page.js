@@ -170,11 +170,11 @@
         if (mode === 'another') $('fModel').focus();
       } else {
         const err = failed[0] && failed[0].error;
-        showMessage('error', '⚠ Save failed. Your entries have been kept — please try again.' + (err && err.message ? ` (${err.message})` : ''));
+        showMessage('error', '⚠ ' + ((typeof qdCutoverMessage === 'function' && qdCutoverMessage(err)) || 'Save failed. Your entries have been kept — please try again.' + (err && err.message ? ` (${err.message})` : '')));
       }
     } catch (e) {
       console.error('Quality Dashboard: scrap entry save failed:', e);
-      showMessage('error', '⚠ Save failed. Your entries have been kept — please try again. (' + (e && e.message ? e.message : String(e)) + ')');
+      showMessage('error', '⚠ ' + ((typeof qdCutoverMessage === 'function' && qdCutoverMessage(e)) || 'Save failed. Your entries have been kept — please try again. (' + (e && e.message ? e.message : String(e)) + ')'));
     } finally {
       setBusy(false);
     }
@@ -237,4 +237,5 @@
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
+  if (typeof qdPrivacyHint === 'function') qdPrivacyHint(['fRemark']);
 })();

@@ -58,7 +58,8 @@
         ${field('Initial Action', textOrDash(r.actionPlan))}
         ${field('Scrap Cost', fmtThb(r.scrapCost))}
         ${field('Unit Price', fmtThb(r.unitPrice))}
-        ${field('Recorded By', textOrDash(r.recordedBy))}
+        ${r.recordedBy || window.qdAuthMode !== 'enforce' ? field('Recorded By', textOrDash(r.recordedBy))
+          : `<div class="qd-dd-field"><div class="qd-dd-label">Recorded By</div><div class="qd-dd-value" data-recorded-by="${escapeHtml(r.id)}">–</div></div>`}
       </div>`;
 
     const excelSourceHtml = `
@@ -237,6 +238,13 @@
         const isOpen = dd.style.display !== 'none';
         tbody.querySelectorAll('.qd-detail-drilldown').forEach(d => d.style.display = 'none');
         dd.style.display = isOpen ? 'none' : 'table-row';
+        // "Recorded By" of an imported record is not public (Phase 8): read it only when a signed-in
+        // user opens the record (one document read; refused by the rules for anyone else).
+        const rb = dd.querySelector('[data-recorded-by]');
+        if (!isOpen && rb && !rb.dataset.loaded && window.QDAuth && QDAuth.getState().profile) {
+          rb.dataset.loaded = '1';
+          ScrapDataAdapter.getRecordedBy(window.qdDb, rb.dataset.recordedBy).then(v => { rb.textContent = v || '–'; });
+        }
       });
     });
 
@@ -344,7 +352,7 @@
       console.error('Quality Dashboard: updateScrapEntry failed:', e);
       const msgEl = $('editMessage');
       msgEl.className = 'qd-form-message error';
-      msgEl.textContent = '⚠ Could not update: ' + (e && e.message ? e.message : String(e));
+      msgEl.textContent = '⚠ ' + ((typeof qdCutoverMessage === 'function' && qdCutoverMessage(e)) || 'Could not update: ' + (e && e.message ? e.message : String(e)));
       msgEl.style.display = 'block';
     } finally {
       btn.disabled = false;
@@ -384,7 +392,7 @@
       console.error('Quality Dashboard: deleteScrapEntry failed:', e);
       const msgEl = $('deleteMessage');
       msgEl.className = 'qd-form-message error';
-      msgEl.textContent = '⚠ Could not delete: ' + (e && e.message ? e.message : String(e));
+      msgEl.textContent = '⚠ ' + ((typeof qdCutoverMessage === 'function' && qdCutoverMessage(e)) || 'Could not delete: ' + (e && e.message ? e.message : String(e)));
       msgEl.style.display = 'block';
     } finally {
       btn.disabled = false;
@@ -408,4 +416,5 @@
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
+  if (typeof qdPrivacyHint === 'function') qdPrivacyHint(['eRemark']);
 })();

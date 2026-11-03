@@ -120,7 +120,37 @@
     };
     const who = typeof qdGuardWrite === "function" ? qdGuardWrite("improvement.write", {}) : {};
     void who;   // (no e-mail on public documents: who did what is in the non-public audit trail / sign-in log)
+    if (privateOwners()) {
+      // Owners (names) go to the non-public improvementOwners/{id}, written in the same batch.
+      const ref = db.collection(IMPROVEMENT_COLLECTION).doc();
+      const split = splitOwners(doc.actions);
+      doc.actions = split.actions;
+      const batch = db.batch();
+      batch.set(ref, doc);
+      batch.set(ownersRef(db, ref.id), { owners: split.owners, updatedAt: now });
+      await batch.commit();
+      return ref;
+    }
     return db.collection(IMPROVEMENT_COLLECTION).add(doc);
+  }
+
+  // ---- Action owners kept out of the public document (Phase 8, policy pending G4) ----
+  // Only while sign-in is enforced; with sign-in "off" improvements are saved exactly as before.
+  function privateOwners() { return typeof window !== "undefined" && window.qdAuthMode === "enforce"; }
+  function ownersRef(db, id) { return db.collection(typeof QD_IMPROVEMENT_OWNERS_COLLECTION === "string" ? QD_IMPROVEMENT_OWNERS_COLLECTION : "improvementOwners").doc(id); }
+  function splitOwners(actions) {
+    const list = Array.isArray(actions) ? actions : [];
+    if (list.length > 20) throw new Error("An improvement can have at most 20 actions.");
+    return { actions: list.map(a => Object.assign({}, a, { owner: "" })), owners: list.map(a => String((a && a.owner) || "").slice(0, 100)) };
+  }
+  // Signed-in only: the owners of one improvement, merged into its actions. Public: owners stay hidden.
+  async function withOwners(db, rec) {
+    if (!privateOwners() || !rec) return rec;
+    try {
+      const s = await ownersRef(db, rec.id).get();
+      const owners = s.exists ? s.data().owners || [] : [];
+      return Object.assign({}, rec, { actions: (rec.actions || []).map((a, i) => Object.assign({}, a, { owner: owners[i] || a.owner || "" })) });
+    } catch (e) { return rec; }
   }
 
   /**
@@ -135,6 +165,14 @@
     if (!db) throw new Error("No Firestore connection available (db is null).");
     if (!id) throw new Error("updateImprovement requires an id.");
     const who = typeof qdGuardWrite === "function" ? qdGuardWrite("improvement.write", {}) : {};
+    void who;
+    if (privateOwners() && Array.isArray(patch.actions)) {
+      const split = splitOwners(patch.actions);
+      const batch = db.batch();
+      batch.update(db.collection(IMPROVEMENT_COLLECTION).doc(id), { ...patch, actions: split.actions, updatedAt: Date.now() });
+      batch.set(ownersRef(db, id), { owners: split.owners, updatedAt: Date.now() });
+      return batch.commit();
+    }
     return db.collection(IMPROVEMENT_COLLECTION).doc(id).update({
       ...patch,
       updatedAt: Date.now()   // (no e-mail on public documents: who did what is in the non-public audit trail / sign-in log)
@@ -142,6 +180,7 @@
   }
 
   window.ImprovementAdapter = {
+    withOwners,
     normalizeImprovement,
     getImprovements,
     addImprovement,

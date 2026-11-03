@@ -1438,7 +1438,7 @@
       msgEl.textContent = `Imported ${succeeded} record${succeeded > 1 ? 's' : ''} into scrapLogs in ${totalSec}s (batch ${importBatchId}). Check Scrap Detail to review them.${mappingSaveNote}`;
     } else {
       msgEl.className = 'qd-form-message error';
-      msgEl.textContent = `Imported ${succeeded} record${succeeded > 1 ? 's' : ''}, but ${failures.length} failed: ${failures[0].error && failures[0].error.message ? failures[0].error.message : 'unknown error'}${mappingSaveNote}${importMarkerNote}`;
+      msgEl.textContent = `Imported ${succeeded} record${succeeded > 1 ? 's' : ''}, but ${failures.length} failed: ${(typeof qdCutoverMessage === 'function' && qdCutoverMessage(failures[0].error)) || (failures[0].error && failures[0].error.message ? failures[0].error.message : 'unknown error')}${mappingSaveNote}${importMarkerNote}`;
     }
     msgEl.style.display = 'block';
   }

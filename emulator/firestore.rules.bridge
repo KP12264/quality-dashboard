@@ -140,12 +140,34 @@ service cloud.firestore {
     // Public collections never receive personal data (Phase 7): who did what is kept in the
     // non-public audit events (scrapSlots/{id}/events, "by"). A write may not ADD createdBy /
     // updatedBy; values already on old documents are left exactly as they are.
+    // Phase 8 (policy pending G4): also recordedBy (employee code from Excel). It goes to
+    // scrapLogPrivate/{logId} instead, which only signed-in QD users can read.
     function qdNoNewPersonal() {
       return request.resource == null
         || (resource == null
-              ? !request.resource.data.keys().hasAny(['createdBy', 'updatedBy'])
+              ? !request.resource.data.keys().hasAny(['createdBy', 'updatedBy', 'recordedBy'])
               : request.resource.data.get('createdBy', null) == resource.data.get('createdBy', null)
-                && request.resource.data.get('updatedBy', null) == resource.data.get('updatedBy', null));
+                && request.resource.data.get('updatedBy', null) == resource.data.get('updatedBy', null)
+                && request.resource.data.get('recordedBy', null) == resource.data.get('recordedBy', null));
+    }
+    // Improvement action owners (names) are kept in improvementOwners/{id} (not public). A public
+    // improvement may have at most 20 actions and none of them may carry an owner.
+    function qdNoActionOwner(a, i) {
+      return a.size() <= i || !(a[i] is map) || a[i].get('owner', '') == '';
+    }
+    function qdNoActionOwners() {
+      return request.resource == null || !('actions' in request.resource.data)
+        || (request.resource.data.actions is list && request.resource.data.actions.size() <= 20
+            && qdNoActionOwner(request.resource.data.actions, 0) && qdNoActionOwner(request.resource.data.actions, 1)
+            && qdNoActionOwner(request.resource.data.actions, 2) && qdNoActionOwner(request.resource.data.actions, 3)
+            && qdNoActionOwner(request.resource.data.actions, 4) && qdNoActionOwner(request.resource.data.actions, 5)
+            && qdNoActionOwner(request.resource.data.actions, 6) && qdNoActionOwner(request.resource.data.actions, 7)
+            && qdNoActionOwner(request.resource.data.actions, 8) && qdNoActionOwner(request.resource.data.actions, 9)
+            && qdNoActionOwner(request.resource.data.actions, 10) && qdNoActionOwner(request.resource.data.actions, 11)
+            && qdNoActionOwner(request.resource.data.actions, 12) && qdNoActionOwner(request.resource.data.actions, 13)
+            && qdNoActionOwner(request.resource.data.actions, 14) && qdNoActionOwner(request.resource.data.actions, 15)
+            && qdNoActionOwner(request.resource.data.actions, 16) && qdNoActionOwner(request.resource.data.actions, 17)
+            && qdNoActionOwner(request.resource.data.actions, 18) && qdNoActionOwner(request.resource.data.actions, 19));
     }
     function qdValidScrap(d) {
       return qdValidSlot(d.line, d.shift)
@@ -501,7 +523,45 @@ service cloud.firestore {
     }
     match /improvements/{id} {
       allow read: if true;
-      allow write: if qdAdmin() && qdNoNewPersonal();          // Leader / Viewer: read-only
+      allow write: if qdAdmin() && qdNoNewPersonal() && qdNoActionOwners();          // Leader / Viewer: read-only
+    }
+
+    // ---- Personal data, NOT public (Phase 8; policy pending G4) ----
+    // Who recorded an imported scrap record (Excel "Emp. Ld"): one doc per scrap log, written with the
+    // log in the same commit, readable by signed-in QD users only.
+    function qdLogPath(id) {
+      return /databases/$(database)/documents/scrapLogs/$(id);
+    }
+    match /scrapLogPrivate/{id} {
+      allow read: if qdActive();
+      allow create, update: if existsAfter(qdLogPath(id))
+        && qdCanWriteSlot(getAfter(qdLogPath(id)).data.line, getAfter(qdLogPath(id)).data.shift)
+        && request.resource.data.keys().hasOnly(['recordedBy'])
+        && request.resource.data.recordedBy is string && request.resource.data.recordedBy.size() <= 64;
+      // removed together with its scrap log (or by an admin)
+      allow delete: if qdAdmin()
+        || (exists(qdLogPath(id)) && !existsAfter(qdLogPath(id))
+            && qdCanWriteSlot(get(qdLogPath(id)).data.line, get(qdLogPath(id)).data.shift));
+    }
+    // Operations log (Phase 8): one immutable record per write step run from the Admin page's
+    // Operations tab (reconcile, baseline, gate) — who, when, approval reference, result.
+    match /qdOpsLog/{id} {
+      allow read: if qdAdmin();
+      allow create: if qdAdmin()
+        && request.resource.data.keys().hasOnly(['action', 'projectId', 'database', 'approvalRef', 'reason', 'summary', 'at', 'by'])
+        && request.resource.data.action in ['RECONCILE', 'BASELINE_APPLY', 'BASELINE_GATE', 'CLEAR_IMPORT_MARKER']
+        && request.resource.data.approvalRef is string && request.resource.data.approvalRef.size() >= 3
+        && request.resource.data.reason is string && request.resource.data.reason.size() >= 3
+        && request.resource.data.at == request.time && request.resource.data.by == qdEmail();
+      allow update, delete: if false;
+    }
+    // Improvement action owners: owners[i] belongs to actions[i] of improvements/{id}.
+    match /improvementOwners/{id} {
+      allow read: if qdActive();
+      allow write: if qdAdmin()
+        && (request.resource == null
+            || (request.resource.data.keys().hasOnly(['owners', 'updatedAt'])
+                && request.resource.data.owners is list && request.resource.data.owners.size() <= 20));
     }
     match /scrapModelMappings/{id} {
       allow read: if true;

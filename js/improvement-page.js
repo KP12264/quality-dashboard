@@ -118,7 +118,7 @@
     if (window.qdFirebaseError) return;
     try {
       const { records } = await ImprovementAdapter.getImprovements(window.qdDb, {});
-      const rec = records.find(r => r.id === id);
+      const rec = await ImprovementAdapter.withOwners(window.qdDb, records.find(r => r.id === id));   // owners: signed-in only
       if (!rec) { showBanner('warn', '⚠ Improvement record not found.'); return; }
       $('formTitle').textContent = 'Edit Improvement — ' + rec.improvementId;
       $('fProblem').value = rec.problem;
@@ -225,7 +225,7 @@
       switchTab('list');
     } catch (err) {
       console.error('Quality Dashboard: failed to save improvement:', err);
-      showMessage('error', '⚠ Could not save: ' + (err && err.message ? err.message : String(err)));
+      showMessage('error', '⚠ ' + ((typeof qdCutoverMessage === 'function' && qdCutoverMessage(err)) || 'Could not save: ' + (err && err.message ? err.message : String(err))));
     } finally {
       saveBtn.disabled = false;
       saveBtn.textContent = editingId ? 'Update Improvement' : 'Save Improvement';
@@ -247,4 +247,5 @@
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
+  if (typeof qdPrivacyHint === 'function') qdPrivacyHint(['fProblem', 'fRootCause']);
 })();

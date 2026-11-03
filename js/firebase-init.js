@@ -72,6 +72,9 @@ window.qdCloseRequiredFrom = null;
     const testFrom = new URLSearchParams(location.search).get("qdCloseFrom");
     if (window.qdEmulator && /^\d{4}-\d{2}-\d{2}$/.test(testFrom || "")) closeFrom = testFrom;
     window.qdCloseRequiredFrom = window.qdAuthMode === "enforce" && closeFrom ? closeFrom : null;
+    // Operations tab write lock (config, or ?qdOpsWrite=1 in local emulator test mode only).
+    window.qdOpsWrite = window.qdAuthMode === "enforce"
+      && ((typeof QD_OPS_WRITE_ENABLED === "boolean" && QD_OPS_WRITE_ENABLED) || (window.qdEmulator && new URLSearchParams(location.search).get("qdOpsWrite") === "1"));
   } catch (e) {
     console.error("Quality Dashboard: Firebase init failed:", e);
     window.qdFirebaseError = "Could not connect to Firebase: " + (e && e.message ? e.message : String(e));
@@ -89,3 +92,26 @@ window.qdGuardWrite = function (action, ctx) {
   }
   return window.QDAuth.assertCan(action, ctx || {});
 };
+
+// Free-text fields end up in publicly readable documents (Phase 8, policy pending G4): while sign-in is
+// enforced, remind people not to type names or employee codes there. No effect with sign-in "off".
+window.qdPrivacyHint = function (ids) {
+  if (window.qdAuthMode !== "enforce") return;
+  const apply = () => ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el || el.dataset.qdPrivacyHint) return;
+    el.dataset.qdPrivacyHint = "1";
+    el.placeholder = (el.placeholder ? el.placeholder + " — " : "") + "no names or employee codes (visible to everyone)";
+  });
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", apply); else apply();
+};
+
+// Cutover message (Phase 8). After the new rules are published, a page still running with sign-in
+// "off" (opened before the switch) is refused by Firestore. Instead of a raw error, tell the user to
+// reload — the reloaded page asks them to sign in. Returns null when the error is something else.
+window.qdCutoverMessage = function (err) {
+  const code = String((err && (err.code || err.message)) || "");
+  if (window.qdAuthMode === "enforce" || !/permission/i.test(code)) return null;
+  return "This page is out of date: saving now requires signing in. Your entries are kept — reload the page (Ctrl+F5 / pull to refresh) and sign in. · หน้านี้เป็นเวอร์ชันเก่า การบันทึกต้องเข้าสู่ระบบแล้ว ข้อมูลที่กรอกยังอยู่ — กรุณารีโหลดหน้าแล้วเข้าสู่ระบบ";
+};
+

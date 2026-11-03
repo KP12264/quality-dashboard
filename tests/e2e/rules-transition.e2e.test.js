@@ -183,7 +183,7 @@ describe('old site (sign-in off) and new site (sign-in on) under each rules vers
     const o = await oldSite();
     summary.push(`candidate :: old site (off) :: form ${o.form}, Excel import ${o.import}, mapping ${o.mapping}, ${o.logsWritten} logs, dashboard ${o.dashboard}`);
     assert.deepEqual([o.form, o.import, o.mapping, o.logsWritten, o.dashboard], ['refused', 'refused', 'refused', 0, 'ok']);
-    assert.match(o.formText, /Save failed/);   // the old page tells the user; nothing is lost silently
+    assert.match(o.formText, /out of date.*reload the page.*sign in/);   // cutover message: reload + sign in; entry kept
   });
 });
 
@@ -217,3 +217,26 @@ describe('retired page copies (Phase 7)', () => {
   }
 });
 
+describe('plan-tracking.html and weekly-review.html (Phase 8, P7-2 evidence)', () => {
+  // Finding: commit 3c28849 (2026-10-16) removed SCRAP_WEEKLY_PLAN_COLLECTION / MONTHLY_REDUCTION_GOAL
+  // from js/config.js, so both pages cannot read weekly plans under ANY rules (the adapter's
+  // ReferenceError is caught and shown as "could not be read"). Recorded, not fixed (P7-2 decision).
+  for (const rules of ['production', 'candidate']) {
+    it(`load under ${rules} rules (public): pages open, weekly plans unreadable (config constant missing)`, async () => {
+      await useRules(rules); await seed();
+      for (const page of ['plan-tracking.html', 'weekly-review.html']) {
+        const { context, page: pg } = await newPage();
+        const errors = [];
+        pg.on('pageerror', e => errors.push(e.message));
+        await pg.goto(`${BASE}/${page}?qdEmulator=1&qdAuthMode=off`);
+        await pg.waitForTimeout(2500);
+        const st = await pg.evaluate(() => ({ constant: typeof SCRAP_WEEKLY_PLAN_COLLECTION, goal: typeof MONTHLY_REDUCTION_GOAL, banner: (document.getElementById('connectionBanner') || {}).textContent || '' }));
+        await context.close();
+        assert.deepEqual(errors, [], page);
+        assert.equal(st.constant, 'undefined');
+        assert.match(st.banner, /could not be read/);
+        summary.push(`${rules} :: ${page} (public) :: opens; weekly plans unreadable because SCRAP_WEEKLY_PLAN_COLLECTION is missing from config.js (since 3c28849)`);
+      }
+    });
+  }
+});

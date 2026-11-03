@@ -78,6 +78,15 @@ const QD_CLOSE_REQUIRED_FROM = null;
 // Public, email-free mirror of each day's shift-close state (read by the public Dashboard and
 // Executive Report). Kept equal to scrapSlots by Firestore Rules; see emulator/firestore.rules.
 const QD_CLOSE_SUMMARY_COLLECTION = "scrapCloseSummary";
+// Personal data kept out of public documents while sign-in is enforced (Phase 8, policy pending G4):
+// the employee code an Excel import records ("recordedBy") and improvement action owners.
+// Readable by signed-in Quality Dashboard users only (emulator/firestore.rules).
+const QD_SCRAP_PRIVATE_COLLECTION = "scrapLogPrivate";
+// Operations tab (Admin page): audits and dry runs are read-only; the steps that WRITE (reconcile,
+// baseline, gate) stay locked unless this is true. Keep false until a written approval for that
+// step exists. (Local emulator test mode may unlock it with ?qdOpsWrite=1; nothing else can.)
+const QD_OPS_WRITE_ENABLED = false;
+const QD_IMPROVEMENT_OWNERS_COLLECTION = "improvementOwners";
 const QD_EMULATOR = {
   projectId: "demo-quality-dashboard",   // "demo-" projects exist only in the emulator
   firestoreHost: "127.0.0.1", firestorePort: 8080,

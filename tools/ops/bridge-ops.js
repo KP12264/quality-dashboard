@@ -69,7 +69,34 @@
     });
   }
 
-  const api = { bridgeAudit, reconcileSlot };
+  /**
+   * offLedgerSince(db, { from, to, sinceMs }) — POST-CANDIDATE AUDIT, read only.
+   * Scrap logs created at or after `sinceMs` (createdAt) that no ledger event accounts for
+   * (v{n} creates / movesIn, RECONCILE logIds, baseline b1 logIds). After the candidate rules are
+   * published this must stay EMPTY: anything listed was written by a client around the ledger.
+   * Reads only the events of the slots that have such logs.
+   */
+  async function offLedgerSince(db, { from, to, sinceMs }) {
+    const recent = [];
+    (await db.collection('scrapLogs').where('date', '>=', from).where('date', '<=', to).get()).forEach(d => {
+      const l = Object.assign({ id: d.id }, d.data());
+      if (Number(l.createdAt) >= sinceMs) recent.push(l);
+    });
+    const bySlot = new Map();
+    recent.forEach(l => { const id = `${l.date}_${l.line}_${l.shift}`; if (!bySlot.has(id)) bySlot.set(id, []); bySlot.get(id).push(l); });
+    const offLedger = [];
+    for (const [slotId, list] of bySlot) {
+      const known = new Set();
+      (await db.collection('scrapSlots').doc(slotId).collection('events').get()).forEach(d => {
+        const e = d.data();
+        [].concat(e.creates || [], e.movesIn || [], e.logIds || []).forEach(x => known.add(x));
+      });
+      list.forEach(l => { if (!known.has(l.id)) offLedger.push({ id: l.id, slotId, createdAt: l.createdAt, scrapQty: l.scrapQty }); });
+    }
+    return { checked: recent.length, offLedger };
+  }
+
+  const api = { bridgeAudit, reconcileSlot, offLedgerSince };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   if (typeof window !== 'undefined') window.BridgeOps = api;
 })(this);

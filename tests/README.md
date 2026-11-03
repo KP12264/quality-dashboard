@@ -111,3 +111,12 @@ date for that page only (emulator only).
 - `tests/unit/page-inventory.test.js` — every page that can write needs sign-in or is retired.
 - Tools: `tools/ops/bridge-ops.js` (bridgeAudit, reconcileSlot), `tools/migration/ledger-baseline.js`
   (`completeIfClean`). Rules publishes inside one test use the emulator REST endpoint.
+
+## Launch preparation (Phase 8)
+
+- `tests/rules/privacy.test.js`, `tests/e2e/privacy.e2e.test.js` — recordedBy / improvement owners
+  kept in non-public sidecar documents (policy pending G4).
+- `tests/e2e/ops-console.e2e.test.js` — Admin "Operations" tab: hidden unless admin + sign-in on,
+  read-only by default, write lock + typed project/database + approval, qdOpsLog, post-candidate audit.
+- `tests/e2e/rules-transition.e2e.test.js` — also the cutover message and plan-tracking /
+  weekly-review evidence.
