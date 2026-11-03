@@ -101,6 +101,16 @@ describe('privacy migration (synthetic old data)', () => {
     assert.equal(r2.logs.migrated, 1);
     const r3 = await PM.apply(A.db, plan, Object.assign({ fieldValue: FV }, await op(A, 'PRIVACY_MIGRATION')));   // idempotent
     assert.equal(r3.logs.migrated + r3.improvements.migrated, 0);
+    // nothing skipped silently: every planned document is either migrated or listed with a reason
+    const planned = plan.logs.length + plan.improvements.length;
+    assert.equal(r3.skippedDetails.length + r3.logs.failed.length + r3.improvements.failed.length, planned);
+    assert.ok(r3.skippedDetails.every(x => /already migrated/.test(x.reason)));
+    const r1listed = r1.logs.migrated + r1.improvements.migrated + r1.skippedDetails.length + r1.logs.failed.length + r1.improvements.failed.length;
+    assert.equal(r1listed, planned);
+    const ex = PM.exceptionReport(plan, r1, null);
+    assert.deepEqual(ex.rows.filter(x => x.stage === 'scan').map(x => x.id).sort(), ['impMany', 'oldLong']);
+    assert.equal(ex.rows.filter(x => x.stage === 'apply' && /failed/.test(x.reason)).length, 1);
+    report.push(['Exception report', `${ex.count} rows after the interrupted run: 2 scan exceptions (decision M-P2) + 1 failed document (re-apply); a re-run lists all ${planned} planned documents as "already migrated" — nothing dropped silently`]);
     report.push(['Interrupted run (1 failure) + resume', `1st: ${r1.logs.migrated} logs + ${r1.improvements.migrated} improvements migrated, 1 failed · resume: ${r2.logs.migrated} log · re-run: 0 changes (idempotent)`]);
   });
   it('verify: no personal field left on public documents; sidecars hold exactly the backed-up values', async () => {

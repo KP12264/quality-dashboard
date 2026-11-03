@@ -18,7 +18,7 @@
   const $ = id => document.getElementById(id);
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const DATABASE = '(default)';
-  let lastAudit = null, lastPlan = null, lastReport = {}, privacyPlan = null, privacyBackup = null, backupSaved = false;
+  let lastAudit = null, lastPlan = null, lastReport = {}, privacyPlan = null, privacyBackup = null, backupSaved = false, privacyResult = null, privacyVerified = null;
 
   const projectId = () => (window.qdDb && window.qdDb.app && window.qdDb.app.options && window.qdDb.app.options.projectId) || '?';
   const opts = () => ({ email: QDAuth.getState().email, serverTimestamp: () => firebase.firestore.FieldValue.serverTimestamp() });
@@ -139,8 +139,15 @@
     if (!backupSaved) throw new Error('Download the backup first.');
     const r = await PrivacyMigration.apply(window.qdDb, privacyPlan, Object.assign({ fieldValue: { delete: () => firebase.firestore.FieldValue.delete() } }, o));
     const v = await PrivacyMigration.verify(window.qdDb, privacyBackup);
-    return { result: r, verify: v };
+    privacyResult = r; privacyVerified = v;
+    const ex = PrivacyMigration.exceptionReport(privacyPlan, r, v);
+    return { result: { logs: r.logs, improvements: r.improvements }, verify: { clean: v.clean, problems: v.problems.length }, exceptions: ex.count };
   });
+  function privacyExceptions() {
+    if (!privacyPlan) return out('opsPrivacyOut', 'Run the dry run first.', 'error');
+    const rep = PrivacyMigration.exceptionReport(privacyPlan, privacyResult, privacyVerified);
+    saveJson(rep, `qd-privacy-exceptions_${projectId()}_${Date.now()}.json`);
+  }
   async function privacyVerify() {
     const v = await PrivacyMigration.verify(window.qdDb, privacyBackup);
     lastReport.privacyVerify = v;
@@ -187,6 +194,7 @@
       <button type="button" class="mini-add-btn" id="opsPrivacyBackupBtn">Download backup (JSON)</button>
       <button type="button" class="qd-submit-btn" id="opsPrivacyBtn" style="width:auto;">Apply privacy migration</button>
       <button type="button" class="mini-add-btn" id="opsPrivacyVerifyBtn">Verify</button>
+      <button type="button" class="mini-add-btn" id="opsPrivacyExceptionsBtn">Download exception report (JSON)</button>
       <div id="opsPrivacyOut" class="qd-form-message" style="display:none;"></div>`;
     $('opsAuditBtn').onclick = runAudit;
     $('opsDownloadBtn').onclick = download;
@@ -199,6 +207,7 @@
     $('opsPrivacyBackupBtn').onclick = privacyBackupDownload;
     $('opsPrivacyBtn').onclick = privacyApply;
     $('opsPrivacyVerifyBtn').onclick = privacyVerify;
+    $('opsPrivacyExceptionsBtn').onclick = privacyExceptions;
   }
 
   function init() {

@@ -48,14 +48,18 @@
 
   async function apply(db, plan, opts) {
     const FV = opts.fieldValue;   // { delete: () => FieldValue.delete() }
-    const out = { logs: { migrated: 0, skipped: 0, failed: [] }, improvements: { migrated: 0, skipped: 0, failed: [] } };
+    // Nothing is skipped silently (Phase 10): every skipped or failed document is listed with a reason.
+    const out = { logs: { migrated: 0, skipped: 0, failed: [] }, improvements: { migrated: 0, skipped: 0, failed: [] }, skippedDetails: [] };
+    const skip = (kind, id, reason) => { out.skippedDetails.push({ kind, id, reason }); };
     for (const l of plan.logs) {
       const ref = db.collection('scrapLogs').doc(l.id), pref = db.collection('scrapLogPrivate').doc(l.id);
       try {
         const done = await db.runTransaction(async tx => {
           const snap = await tx.get(ref);
           const priv = await tx.get(pref);
-          if (!snap.exists || snap.data().recordedBy !== l.recordedBy) return false;   // gone / already migrated / changed
+          if (!snap.exists) { skip('scrapLog', l.id, 'document no longer exists'); return false; }
+          if (snap.data().recordedBy === undefined) { skip('scrapLog', l.id, 'already migrated (no recordedBy)'); return false; }
+          if (snap.data().recordedBy !== l.recordedBy) { skip('scrapLog', l.id, 'recordedBy changed since the scan — re-scan'); return false; }
           if (!l.emptyOnly) {
             if (priv.exists && priv.data().recordedBy && priv.data().recordedBy !== l.recordedBy) throw new Error('private record holds a different value');
             tx.set(pref, { recordedBy: String(l.recordedBy), opId: opts.opId });
@@ -74,9 +78,9 @@
         const done = await db.runTransaction(async tx => {
           const snap = await tx.get(ref);
           const own = await tx.get(oref);
-          if (!snap.exists) return false;
+          if (!snap.exists) { skip('improvement', i.id, 'document no longer exists'); return false; }
           const actions = Array.isArray(snap.data().actions) ? snap.data().actions : [];
-          if (!actions.some(x => x && String(x.owner || '').trim())) return false;   // already migrated
+          if (!actions.some(x => x && String(x.owner || '').trim())) { skip('improvement', i.id, 'already migrated (no owner left)'); return false; }
           const prev = own.exists ? own.data().owners || [] : [];
           const owners = actions.map((x, k) => String((x && x.owner) || '') || prev[k] || '');
           tx.set(oref, { owners, updatedAt: Date.now(), opId: opts.opId });
@@ -87,6 +91,23 @@
       } catch (e) { out.improvements.failed.push({ id: i.id, error: (e && (e.code || e.message)) || String(e) }); }
     }
     return out;
+  }
+
+  /**
+   * exceptionReport(plan, result, verifyResult) → one list of EVERY document not migrated, with the
+   * reason and what to do: scan exceptions (not migratable as they are), skipped and failed documents,
+   * and anything verify still finds. Download it with the backup; nothing is dropped silently.
+   */
+  function exceptionReport(plan, result, verifyResult) {
+    const rows = [];
+    (plan.exceptions || []).forEach(x => rows.push({ kind: x.kind, id: x.id, stage: 'scan', reason: x.problem, action: 'decision needed (M-P2): keep public, shorten, or remove — not migrated' }));
+    if (result) {
+      (result.skippedDetails || []).forEach(x => rows.push({ kind: x.kind, id: x.id, stage: 'apply', reason: x.reason, action: /already migrated/.test(x.reason) ? 'none' : 're-scan and apply again' }));
+      [].concat(result.logs.failed.map(f => Object.assign({ kind: 'scrapLog' }, f)), result.improvements.failed.map(f => Object.assign({ kind: 'improvement' }, f)))
+        .forEach(f => rows.push({ kind: f.kind, id: f.id, stage: 'apply', reason: 'failed: ' + f.error, action: 'apply again (resumable)' }));
+    }
+    if (verifyResult) verifyResult.problems.forEach(p => rows.push({ kind: 'verify', id: p.split(' ')[0], stage: 'verify', reason: p, action: 'investigate before closing the migration' }));
+    return { kind: 'qd-privacy-migration-exceptions', createdAt: new Date().toISOString(), count: rows.length, rows };
   }
 
   async function verify(db, bak) {
@@ -105,7 +126,7 @@
     return { clean: problems.length === 0 && left.exceptions.length === 0, problems, exceptions: left.exceptions };
   }
 
-  const api = { scan, backup, apply, verify, MAX_CODE, MAX_ACTIONS };
+  const api = { scan, backup, apply, verify, exceptionReport, MAX_CODE, MAX_ACTIONS };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   if (typeof window !== 'undefined') window.PrivacyMigration = api;
 })(this);
