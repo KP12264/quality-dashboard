@@ -254,3 +254,22 @@ test('D1: budget status, daily compliance and data completeness are separate —
   assert.equal(m.completeness, 'NOT_FINAL', '1–4 Oct (before the close date) are not final');
 });
 
+
+test('monthly No data: no log at all = noLog (shown "No log", never 0); every shift confirmed zero = a known 0, FINAL; partly confirmed = so far / Not final', () => {
+  const days = P.util.datesBetween('2026-10-01', '2026-10-31');
+  // no scrap log, Shift Close not in use → nothing is known
+  const none = P.buildMonth({ ym: '2026-10', asOf: '2026-10-31', records: [] });
+  assert.equal(none.noLog, true); assert.equal(none.completeness, 'NOT_FINAL'); assert.equal(none.dailyCompliance, 'NO_DATA');
+  assert.ok(none.weeks.every(w => w.noLog));
+  // every shift of every day closed as CONFIRMED_ZERO (6/6) → the 0 is confirmed
+  const zero = P.buildMonth({ ym: '2026-10', asOf: '2026-10-31', records: [], closeFrom: '2026-10-01', closeUnits: closeUnits(days, []) });
+  assert.equal(zero.noLog, false, 'confirmed zero is data, not "no log"'); assert.equal(zero.actual, 0);
+  assert.deepEqual([zero.budgetStatus, zero.dailyCompliance, zero.completeness], ['WITHIN_PLAN', 'ALL_WITHIN', 'FINAL']);
+  assert.deepEqual(plain(P.labels(zero, 50)), { budget: { key: 'WITHIN_PLAN', text: 'Within plan', tone: 'good' }, daily: { key: 'ALL_WITHIN', text: 'All days within limit (≤50)', tone: 'good' }, data: { key: 'FINAL', text: 'Final', tone: 'good' } });
+  assert.ok(zero.days.every(d => d.state === 'FINAL' && d.qty === 0));
+  // only the first half confirmed → so far, never confirmed
+  const half = P.buildMonth({ ym: '2026-10', asOf: '2026-10-31', records: [], closeFrom: '2026-10-01', closeUnits: closeUnits(days.slice(0, 15), []).concat(closeUnits(days.slice(15), [], Object.fromEntries(days.slice(15).map(d => [d, { all: null }])))) });
+  assert.equal(half.noLog, false); assert.equal(half.completeness, 'NOT_FINAL');
+  assert.equal(P.labels(half, 50).budget.text, 'Within plan · so far'); assert.equal(P.labels(half, 50).daily.text, 'All days within limit (≤50) · so far');
+  assert.equal(half.counts.final, 15); assert.equal(half.counts.noData, 16, 'open days without a log stay unknown');
+});

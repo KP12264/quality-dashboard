@@ -238,10 +238,17 @@
 
   // ---- CSV export -----------------------------------------------------
 
+  // CSV formula injection (defect / model / cause names are typed by users): a text cell whose first
+  // VISIBLE character is = + - @ (also after spaces, tabs, line breaks, zero-width / no-break
+  // characters, or as full-width ＝＋－＠) is prefixed with ' so a spreadsheet never runs it as a
+  // formula. Plain numbers (e.g. -3, 12.5, 1.46%) stay numbers; dates and statuses are unchanged.
   function toCsvRow(cells) {
     return cells.map(c => {
-      const s = String(c ?? '');
-      return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+      let s = String(c ?? '');
+      const lead = s.replace(/^[\s\u0000-\u001f ​-‍⁠﻿]+/, '');
+      const number = /^-?\d+(\.\d+)?%?$/.test(s);
+      if (!number && (/^[=+\-@＝＋－＠]/.test(lead) || /^[\t\r\n]/.test(s))) s = "'" + s;
+      return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
     }).join(',');
   }
 

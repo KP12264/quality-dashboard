@@ -163,6 +163,13 @@
     const set = m.planSources.OVERRIDE + m.planSources.ADMIN_DEFAULT;
     return set === m.weeks.length ? 'all weeks set by an Admin' : `${set} of ${m.weeks.length} weeks set by an Admin, ${m.planSources.DEFAULT} default (not set)`;
   }
+  // Month actual: '–' before the month starts or when unreadable, "No log" when no day has a log
+  // (never 0). A month whose days were all confirmed zero / no production is known: it shows 0.
+  function monthActual(m, withUnit) {
+    if (m.actual === null || !m.elapsedDays) return '–';
+    if (m.noLog) return '<span class="wp-unknown" title="No scrap log on any day yet — not counted as 0">No log</span>';
+    return fmt(m.actual) + (withUnit ? ' <small>pcs</small>' + soFar(m) : '');
+  }
   function renderMonth() {
     const m = state.month;
     const tile = (k, label, value, sub, extra = '') => `<div class="wp-tile" data-k="${k}"${extra}><div class="wp-tile-label">${label}</div><div class="wp-tile-value">${value}</div><div class="wp-tile-sub">${sub}</div></div>`;
@@ -172,9 +179,9 @@
       <div class="wp-tiles">
         ${tile('budget', m.budgetSource === 'CONFIRMED' ? 'Monthly budget' : 'Monthly budget · default', fmt(m.budget) + ' <small>pcs</small>' + (m.budgetSource === 'CONFIRMED' ? '' : ' ' + planTag(m.budgetSource === 'UNAVAILABLE' ? 'UNAVAILABLE' : 'DEFAULT')),
           `= sum of ${m.weeks.length} weekly plans · ${budgetSourceText(m)} · base ${fmt(m.dailyTarget)} × ${m.daysInMonth} days = ${fmt(m.baseBudget)}`)}
-        ${tile('actual', 'Actual', (m.actual === null ? '–' : fmt(m.actual)) + ' <small>pcs</small>' + soFar(m), `plan to date ${fmt(m.planToDate)} pcs`)}
-        ${tile('remaining', 'Remaining', m.actual === null ? '–' : remain(m.remaining) + (m.remaining < 0 ? '' : ' <small>pcs</small>'), remainSub)}
-        ${tile('used', '% Used', pct(m.used), m.projection === null ? 'projection: needs a log every day' : `projection ${fmt(m.projection)} pcs`)}
+        ${tile('actual', 'Actual', monthActual(m, true), `plan to date ${fmt(m.planToDate)} pcs`)}
+        ${tile('remaining', 'Remaining', m.actual === null || !m.elapsedDays || m.noLog ? '–' : remain(m.remaining) + (m.remaining < 0 ? '' : ' <small>pcs</small>'), m.noLog ? 'no scrap log yet — not counted as 0' : remainSub)}
+        ${tile('used', '% Used', m.elapsedDays && !m.noLog ? pct(m.used) : '–', m.projection === null ? 'projection: needs a log every day' : `projection ${fmt(m.projection)} pcs`)}
       </div>
       <div class="wp-bar" aria-hidden="true"><i style="width:${Math.min(100, (m.used || 0) * 100).toFixed(1)}%" class="${m.budgetStatus === 'OVER_PLAN' ? 'bad' : ''}"></i><b style="left:${m.budget ? Math.min(100, m.planToDate / m.budget * 100).toFixed(1) : 0}%" title="plan to date"></b></div>
       <div class="wp-data" id="wpMonthData">Data: ${esc(dataLine(m.counts, m))}</div>
@@ -201,7 +208,7 @@
       <div class="wp-scroll"><table class="wp-table" id="wpWeeksTable">
         <thead><tr><th>Week</th><th>Dates</th><th class="n">Days</th><th class="n">Plan · source</th><th class="n">Plan to date</th><th class="n">Actual</th><th class="n">Remaining</th><th class="n">Used</th><th>Budget</th><th>Daily limit</th><th>Data</th>${edit ? '<th></th>' : ''}</tr></thead>
         <tbody>${rows}</tbody>
-        <tfoot><tr><th>Month</th><td></td><td class="n">${m.daysInMonth}</td><td class="n">${fmt(m.budget)}${m.budgetSource === 'CONFIRMED' ? '' : `<div class="wp-plan-src">${planTag(m.budgetSource === 'UNAVAILABLE' ? 'UNAVAILABLE' : 'DEFAULT')}</div>`}</td><td class="n">${m.elapsedDays ? fmt(m.planToDate) : '–'}</td><td class="n">${m.actual === null ? '–' : fmt(m.actual)}</td><td class="n">${m.actual === null ? '–' : remain(m.remaining)}</td><td class="n">${pct(m.used)}</td><td>${d1Chips(m, ['budget'])}</td><td>${d1Chips(m, ['daily'])}</td><td>${d1Chips(m, ['data'])}${m.elapsedDays ? ` <small>${m.counts.final}/${m.elapsedDays} days final</small>` : ''}</td>${edit ? '<td></td>' : ''}</tr></tfoot>
+        <tfoot><tr><th>Month</th><td></td><td class="n">${m.daysInMonth}</td><td class="n">${fmt(m.budget)}${m.budgetSource === 'CONFIRMED' ? '' : `<div class="wp-plan-src">${planTag(m.budgetSource === 'UNAVAILABLE' ? 'UNAVAILABLE' : 'DEFAULT')}</div>`}</td><td class="n">${m.elapsedDays ? fmt(m.planToDate) : '–'}</td><td class="n">${monthActual(m, false)}</td><td class="n">${m.actual === null || !m.elapsedDays || m.noLog ? '–' : remain(m.remaining)}</td><td class="n">${m.elapsedDays && !m.noLog ? pct(m.used) : '–'}</td><td>${d1Chips(m, ['budget'])}</td><td>${d1Chips(m, ['daily'])}</td><td>${d1Chips(m, ['data'])}${m.elapsedDays ? ` <small>${m.counts.final}/${m.elapsedDays} days final</small>` : ''}</td>${edit ? '<td></td>' : ''}</tr></tfoot>
       </table></div>
       <p class="wp-note">Weeks run Monday–Sunday inside the month, so a day is counted in one week of one month only. Plan = ${fmt(DAILY_TARGET_PCS)} × days unless an Admin sets a lower plan.</p>`;
   }
@@ -316,8 +323,19 @@
   }
 
   // ---- CSV export (D1: the same three results and wording as the page and the Dashboard card) ----
+  // CSV formula injection: a text cell whose first VISIBLE character is = + - @ (also after spaces,
+  // tabs, line breaks, zero-width / no-break characters, or as full-width ＝＋－＠) is prefixed with '
+  // so a spreadsheet never runs it as a formula. Plain numbers (e.g. -28, 12.5, -1.5%) stay numbers.
+  function csvCell(v) {
+    let t = String(v == null ? '' : v);
+    const lead = t.replace(/^[\s\u0000-\u001f ​-‍⁠﻿]+/, '');
+    const number = /^-?\d+(\.\d+)?%?$/.test(t);
+    if (!number && (/^[=+\-@＝＋－＠]/.test(lead) || /^[\t\r\n]/.test(t))) t = "'" + t;
+    return /[",\n\r]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t;
+  }
+  window.__qdCsvCell = csvCell;   // for the tests
   function csvRows() {
-    const m = state.month, cell = v => { const t = String(v == null ? '' : v); return /[",\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t; };
+    const m = state.month, cell = csvCell;
     const row = a => a.map(cell).join(',');
     const lim = m.dailyTarget, L = p => C().labels(p, lim);
     const num = (p, v) => (p.actual === null || !p.elapsedDays ? '' : v);

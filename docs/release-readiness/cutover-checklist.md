@@ -1,6 +1,6 @@
 # Production Cutover Checklist — Quality Dashboard V5 + Weekly Plan V5 (READ-ONLY)
 
-Code: `c4a165e` (branch `claude/vigilant-pasteur-l91qt3`).
+Code: see `results.md` for the final commit (branch `claude/vigilant-pasteur-l91qt3`).
 **This document executes nothing.** Every Production step below is either a read-only check, or an action that needs its own written approval before anyone runs it.
 Nothing was deployed, published, merged, migrated or written to Firestore Production; Production V2 untouched.
 
@@ -10,17 +10,56 @@ Legend:
 - **(RO)** — read-only check, may be done before approval.
 - **(ACT)** — changes Production: needs its own approval.
 
-### Read-only checks vs. steps that write to Production
+### Rule for every step
+- **Nothing is written to Firebase Production** (Firestore, Rules, Auth, Hosting) without a written approval for that exact step: who, when, what, and the rollback.
+- **No test data goes into Production** unless the approval names it. That covers the PV2 smoke entry, the Leader slot save and any record created only to test. It must also say whether and how that data is removed afterwards.
+- A read-only check may be done at any time by a person with read access. It may not change anything, including "just one test save".
 
-| May be done before any approval — **read-only (RO)** | Need written approval first — **writes Production (ACT)** |
-|---|---|
-| 1.2 list databases · 1.3 copy published rules + SHA-256 · 1.4 rules history · 1.5 confirm backup bucket / IAM | 1.5 / 4.2 `gcloud firestore export` (creates an export) |
-| 8.2 Console → Usage, last 14 days | 2.5 every publish (bridge, candidate), site deploys, config releases |
-| 3.4 confirm what old fields are public today | 7.3 creating `qdUsers` (first Admin, roles) |
-| 7.2 / 6.2 / 8.1 decisions and estimates (no system access needed) | 4.1 baseline apply + gate · 5.2–5.5 privacy apply · 6.3 Shift Close date |
-| | **9.x PV2 smoke — saving one test entry is a Production write** (and removing it again) |
-| | **7.4 role smoke — a Leader saving a record is a Production write** |
-| *Read-only but only possible after an ACT step:* 2.6 bridge audits (after 3–4), 3.2 public-page check, 3.3 / 5.1 privacy dry run and 5.4 Exception Report (need the `enforce` site + Admin), 4.4 totals check, 7.5 sign-out check | 2.7 any rollback publish / redeploy |
+### A. READ-ONLY — allowed before any approval
+
+| # | Check | Where |
+|---|---|---|
+| 1.2 | Which databases exist; the site and PV2 use `(default)` | Console → Firestore |
+| 1.3 | Copy the **published** rules; SHA-256 must equal `0967944b…2e2f` | Console → Firestore → Rules |
+| 1.4 | No publish after the noted time | Rules history |
+| 1.5a | Backup bucket and IAM exist (the export itself is B-1) | Console / IAM |
+| 3.4 | Which old fields are publicly readable today | rules snapshot + Console |
+| 8.2 | Reads / day, last 14 days | Console → Usage |
+| 6.2 · 7.2 · 8.1 | Decisions and estimates (close date, account list, cost) | no system access needed |
+| *after an approved step* | 2.6 bridge audits · 3.2 public pages / CSVs · 3.3 + 5.1 privacy dry run · 5.4 Exception Report · 4.4 totals · 7.4a role read checks · 7.5 sign-out check | they read only, but need the new site / rules from section B |
+
+### B. APPROVAL REQUIRED — writes Firebase Production
+
+| # | Step | Writes |
+|---|---|---|
+| B-1 | `gcloud firestore export` (1.5 / 4.2) | an export in the bucket |
+| B-2 | Pre-cutover site release `QD_AUTH_MODE = "off"` (0b) | Hosting |
+| B-3 | Create the first Admin + roles in `qdUsers` (7.3) | Firestore |
+| B-4 | **Publish bridge rules** (2.5 step 3) | Rules |
+| B-5 | **PV2 smoke save** after B-4 (9.2): one agreed test entry | Firestore (PV2 data) |
+| B-6 | Deploy the site with `QD_AUTH_MODE = "enforce"` (step 4) | Hosting |
+| B-7 | **Leader slot save** on the own slot + delete it (7.4b) | Firestore (QD data) |
+| B-8 | **Publish candidate rules** (step 6) | Rules |
+| B-9 | **PV2 smoke save** after B-8 (9.3) | Firestore (PV2 data) |
+| B-10 | Ops write unlock (`QD_OPS_WRITE_ENABLED = true`) + reconcile (step 7) | Hosting + Firestore |
+| B-11 | **Baseline migration** M1: apply + gate (step 8) | Firestore |
+| B-12 | **Privacy migration** M-P1: apply (5.3), after the M-P2 decisions | Firestore |
+| B-13 | Ops write lock again (step 9) | Hosting |
+| B-14 | `QD_CLOSE_REQUIRED_FROM` date (B1, 6.3) | Hosting |
+| B-15 | PV2 smoke save before B-4, as the baseline (9.1) | Firestore (PV2 data) |
+
+### C. ROLLBACK — prepared before B-4, each run itself is an approved write
+
+| ID | When | Action | Restores |
+|---|---|---|---|
+| R2 | **any PV2 smoke failure**, or PV2 users report a problem | re-publish the production snapshot (`0967944b…2e2f`) | today's rules for everyone |
+| R-bridge | a QD-only problem after the candidate | re-publish the bridge | old pages save again; then post-rollback audit + reconcile |
+| R1 | a site problem after B-6 | redeploy the previous site build (`off`) | today's site |
+| R4 | a problem after B-14 | set `QD_CLOSE_REQUIRED_FROM = null` and release | previous target rule |
+| R-M1 | the baseline gate refuses | **no rollback write**: fix the listed slots, re-run (never force) | — |
+| R-MP1 | a privacy apply problem | the backup JSON (5.2) holds the original values; resume, or restore from it (separate approval) | old values |
+
+All rollbacks were rehearsed in the emulator: R2 / R-bridge / forward without data loss (`rehearsal.e2e` R). R1 and R4 are config / site redeploys.
 
 Roles referenced: Release owner (GO / NO-GO) · Firebase owner (backup, rules publish) · PV2 owner (PV2 smoke) · QD admin (Operations tab).
 Order and rollback follow `docs/phase8/runbook.md`, which supersedes Phase 7 §1. This checklist adds Weekly Plan V5 and D1.
@@ -35,7 +74,7 @@ Order and rollback follow `docs/phase8/runbook.md`, which supersedes Phase 7 §1
 | 1.2 | Which database the site uses | repo: `js/config.js` (project `daily-production-report-46b60`) sets no database id, so the SDK uses `(default)` | PROD ☐ (RO) Firebase Console → Firestore: list databases; confirm the site and Production V2 both use `(default)` | only `(default)` in use, or the extra one is documented |
 | 1.3 | Published rules = snapshot | — | PROD ☐ (RO) Console → Firestore → Rules: copy the **published** text and note the publish time; compute SHA-256 | hash equals `0967944b…2e2f`; otherwise **NO-GO** (re-copy, re-run the rules suites on the new snapshot) |
 | 1.4 | Nobody published since | — | PROD ☐ (RO) Rules history in the Console: no publish after the noted time | no newer version |
-| 1.5 | Backup possible | — | PROD ☐ (RO) confirm the bucket / IAM for `gcloud firestore export` exists. The export itself is (ACT): day 0 step 1 | owner + bucket named |
+| 1.5 | Backup possible | — | **1.5a** PROD ☐ (RO) confirm the bucket / IAM for `gcloud firestore export` exists. The export itself is **(ACT, B-1)** | owner + bucket named |
 
 ## 2. G2 — Bridge / Candidate rules: publish order and rollback
 
@@ -93,7 +132,7 @@ Order and rollback follow `docs/phase8/runbook.md`, which supersedes Phase 7 §1
 | 7.1 | Role matrix | EMU ✅ rules + auth e2e: Admin all; Leader own Line × Shift only, 7-day window; Viewer read-only; PV2 user without QD role read-only; Weekly Plan: Admin edits with reason + history, Leader / Viewer read-only | — | — |
 | 7.2 | Account list | — | owner decision: who is Admin (≥ 2), each Leader's slots, Viewers | list approved |
 | 7.3 | Create roles | EMU ✅ Admin page (`users.manage`) | (ACT) step 2: first Admin via Console, the rest via the Admin page | — |
-| 7.4 | Verify | — | PROD ☐ (RO) list `qdUsers`; sign in as one of each role: Viewer cannot save, Admin opens Daily Confirmation. PROD ☐ **(ACT)** Leader saves one test record on the own slot ✓ (then deletes it), other slot refused ✗ | all as expected |
+| 7.4 | Verify | — | **7.4a** PROD ☐ (RO) list `qdUsers`; sign in as one of each role: Viewer cannot save, Admin opens Daily Confirmation. **7.4b** PROD ☐ **(ACT, B-7)** Leader saves one approved test record on the own slot ✓ (then deletes it), other slot refused ✗ | all as expected |
 | 7.5 | Sign-out / account switch clears private data | EMU ✅ §6–7 (same tab, other tab, Back / Forward, storage empty) | PROD ☐ (RO) quick check on a shared PC | no private value after sign-out |
 
 ## 8. C1 / C2 — Firestore reads, monitoring and cost

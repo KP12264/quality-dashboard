@@ -788,3 +788,130 @@ describe('7. Final privacy and legend checks', () => {
   });
 });
 
+describe('8. CSV: same D1 wording as the screen, every month state, no private data, formula-safe, no reads', () => {
+  const parseCsv = text => text.replace(/^\ufeff/, '').split('\n').map(line => { const out = []; let cur = '', q = false;
+    for (let i = 0; i < line.length; i++) { const ch = line[i];
+      if (q) { if (ch === '"' && line[i + 1] === '"') { cur += '"'; i++; } else if (ch === '"') q = false; else cur += ch; }
+      else if (ch === '"') q = true; else if (ch === ',') { out.push(cur); cur = ''; } else cur += ch; }
+    out.push(cur); return out; });
+  const screenRows = page => page.$$eval('#wpWeeksTable tbody tr, #wpWeeksTable tfoot tr', trs => trs.map(tr => {
+    const d = k => (tr.querySelector(`[data-dim="${k}"]`) || {}).textContent;
+    return { key: tr.dataset.week || 'Month', plan: tr.querySelector('.wp-plan') ? tr.querySelector('.wp-plan').textContent : tr.children[3].childNodes[0].textContent,
+      actual: tr.children[5].childNodes[0] ? tr.children[5].childNodes[0].textContent.trim() : '', budget: d('budget'), daily: d('daily'), data: d('data') };
+  }));
+  const csvRows = page => page.evaluate(() => window.__qdWeeklyPlanCsv());
+
+  it('weeks + month rows of the CSV = the weeks table for: mixed month, current month (so far), No data month, future month', async () => {
+    const { page, context } = await newPage();
+    const [y, m] = M.ym.split('-').map(Number);
+    const old = `${m <= 2 ? y - 1 : y}-${String(((m - 3 + 12) % 12) + 1).padStart(2, '0')}`;
+    const [cy, cm] = M.curYm.split('-').map(Number);
+    const future = `${cm === 12 ? cy + 1 : cy}-${String(cm === 12 ? 1 : cm + 1).padStart(2, '0')}`;
+    for (const ym of [M.ym, M.curYm, old, future]) {
+      await planOpen(page, ym);
+      const screen = await screenRows(page), csv = parseCsv((await csvRows(page)).join('\n'));
+      for (const r of screen) {
+        const c = csv.find(x => x[0] === r.key);
+        assert.ok(c, `${ym} ${r.key} in the CSV`);
+        assert.equal(c[3], r.plan.replace(/,/g, ''), `${ym} ${r.key} plan`);
+        assert.equal(c[9], r.budget, `${ym} ${r.key} budget`); assert.equal(c[10], r.daily, `${ym} ${r.key} daily`); assert.equal(c[12], r.data, `${ym} ${r.key} data`);
+        if (r.actual === 'No log') assert.equal(c[6], 'No log', `${ym} ${r.key}: No log, never 0`);
+        else if (r.actual === '–') assert.equal(c[6], '', `${ym} ${r.key}: no number`);
+        else assert.equal(c[6], r.actual.replace(/,/g, ''), `${ym} ${r.key} actual`);
+      }
+      // not final is never confirmed: every "Within plan" / "All days within limit" on a not-final row says "so far"
+      for (const c of csv.filter(x => /^W\d|^Month$/.test(x[0]))) if (c[12] === 'Not final') {
+        if (c[9].startsWith('Within plan')) assert.match(c[9], /so far/, `${ym} ${c[0]}`);
+        if (c[10].startsWith('All days within')) assert.match(c[10], /so far/, `${ym} ${c[0]}`);
+      }
+      // days section: no number for a day without a log
+      csv.filter(x => /^\d{4}-\d{2}-\d{2}$/.test(x[0]) && /No data/.test(x[4])).forEach(x => assert.equal(x[2], '', 'No data day: empty, not 0'));
+    }
+    await context.close();
+  });
+
+  it('Dashboard card, weekly page and CSV: identical D1 wording for the current week and the month', async () => {
+    const { page, context } = await newPage();
+    await dashOpen(page); await dashRange(page, M.d(1), M.d(M.nDays));
+    const cardWeek = await page.$$eval('#planCard [data-k="week"] .wp-chip[data-dim]', cs => cs.map(c => c.textContent.trim()));
+    const cardMonth = await page.$$eval('#planCard [data-k="month"] .wp-chip[data-dim]', cs => cs.map(c => c.textContent.trim()));
+    const w = await newPage();
+    await planOpen(w.page, M.ym, '&week=W5');
+    const pageWeek = await w.page.$$eval('#wpWeekDetail .wp-d1 .wp-chip', cs => cs.map(c => c.textContent.trim()));
+    const pageMonth = await w.page.$$eval('#wpMonth .wp-d1 .wp-chip', cs => cs.map(c => c.textContent.trim()));
+    const csv = parseCsv((await csvRows(w.page)).join('\n'));
+    const row = k => { const c = csv.find(x => x[0] === k); return [c[9], c[10], c[12]]; };
+    assert.deepEqual(cardWeek, pageWeek); assert.deepEqual(pageWeek, row('W5'));
+    assert.deepEqual(cardMonth, pageMonth); assert.deepEqual(pageMonth, row('Month'));
+    await w.context.close(); await context.close();
+  });
+
+  it('No data month: weekly page tile + total row, Dashboard card and CSV all say "No log" (never 0)', async () => {
+    const [y, m] = M.ym.split('-').map(Number);
+    const old = `${m <= 2 ? y - 1 : y}-${String(((m - 3 + 12) % 12) + 1).padStart(2, '0')}`;
+    const last = new Date(Date.UTC(Number(old.slice(0, 4)), Number(old.slice(5)), 0)).getUTCDate();
+    const { page, context } = await newPage();
+    await planOpen(page, old);
+    assert.match(await page.textContent('#wpMonth [data-k="actual"] .wp-tile-value'), /^No log$/);
+    assert.equal((await page.textContent('#wpMonth [data-k="remaining"] .wp-tile-value')).trim(), '–');
+    assert.equal((await page.textContent('#wpWeeksTable tfoot tr td:nth-child(6)')).trim(), 'No log');
+    const csv = parseCsv((await csvRows(page)).join('\n'));
+    assert.equal(csv.find(x => x[0] === 'Month')[6], 'No log');
+    const d = await newPage();
+    await dashOpen(d.page); await dashRange(d.page, `${old}-01`, `${old}-${String(last).padStart(2, '0')}`);
+    assert.equal(await d.page.textContent('#planCard [data-k="month"] [data-v="actual"]'), 'No log');
+    assert.doesNotMatch(await d.page.textContent('#planCard [data-k="month"]'), /\bActual\s*0\b/);
+    await d.context.close(); await context.close();
+  });
+
+  it('CSV export reads nothing from Firestore and has no private data (also when exported by a signed-in Admin)', async () => {
+    const { page, context } = await newPage(1440);
+    await planOpen(page, M.ym, '&week=W2');
+    await signIn(page, 'ADMIN1');
+    await page.waitForFunction(() => /jig check/.test((document.getElementById('wpReviewText') || {}).value || ''), null, { timeout: 15000 });
+    await resetReads(page);
+    const dl = page.waitForEvent('download');
+    await page.click('#wpCsv');
+    const file = fs.readFileSync(await (await dl).path(), 'utf8');
+    assert.equal(sum(await reads(page)).gets, 0, 'export: 0 queries, 0 reads');
+    assert.ok(file.startsWith('\ufeff'), 'BOM for Excel (Thai text)');
+    assert.doesNotMatch(file, /@prodv2|admin1|jig check|Stricter target|Line B trial run|KP00\d\d|Planned stop/i);
+    await context.close();
+  });
+
+  it('formula injection: user text starting with = + - @ is neutralised in the Executive Report CSV; the weekly CSV guard keeps numbers', async () => {
+    await env.withSecurityRulesDisabled(async ctx => {
+      const { doc, setDoc } = require('firebase/firestore');
+      await setDoc(doc(ctx.firestore(), 'scrapLogs', 'inject1'), { date: M.d(13), shift: 'DAY', line: 'A', model: '@SUM(1+1)', defectType: '=HYPERLINK("http://example.invalid","x")', rootCause: '+cmd', scrapQty: 1, remark: '-2+3', createdAt: 1 });
+      await setDoc(doc(ctx.firestore(), 'scrapLogs', 'inject2'), { date: M.d(13), shift: 'NIGHT', line: 'B', model: ' \t=cmd|calc', defectType: '\u200b+SUM(9)', rootCause: '', scrapQty: 1, remark: '', createdAt: 1 });
+    });
+    const { page, context } = await newPage();
+    await page.goto(`${BASE}/executive-report.html?${q()}`);
+    await page.waitForFunction(() => window.qdDb, null, { timeout: 15000 });
+    await page.click('#periodTabs button[data-period="monthly"]');
+    await page.fill('#rEndDate', M.d(M.nDays));
+    await page.click('#refreshReport');
+    await page.waitForTimeout(4000);
+    const [download] = await Promise.all([page.waitForEvent('download'), page.click('#exportCsv')]);
+    const rows = parseCsv(fs.readFileSync(await download.path(), 'utf8'));
+    const cells = rows.flat();
+    assert.ok(cells.some(c => c.startsWith("'=HYPERLINK")), 'the defect name is in the CSV, neutralised');
+    const visible = c => c.replace(/^[\s\u0000-\u001f\u00a0\u200b-‍⁠\ufeff]+/, '');
+    const risky = cells.filter(c => /^[=+@\uff1d＋\uff20]/.test(visible(c)) || /^[-－](?!\d+(\.\d+)?%?$)/.test(visible(c)));
+    assert.deepEqual(risky, [], 'no cell can start a formula');
+    assert.ok(cells.some(c => c.startsWith("'") && /\+SUM\(9\)/.test(c)), 'zero-width-hidden formula neutralised');
+    assert.ok(cells.some(c => /^\d{4}-\d{2}-\d{2}$/.test(c)) && cells.some(c => /^(WITHIN TARGET|OVER TARGET|INCOMPLETE|NO DATA|CONFLICT|NO PRODUCTION)$/.test(c)), 'dates and statuses unchanged')
+    assert.ok(cells.some(c => /^\d+$/.test(c)), 'numbers stay numbers');
+    await context.close();
+    // weekly CSV guard (its own cells are system text, but the guard is the same)
+    const w = await newPage();
+    await planOpen(w.page, M.ym);
+    const vectors = ['=1+2', '+A1', '@x', '-x', ' =1+2', '\t=1+2', '\r=1+2', '\n+A1', '\u00a0@x', '\u200b=1+2', '\ufeff-x', '\uff1d1+2', '\uff20SUM(A1)'];
+    const keep = ['-28', '12.5', '0', '-1.5%', '2026-10-05', '01 Oct – 04 Oct', 'Within plan · so far', 'Daily limit breached · 1 day >50', 'Not final', 'No log', '7/7'];
+    const res = await w.page.evaluate(([a, b]) => ({ bad: a.map(v => window.__qdCsvCell(v)), ok: b.map(v => window.__qdCsvCell(v)) }), [vectors, keep]);
+    res.bad.forEach((v, i) => assert.ok(v.replace(/^"/, '').startsWith("'"), `neutralised: ${JSON.stringify(vectors[i])} -> ${JSON.stringify(v)}`));
+    assert.deepEqual(res.ok, keep, 'numbers, dates and D1 texts unchanged');
+    await w.context.close();
+  });
+});
+
