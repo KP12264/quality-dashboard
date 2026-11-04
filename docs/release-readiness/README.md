@@ -89,6 +89,37 @@ Re-used data is never older than `QD_VIEW_CACHE_MINUTES` = **5 minutes**.
 - **A filter click** shows the data loaded at the time in "Last refreshed", which it does not change. Up to 5 minutes it re-uses that data; after 5 minutes it reads again.
 - Tested (release-readiness §5): a log written elsewhere stays out on filter clicks; Refresh shows it in the KPI and the card; after 5 minutes a filter click shows the next one; a reopened page shows both. Weekly Plan: Reload, and a month older than 5 minutes, show the new log.
 
+| Path | Behaviour | Test |
+|---|---|---|
+| Filter change within 5 min | re-uses the loaded data; numbers identical to a fresh read; "Last refreshed" unchanged | §4, §5 |
+| Data older than 5 min | the next filter click / month switch reads fresh; until then a hint says "older than 5 min — press Refresh / Reload" (clock only, no reads) | §5, §6 |
+| Refresh / Reload | always reads fresh (card included) | §4, §5, §6 |
+| Save / import **in the same tab** (Scrap Entry is another page) | coming back is a new page load, or a back/forward-cache restore, which now reloads: always fresh | §6 |
+| Save **in another tab** | shown at once with Refresh / Reload, at the latest after 5 minutes on the next action; the stale hint tells the user | §5, §6 |
+| Admin plan / review save on weekly-plan.html | the page re-reads the plans at once | weekly-plan e2e |
+
+### Private data after sign-out or an account switch
+
+When a signed-in user signs out, or another account takes over, the page reloads. "Another account" includes a sign-out or switch in another tab, because Firebase Auth shares the session between tabs.
+
+- No private value stays on screen or in memory: Recorded By, improvement owners, plan history, review notes.
+- The page only shows "Signing out…" until the reload.
+- Pages restored from the back/forward cache reload too.
+- The caches hold public data only: scrap, plans, close summary. Review notes and history are never cached.
+- Tested:
+  - Weekly Plan: history and review note are gone after sign-out; signing out in tab B clears tab A; Admin → Viewer shows Viewer rights only.
+  - Scrap Detail: "Recorded By" is gone after sign-out.
+  - Existing auth / shift-close tests that sign out and back in still pass.
+
+### Measuring reads: queries vs documents
+
+The counter wraps every Firestore `get()` in the browser and records three numbers per collection:
+- queries;
+- documents returned;
+- an **estimate** of billed reads: each document returned, at least 1 per query, and 1 per document get even when the document does not exist.
+
+**Limitation:** the emulator has no billing, so actual billed reads cannot be measured here; they show only in the Firebase Console (Usage) on the real project. The query count is never used as the read count.
+
 ### Weekly status when a day is over 50
 
 Two separate checks:
@@ -124,7 +155,11 @@ A day over 50 therefore never hides; it does not by itself turn a week that is w
 | 12 | `target-close` read test counted before the card had finished loading (race) | test | waits until the page has settled | e2e |
 | 13 | Re-used data had no age limit (a save / import elsewhere could stay hidden until Refresh) | logic | 5-minute cap (`QD_VIEW_CACHE_MINUTES`) | e2e §5 |
 | 14 | `rules-transition` expected the old banner wording | test | expects the new "access denied … NOT a confirmed plan" | e2e |
-| 15 | Changed JS / CSS kept old `?v=` cache keys | release | bumped on index.html / weekly-plan.html | — |
+| 15 | Changed JS / CSS kept old `?v=` cache keys | release | bumped (qd-auth.js on every page) | — |
+| 16 | Private data stayed on screen after sign-out / an account switch (also from another tab) | privacy | page reloads when the signed-in user leaves | e2e §6, privacy e2e |
+| 17 | A page restored from the back/forward cache could show data from before a save | logic | reload on restore | e2e §6 |
+| 18 | No sign that the shown data was old (other tab saves) | UI | stale hint next to Refresh / "Loaded hh:mm (TH)" on Weekly Plan | e2e §6 |
+| 19 | Read report showed only documents returned | report | + billed estimate and the limitation | read-cost.md |
 
 Open (not fixed; decisions):
 
