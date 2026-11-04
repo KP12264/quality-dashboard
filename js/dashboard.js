@@ -1127,6 +1127,9 @@
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="14 7 21 7 21 14"/></svg>
         <span>No production or scrap data in this period.</span>`;
       holder.insertAdjacentElement('afterend', empty);
+      // nothing is drawn: no legend / note may be left over from the previous range (e.g. "Over target")
+      if ($('trendLegend')) $('trendLegend').innerHTML = '';
+      if ($('trendNote')) $('trendNote').textContent = '';
       return;
     }
     holder.style.display = '';

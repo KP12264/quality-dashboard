@@ -194,6 +194,20 @@ describe('1. Dashboard V5 with the Scrap Budget card', () => {
   }
 });
 
+describe('1b. Dashboard: a period without any data shows no leftover legend', () => {
+  it('month range (legend with Over / Within) → a day with no production and no scrap: empty legend and note', async () => {
+    const { page, context } = await newPage();
+    await dashOpen(page);
+    await dashRange(page, M.d(1), M.d(M.nDays));
+    assert.match(await page.textContent('#trendLegend'), /Over target/);
+    await dashRange(page, M.d(11), M.d(11));   // seeded: no production, no scrap log
+    assert.match(await page.textContent('#scrapTrendCard'), /No production or scrap data in this period/);
+    assert.equal((await page.textContent('#trendLegend')).trim(), '', 'no leftover legend');
+    assert.equal((await page.textContent('#trendNote')).trim(), '');
+    await context.close();
+  });
+});
+
 describe('2. weekly-plan.html — every important state', () => {
   it('month summary + weeks table: Over plan, Within plan (final), Not final; plan sources', async () => {
     const { page, context, errors } = await newPage();
