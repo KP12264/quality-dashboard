@@ -3,7 +3,10 @@
 Branch `claude/vigilant-pasteur-l91qt3`, Emulator `demo-quality-dashboard` only. Nothing was deployed, published or merged. Firestore Production and Production V2 were not touched.
 The flags are unchanged: `QD_AUTH_MODE = "off"`, `QD_CLOSE_REQUIRED_FROM = null`, `QD_OPS_WRITE_ENABLED = false`.
 
-**Overall: NO-GO for production.** The code is ready on the development branch. Every gate below that needs an owner decision is still open.
+**Final code: `1363aae`.** **Overall: NO-GO for production.**
+
+The code is ready and fully tested on the development branch, but every gate below that needs an owner decision is still open (⛔).
+GO requires all ⛔ to be resolved and approved. NO-GO also applies if any suite fails or the re-copied production rules hash differs.
 
 ## 1. Dashboard V5 with the Scrap Budget card
 
