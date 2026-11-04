@@ -13,20 +13,44 @@
   const C = () => window.WeeklyPlanCalc, U = () => window.WeeklyPlanCalc.util;
   const fmt = n => Number.isFinite(n) ? Math.round(n).toLocaleString('en-US') : '–';
   const pct = n => Number.isFinite(n) ? (n * 100).toFixed(0) + '%' : '–';
+  // Remaining below zero is shown as "N over" (never as a negative budget).
+  const remain = n => !Number.isFinite(n) ? '–' : (n < 0 ? `<span class="wp-over">${Math.round(-n).toLocaleString('en-US')} over</span>` : Math.round(n).toLocaleString('en-US'));
+  // ON_TRACK on a week / month that is complete and final reads "Within plan".
+  const statusKey = p => (p.status === 'ON_TRACK' && p.final ? 'WITHIN_PLAN' : p.status);
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const LINE_LABEL = code => { const l = LINES.find(x => x.code === code); return l ? l.label : code; };
 
   const STATUS = {
-    ON_TRACK: ['On track', 'good'], OVER: ['Over plan', 'bad'], NOT_FINAL: ['Not final', 'warn'],
+    ON_TRACK: ['On track', 'good'], WITHIN_PLAN: ['Within plan', 'good'], OVER: ['Over plan', 'bad'], NOT_FINAL: ['Not final', 'warn'],
     NOT_STARTED: ['Not started', 'neutral'], READ_ERROR: ['Read error', 'bad']
   };
   const DAY_STATE = {
     FINAL: ['Final', 'good'], LOGGED: ['Logged · not closed', 'warn'], PENDING: ['Pending close', 'warn'],
     CONFLICT: ['Conflict', 'bad'], NO_DATA: ['No data (not 0)', 'neutral'], READ_ERROR: ['Read error', 'bad'], FUTURE: ['—', 'neutral']
   };
+  // Plan source (never shows a default as an approved plan)
+  const PLAN_SOURCE = {
+    OVERRIDE: ['Set by Admin', 'good', 'An Admin set this plan (history in the editor)'],
+    ADMIN_DEFAULT: ['Default · confirmed', 'good', 'An Admin confirmed the default plan (50 × days)'],
+    DEFAULT: ['Default · not set', 'neutral', 'No plan has been set for this week: the default 50 × days is shown, not an approved plan'],
+    UNAVAILABLE: ['Default · unconfirmed', 'warn', 'Weekly plans could not be read: the default 50 × days is shown and is NOT a confirmed plan']
+  };
+  const planTag = src => { const [t, c, title] = PLAN_SOURCE[src]; return `<span class="wp-chip ${c} wp-src" data-source="${src}" title="${esc(title)}">${esc(t)}</span>`; };
+  const FINAL_TEXT = { 'WITHIN TARGET': 'Final', 'OVER TARGET': 'Final · over 50', 'NO PRODUCTION': 'Final · no production' };
+  function dayChip(d) {
+    if (d.state === 'FINAL') return `<span class="wp-chip ${d.evaluatorStatus === 'OVER TARGET' ? 'bad' : 'good'}" data-status="FINAL">${esc(FINAL_TEXT[d.evaluatorStatus] || 'Final')}</span>`;
+    return chip(DAY_STATE, d.state);
+  }
+  function plansProblem() {
+    const e = state.data && state.data.plans && state.data.plans.error;
+    if (!e) return null;
+    return /permission/i.test(e.code || e.message || '') ? 'denied' : 'error';
+  }
   const chip = (map, k) => { const [t, c] = map[k] || [k, 'neutral']; return `<span class="wp-chip ${c}" data-status="${esc(k)}">${esc(t)}</span>`; };
 
-  const state = { ym: null, week: null, asOf: null, data: null, month: null, improveScope: 'week', reviews: null, goal: null, loadSeq: 0 };
+  // cache: per month, what was read (scrap, plans, closes, goal) — going back to a month reads
+  // nothing again; Reload reads that month fresh. Reopening the page starts empty.
+  const state = { ym: null, week: null, asOf: null, data: null, month: null, improveScope: 'week', reviews: null, goal: null, loadSeq: 0, cache: new Map(), goals: new Map() };
   window.__qdWeeklyPlan = state;   // read by the tests
 
   function todayBkk() { return new Date(Date.now() + 7 * 3600000).toISOString().slice(0, 10); }
@@ -50,13 +74,16 @@
   const canEdit = () => signedIn() && QDAuth.can('weeklyPlan.write', {});
 
   // ---- load ------------------------------------------------------------------------------
-  async function load() {
+  async function load(force) {
     const seq = ++state.loadSeq;
     const ym = state.ym, asOf = asOfFor(ym), db = window.qdDb;
-    state.asOf = asOf; state.goal = null;
-    $('wpGoalBody').innerHTML = ''; if ($('wpGoal').open) $('wpGoal').open = false;
+    if (force) { state.cache.delete(ym); state.goals.delete(ym); }
+    state.asOf = asOf; state.goal = state.goals.get(ym) || null;
+    $('wpGoalBody').innerHTML = ''; if ($('wpGoal').open) $('wpGoal').open = false;   // reopening shows the kept goal
     $('wpMonth').innerHTML = '<div class="wp-loading">Loading…</div>';
     if (window.qdFirebaseError || !db) { banner('error', '⚠ ' + (window.qdFirebaseError || 'Not connected to Firestore.')); return; }
+    const hit = state.cache.get(ym);
+    if (hit && hit.asOf === asOf) { state.data = hit.data; finishLoad(seq); return; }
     const from = U().monthStart(ym);
     const elapsed = asOf >= from;
     const [scrap, plans] = await Promise.all([
@@ -68,10 +95,17 @@
     const close = await WeeklyPlanData.closeStatus(db, dates, scrap.records, !!scrap.error, null);
     if (seq !== state.loadSeq) return;
     state.data = { scrap, plans, close };
+    if (!scrap.error && !close.failed && !plans.error) state.cache.set(ym, { asOf, data: state.data });   // never keep a failed read
+    finishLoad(seq);
+  }
+  function finishLoad(seq) {
+    const { scrap, plans, close } = state.data;
     const msgs = [];
     if (scrap.error) msgs.push('Scrap data could not be read — no figures are shown (never shown as 0).');
     if (close.failed) msgs.push('Shift close status could not be read — affected days show Read error.');
-    if (plans.error) msgs.push('Weekly plans could not be read — the default plan (50 × days) is shown.');
+    if (plans.error) msgs.push(/permission/i.test(plans.error.code || plans.error.message || '')
+      ? 'Weekly plans are not readable here (access denied by the Firestore rules) — the default plan (50 × days) is shown and is NOT a confirmed plan.'
+      : 'Weekly plans could not be read (read error) — the default plan (50 × days) is shown and is NOT a confirmed plan. Try Reload.');
     banner(scrap.error ? 'error' : 'warn', msgs.length ? '⚠ ' + msgs.join(' ') : '');
     compute();
     render();
@@ -113,16 +147,22 @@
   }
   const soFar = p => (p.soFar && p.actual !== null && p.elapsedDays > 0 ? '<sup class="wp-sofar" title="So far — includes days that are not final">so far</sup>' : '');
 
+  function budgetSourceText(m) {
+    if (m.budgetSource === 'UNAVAILABLE') return plansProblem() === 'denied' ? 'plans not readable (access denied): default, unconfirmed' : 'plans could not be read: default, unconfirmed';
+    const set = m.planSources.OVERRIDE + m.planSources.ADMIN_DEFAULT;
+    return set === m.weeks.length ? 'all weeks set by an Admin' : `${set} of ${m.weeks.length} weeks set by an Admin, ${m.planSources.DEFAULT} default (not set)`;
+  }
   function renderMonth() {
     const m = state.month;
     const tile = (k, label, value, sub, extra = '') => `<div class="wp-tile" data-k="${k}"${extra}><div class="wp-tile-label">${label}</div><div class="wp-tile-value">${value}</div><div class="wp-tile-sub">${sub}</div></div>`;
     const remainSub = m.actual === null ? '' : (m.remaining < 0 ? 'over the budget' : (m.soFar ? 'at most, while days are not final' : 'left in the budget'));
     $('wpMonth').innerHTML = `
-      <div class="wp-month-head"><h2>${esc(m.monthLabel)}</h2>${chip(STATUS, m.status)}<span class="wp-asof">as of ${esc(m.elapsedDays ? U().shortDate(m.asOf) : '—')}</span></div>
+      <div class="wp-month-head"><h2>${esc(m.monthLabel)}</h2>${chip(STATUS, statusKey(m))}<span class="wp-asof">as of ${esc(m.elapsedDays ? U().shortDate(m.asOf) : '—')}</span></div>
       <div class="wp-tiles">
-        ${tile('budget', 'Monthly budget', fmt(m.budget) + ' <small>pcs</small>', `= sum of ${m.weeks.length} weekly plans · base ${fmt(m.dailyTarget)} × ${m.daysInMonth} days = ${fmt(m.baseBudget)}`)}
+        ${tile('budget', m.budgetSource === 'CONFIRMED' ? 'Monthly budget' : 'Monthly budget · default', fmt(m.budget) + ' <small>pcs</small>' + (m.budgetSource === 'CONFIRMED' ? '' : ' ' + planTag(m.budgetSource === 'UNAVAILABLE' ? 'UNAVAILABLE' : 'DEFAULT')),
+          `= sum of ${m.weeks.length} weekly plans · ${budgetSourceText(m)} · base ${fmt(m.dailyTarget)} × ${m.daysInMonth} days = ${fmt(m.baseBudget)}`)}
         ${tile('actual', 'Actual', (m.actual === null ? '–' : fmt(m.actual)) + ' <small>pcs</small>' + soFar(m), `plan to date ${fmt(m.planToDate)} pcs`)}
-        ${tile('remaining', 'Remaining', m.actual === null ? '–' : fmt(m.remaining) + ' <small>pcs</small>', remainSub)}
+        ${tile('remaining', 'Remaining', m.actual === null ? '–' : remain(m.remaining) + (m.remaining < 0 ? '' : ' <small>pcs</small>'), remainSub)}
         ${tile('used', '% Used', pct(m.used), m.projection === null ? 'projection: needs a log every day' : `projection ${fmt(m.projection)} pcs`)}
       </div>
       <div class="wp-bar" aria-hidden="true"><i style="width:${Math.min(100, (m.used || 0) * 100).toFixed(1)}%" class="${m.status === 'OVER' ? 'bad' : ''}"></i><b style="left:${m.budget ? Math.min(100, m.planToDate / m.budget * 100).toFixed(1) : 0}%" title="plan to date"></b></div>
@@ -136,20 +176,21 @@
       <tr data-week="${w.key}" class="${w.key === state.week ? 'selected' : ''}" tabindex="0">
         <th scope="row">${w.key}</th>
         <td>${esc(w.label)}</td><td class="n">${w.days}</td>
-        <td class="n">${fmt(w.plan)}${w.override !== null ? ` <span class="wp-ov" title="Admin override (base ${fmt(w.basePlan)})">✎ base ${fmt(w.basePlan)}</span>` : ''}</td>
+        <td class="n"><span class="wp-plan">${fmt(w.plan)}</span>${w.override !== null ? ` <span class="wp-ov" title="Admin override (base ${fmt(w.basePlan)})">base ${fmt(w.basePlan)}</span>` : ''}</td>
+        <td>${planTag(w.planSource)}</td>
         <td class="n">${w.elapsedDays ? fmt(w.planToDate) : '–'}</td>
         <td class="n">${w.elapsedDays ? (w.actual === null ? '–' : (w.noLog ? '<span class="wp-unknown" title="No scrap log on any day yet — not counted as 0">No log</span>' : fmt(w.actual) + soFar(w))) : '–'}</td>
-        <td class="n">${w.elapsedDays && w.actual !== null ? fmt(w.remaining) : '–'}</td>
+        <td class="n">${w.elapsedDays && w.actual !== null && !w.noLog ? remain(w.remaining) : '–'}</td>
         <td class="n">${w.elapsedDays && !w.noLog ? pct(w.used) : '–'}</td>
-        <td>${chip(STATUS, w.status)}</td>
-        <td>${w.elapsedDays ? `${w.counts.final}/${w.elapsedDays} final` : '—'}</td>
+        <td>${chip(STATUS, statusKey(w))}</td>
+        <td>${w.elapsedDays ? `${w.counts.final}/${w.elapsedDays} final` : '—'}${w.counts.overDaily ? ` <span class="wp-chip bad" title="Days over the daily limit">${w.counts.overDaily} day${w.counts.overDaily === 1 ? '' : 's'} &gt;${fmt(m.dailyTarget)}</span>` : ''}</td>
         ${edit ? `<td><button type="button" class="sc-btn wp-edit" data-edit="${w.key}">Edit plan</button></td>` : ''}
       </tr>`).join('');
     $('wpWeeks').innerHTML = `
       <div class="wp-scroll"><table class="wp-table" id="wpWeeksTable">
-        <thead><tr><th>Week</th><th>Dates</th><th class="n">Days</th><th class="n">Plan</th><th class="n">Plan to date</th><th class="n">Actual</th><th class="n">Remaining</th><th class="n">Used</th><th>Status</th><th>Data</th>${edit ? '<th></th>' : ''}</tr></thead>
+        <thead><tr><th>Week</th><th>Dates</th><th class="n">Days</th><th class="n">Plan</th><th>Plan source</th><th class="n">Plan to date</th><th class="n">Actual</th><th class="n">Remaining</th><th class="n">Used</th><th>Status</th><th>Data</th>${edit ? '<th></th>' : ''}</tr></thead>
         <tbody>${rows}</tbody>
-        <tfoot><tr><th>Month</th><td></td><td class="n">${m.daysInMonth}</td><td class="n">${fmt(m.budget)}</td><td class="n">${m.elapsedDays ? fmt(m.planToDate) : '–'}</td><td class="n">${m.actual === null ? '–' : fmt(m.actual)}</td><td class="n">${m.actual === null ? '–' : fmt(m.remaining)}</td><td class="n">${pct(m.used)}</td><td>${chip(STATUS, m.status)}</td><td>${m.elapsedDays ? `${m.counts.final}/${m.elapsedDays} final` : '—'}</td>${edit ? '<td></td>' : ''}</tr></tfoot>
+        <tfoot><tr><th>Month</th><td></td><td class="n">${m.daysInMonth}</td><td class="n">${fmt(m.budget)}</td><td>${m.budgetSource === 'CONFIRMED' ? '' : planTag(m.budgetSource === 'UNAVAILABLE' ? 'UNAVAILABLE' : 'DEFAULT')}</td><td class="n">${m.elapsedDays ? fmt(m.planToDate) : '–'}</td><td class="n">${m.actual === null ? '–' : fmt(m.actual)}</td><td class="n">${m.actual === null ? '–' : remain(m.remaining)}</td><td class="n">${pct(m.used)}</td><td>${chip(STATUS, statusKey(m))}</td><td>${m.elapsedDays ? `${m.counts.final}/${m.elapsedDays} final` : '—'}</td>${edit ? '<td></td>' : ''}</tr></tfoot>
       </table></div>
       <p class="wp-note">Weeks run Monday–Sunday inside the month, so a day is counted in one week of one month only. Plan = ${fmt(DAILY_TARGET_PCS)} × days unless an Admin sets a lower plan.</p>`;
   }
@@ -170,13 +211,13 @@
         <th scope="row">${esc(d.label)}</th>
         <td class="n">${d.state === 'FUTURE' ? '—' : (d.qty === null ? '<span class="wp-unknown" title="No scrap log — not counted as 0">—</span>' : fmt(d.qty))}</td>
         <td>${d.qty === null ? '' : (d.overDaily ? `<span class="wp-chip bad">&gt;${fmt(m.dailyTarget)}</span>` : `<span class="wp-chip good">≤${fmt(m.dailyTarget)}</span>`)}</td>
-        <td>${chip(DAY_STATE, d.state)}</td>
+        <td>${dayChip(d)}</td>
         <td>${d.closeRequired && d.state !== 'FUTURE' ? `<a href="daily-confirmation.html?date=${d.date}${window.qdEmulator ? '&qdEmulator=1' : ''}">${esc(d.closeText || '0/6')} closed</a>` : (d.state === 'FUTURE' ? '' : 'close not required')}</td>
         ${LINES.map(l => `<td class="n">${d.state === 'FUTURE' || d.qty === null ? '—' : fmt(d.lineShift[l.code].total)}</td>`).join('')}
       </tr>`).join('');
     $('wpWeekDetail').innerHTML = `
-      <div class="wp-section-head"><h2>${w.key} · ${esc(w.label)}</h2>${chip(STATUS, w.status)}</div>
-      <p class="wp-data" id="wpWeekData">Plan ${fmt(w.plan)} pcs${w.override !== null ? ` (Admin override, base ${fmt(w.basePlan)})` : ` (${fmt(DAILY_TARGET_PCS)} × ${w.days} days)`} · Actual ${w.actual === null ? '–' : (w.noLog ? 'no scrap log yet' : fmt(w.actual) + (w.soFar && w.elapsedDays ? ' so far' : ''))} · Remaining ${w.actual === null || !w.elapsedDays ? '–' : fmt(w.remaining)} · Data: ${esc(w.elapsedDays ? dataLine(w.counts, m) : 'not started')}</p>
+      <div class="wp-section-head"><h2>${w.key} · ${esc(w.label)}</h2>${chip(STATUS, statusKey(w))}</div>
+      <p class="wp-data" id="wpWeekData">Plan ${fmt(w.plan)} pcs${w.override !== null ? ` (Admin override, base ${fmt(w.basePlan)})` : ` (${fmt(DAILY_TARGET_PCS)} × ${w.days} days)`} ${planTag(w.planSource)} · Actual ${w.actual === null ? '–' : (w.noLog ? 'no scrap log yet' : fmt(w.actual) + (w.soFar && w.elapsedDays ? ' so far' : ''))} · Remaining ${w.actual === null || !w.elapsedDays || w.noLog ? '–' : remain(w.remaining)} · Data: ${esc(w.elapsedDays ? dataLine(w.counts, m) : 'not started')}</p>
       <div class="wp-grid2">
         <div><div class="wp-scroll"><table class="wp-table" id="wpDaysTable"><caption>Days · daily limit ≤${fmt(m.dailyTarget)} pcs (Door A+B+C, Day + Night)</caption>
           <thead><tr><th>Date</th><th class="n">Scrap</th><th>≤${fmt(m.dailyTarget)}</th><th>Data</th><th>Shift Close</th>${LINES.map(l => `<th class="n">${esc(l.label)}</th>`).join('')}</tr></thead>
@@ -233,7 +274,8 @@
 
   // ---- reduction goal (previous month, loaded on demand) ---------------------------------
   async function loadGoal() {
-    if (state.goal || !state.month) return;
+    if (state.goal && state.goal.forYm === state.ym) { renderGoal(); return; }
+    if (!state.month) return;
     const seq = state.loadSeq, db = window.qdDb, pym = U().prevMonth(state.ym);
     $('wpGoalBody').innerHTML = '<div class="wp-loading">Loading the previous month…</div>';
     const from = U().monthStart(pym), to = U().monthEnd(pym);
@@ -241,7 +283,8 @@
     const close = await WeeklyPlanData.closeStatus(db, U().datesBetween(from, to), scrap.records, !!scrap.error, null);
     if (seq !== state.loadSeq) return;
     const prev = C().buildMonth({ ym: pym, asOf: to, records: scrap.records, scrapReadFailed: !!scrap.error, closeFrom: close.from, closeUnits: close.units, closeReadFailed: close.failed, overrides: {}, dailyTarget: DAILY_TARGET_PCS });
-    state.goal = C().reductionGoal({ prev, current: state.month, goal: QD_MONTHLY_REDUCTION_GOAL });
+    state.goal = Object.assign(C().reductionGoal({ prev, current: state.month, goal: QD_MONTHLY_REDUCTION_GOAL }), { forYm: state.ym });
+    if (!scrap.error && !close.failed) state.goals.set(state.ym, state.goal);
     renderGoal();
   }
   function renderGoal() {
@@ -273,7 +316,7 @@
     if (typeof dlg.showModal === 'function') dlg.showModal(); else dlg.setAttribute('open', '');
     try {
       const h = await WeeklyPlanData.loadHistory(window.qdDb, state.ym, w.key);
-      $('wpEditHistory').innerHTML = h.length ? h.map(x => `<li>#${x.rev} · ${x.from === null || x.from === undefined ? 'default' : fmt(x.from)} → ${x.to === null ? 'default' : fmt(x.to)} · ${esc(x.reason)} · ${esc(x.by || '')}${x.at ? ' · ' + esc(x.at.toLocaleString('en-GB')) : ''}</li>`).join('') : '<li class="wp-note">No changes yet.</li>';
+      $('wpEditHistory').innerHTML = h.length ? h.map(x => `<li>#${x.rev} · ${x.from === null || x.from === undefined ? 'default' : fmt(x.from)} → ${x.to === null ? 'default' : fmt(x.to)} · ${esc(x.reason)} · ${esc(x.by || '')}${x.at ? ' · ' + esc(x.at.toLocaleString('en-GB', { timeZone: 'Asia/Bangkok', day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })) + ' (TH)' : ''}</li>`).join('') : '<li class="wp-note">No changes yet.</li>';
     } catch (e) { $('wpEditHistory').innerHTML = '<li class="wp-note">History could not be read.</li>'; }
   }
   async function saveEditor(clear) {
@@ -307,7 +350,7 @@
     $('wpMonthInput').addEventListener('change', () => { if (/^\d{4}-\d{2}$/.test($('wpMonthInput').value)) go($('wpMonthInput').value); });
     $('wpPrev').addEventListener('click', () => go(U().prevMonth(state.ym)));
     $('wpNext').addEventListener('click', () => go(U().nextMonth(state.ym)));
-    $('wpReload').addEventListener('click', () => load());
+    $('wpReload').addEventListener('click', () => load(true));
     $('wpWeeks').addEventListener('click', e => {
       const ed = e.target.closest('[data-edit]'); if (ed) { openEditor(ed.dataset.edit); return; }
       const tr = e.target.closest('tr[data-week]'); if (tr) { state.week = tr.dataset.week; renderWeeks(); renderWeek(); renderImprove(); renderReview(); writeUrl(); }

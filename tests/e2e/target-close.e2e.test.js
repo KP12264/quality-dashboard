@@ -259,6 +259,10 @@ describe('Dashboard, Executive Report and CSV agree (emulator)', () => {
       await page.waitForFunction(() => window.qdDb, null, { timeout: 15000 });
       await page.evaluate(COUNT_READS);
       await dashboardStatuses(page, D.pre, D.pending);
+      // wait until the whole page has settled (Attention Required + the Weekly Plan V5 card), so both
+      // measurements count the same reads
+      await page.waitForFunction(() => window.__qdPlanCard && window.__qdPlanCard.month && !/Loading/.test(document.getElementById('attentionSummary').textContent), null, { timeout: 20000 });
+      await page.waitForTimeout(300);
       const reads = await page.evaluate(() => window.__qdReads);
       await context.close();
       return reads;

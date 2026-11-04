@@ -183,6 +183,13 @@
       const raw = o.overrides ? o.overrides[w.key] : null;
       const ov = resolveOverride(raw, basePlan);
       if (ov.invalid) warnings.push('override-invalid:' + w.key);
+      // Where the plan comes from — a default is never presented as an approved plan:
+      //   UNAVAILABLE    plans could not be read (e.g. denied by the rules): default shown, unconfirmed
+      //   DEFAULT        no plan document for the week (nobody set it): default, not set by an Admin
+      //   ADMIN_DEFAULT  an Admin confirmed the default (document with planOverride null)
+      //   OVERRIDE       an Admin set a lower plan
+      const hasDoc = !!o.overrides && Object.prototype.hasOwnProperty.call(o.overrides, w.key);
+      const planSource = o.plansReadFailed ? 'UNAVAILABLE' : ov.value !== null ? 'OVERRIDE' : (hasDoc && (raw === null || raw === undefined) ? 'ADMIN_DEFAULT' : 'DEFAULT');
       const plan = ov.value !== null ? ov.value : basePlan;
       const elapsedDays = wDays.filter(d => d.elapsed).length;
       const planToDate = plan * elapsedDays / w.days;
@@ -192,7 +199,7 @@
       const ls = blankLineShift();
       if (!scrapReadFailed) recs.filter(r => r.date >= w.start && r.date <= w.end).forEach(r => addLineShift(ls, r));
       return Object.assign({}, w, {
-        basePlan, override: ov.value, overrideRaw: raw === undefined ? null : raw, overrideInvalid: ov.invalid, plan,
+        basePlan, planSource, planConfirmed: planSource === 'OVERRIDE' || planSource === 'ADMIN_DEFAULT', override: ov.value, overrideRaw: raw === undefined ? null : raw, overrideInvalid: ov.invalid, plan,
         elapsedDays, planToDate, actual, remaining: actual === null ? null : plan - actual,
         used: actual === null || plan <= 0 ? null : actual / plan,
         budgetExceeded: actual !== null && actual > plan,
@@ -205,6 +212,11 @@
 
     const elapsedDays = days.filter(d => d.elapsed).length;
     const budget = weeks.reduce((s, w) => s + w.plan, 0);
+    const planSources = { OVERRIDE: 0, ADMIN_DEFAULT: 0, DEFAULT: 0, UNAVAILABLE: 0 };
+    weeks.forEach(w => { planSources[w.planSource]++; });
+    // CONFIRMED: every week's plan was set by an Admin; DEFAULT: at least one week has no plan;
+    // UNAVAILABLE: the plans could not be read at all (budget = default, unconfirmed).
+    const budgetSource = o.plansReadFailed ? 'UNAVAILABLE' : (planSources.DEFAULT === 0 ? 'CONFIRMED' : 'DEFAULT');
     const planToDate = weeks.reduce((s, w) => s + w.planToDate, 0);
     const actual = scrapReadFailed ? null : weeks.reduce((s, w) => s + w.actual, 0);
     const counts = countStates(days);
@@ -221,7 +233,7 @@
       final: allFinal && elapsedDays === nDays, soFar: !(allFinal && elapsedDays === nDays),
       counts, status: periodStatus({ elapsedDays, actual, planToDate, anyReadError: counts.readError > 0, allFinal }),
       closeFrom, closeInUse: !!closeFrom && closeFrom <= asOf && asOf >= dailyFrom,
-      lineShift: ls, weeks, days, warnings
+      budgetSource, planSources, lineShift: ls, weeks, days, warnings
     };
   }
 

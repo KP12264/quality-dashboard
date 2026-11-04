@@ -204,3 +204,18 @@ test('config: weekly plan constants', () => {
   assert.equal(K('QD_AUTH_MODE'), 'off');
   assert.equal(K('QD_CLOSE_REQUIRED_FROM'), null);
 });
+
+test('plan source: no document = DEFAULT (not set), Admin default = ADMIN_DEFAULT, override, unreadable = UNAVAILABLE — a default is never "confirmed"', () => {
+  const m = P.buildMonth({ ym: '2026-10', asOf: '2026-10-31', records: [], overrides: { W2: 300, W4: null } });
+  assert.deepEqual(plain(m.weeks.map(w => [w.key, w.planSource, w.planConfirmed])), [['W1', 'DEFAULT', false], ['W2', 'OVERRIDE', true], ['W3', 'DEFAULT', false], ['W4', 'ADMIN_DEFAULT', true], ['W5', 'DEFAULT', false]]);
+  assert.equal(m.budgetSource, 'DEFAULT'); assert.deepEqual(plain(m.planSources), { OVERRIDE: 1, ADMIN_DEFAULT: 1, DEFAULT: 3, UNAVAILABLE: 0 });
+  const all = P.buildMonth({ ym: '2026-10', asOf: '2026-10-31', records: [], overrides: { W1: null, W2: 300, W3: null, W4: null, W5: 250 } });
+  assert.equal(all.budgetSource, 'CONFIRMED');
+  // the read failed: same default numbers, but UNAVAILABLE everywhere (even where a plan may exist)
+  const failed = P.buildMonth({ ym: '2026-10', asOf: '2026-10-31', records: [], overrides: {}, plansReadFailed: true });
+  assert.equal(failed.budgetSource, 'UNAVAILABLE'); assert.ok(failed.weeks.every(w => w.planSource === 'UNAVAILABLE' && !w.planConfirmed));
+  assert.equal(failed.budget, 1550); assert.deepEqual(plain(failed.warnings), ['plans-read-failed']);
+  // an invalid override is not applied and the week counts as not set
+  const bad = P.buildMonth({ ym: '2026-10', asOf: '2026-10-31', records: [], overrides: { W1: 999 } });
+  assert.equal(bad.weeks[0].planSource, 'DEFAULT'); assert.equal(bad.weeks[0].plan, 200);
+});

@@ -10,16 +10,38 @@
  *                 missing days (1st … From − 1) are read, in one query.
  * Shift Close: the close context the Dashboard loaded (only missing close-required dates are read).
  * Plans: one query (<= 6 documents). Details live on weekly-plan.html.
+ * Cache: what the card reads ITSELF (plans, the missing days, missing close dates) is kept for the
+ * page session, so changing the Line / Shift filter or going back to a date reads nothing again;
+ * the Refresh button (PlanCard.invalidate) and reopening the page read it fresh.
  * Exposed as window.PlanCard.
  * ------------------------------------------------------------------
  */
 (function () {
   const fmt = n => Number.isFinite(n) ? Math.round(n).toLocaleString('en-US') : '–';
   const pct = n => Number.isFinite(n) ? (n * 100).toFixed(0) + '%' : '–';
+  // Remaining below zero is shown as "N over" (never as a negative budget).
+  const remain = n => !Number.isFinite(n) ? '–' : (n < 0 ? `<span class="wp-over">${Math.round(-n).toLocaleString('en-US')} over</span>` : Math.round(n).toLocaleString('en-US'));
+  // ON_TRACK on a week / month that is complete and final reads "Within plan".
+  const statusKey = p => (p.status === 'ON_TRACK' && p.final ? 'WITHIN_PLAN' : p.status);
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const STATUS = { ON_TRACK: ['On track', 'good'], OVER: ['Over plan', 'bad'], NOT_FINAL: ['Not final', 'warn'], NOT_STARTED: ['Not started', 'neutral'], READ_ERROR: ['Read error', 'bad'] };
+  const STATUS = { ON_TRACK: ['On track', 'good'], WITHIN_PLAN: ['Within plan', 'good'], OVER: ['Over plan', 'bad'], NOT_FINAL: ['Not final', 'warn'], NOT_STARTED: ['Not started', 'neutral'], READ_ERROR: ['Read error', 'bad'] };
   const chip = k => { const [t, c] = STATUS[k] || [k, 'neutral']; return `<span class="wp-chip ${c}" data-status="${k}">${t}</span>`; };
   const todayBkk = () => new Date(Date.now() + 7 * 3600000).toISOString().slice(0, 10);
+  let cache = new Map();
+  const cached = (key, fn) => {
+    if (!cache.has(key)) {
+      const p = Promise.resolve().then(fn);
+      cache.set(key, p);
+      p.then(v => { if (v && v.error) cache.delete(key); }, () => cache.delete(key));   // never keep a failure
+    }
+    return cache.get(key);
+  };
+  function invalidate() { cache = new Map(); }
+  const SRC = {
+    OVERRIDE: ['set by Admin', 'good'], ADMIN_DEFAULT: ['default · confirmed', 'good'],
+    DEFAULT: ['default · not set', 'neutral'], UNAVAILABLE: ['default · unconfirmed', 'warn']
+  };
+  const srcTag = k => `<span class="wp-chip ${SRC[k][1]} wp-src" data-source="${k}">${SRC[k][0]}</span>`;
 
   /**
    * Scrap records covering [win.from, win.to]: reuse `sources` ({ from, to, result }) that the
@@ -32,25 +54,26 @@
     if (best && best.from <= win.from) return { records: best.result.records, error: false, extraQuery: null };
     const U = WeeklyPlanCalc.util;
     const gapTo = best ? U.addDays(best.from, -1) : win.to;
-    const extra = await ScrapDataAdapter.getScrapData(db, { startDate: win.from, endDate: gapTo });
+    const extra = await cached(`gap|${win.from}|${gapTo}`, () => ScrapDataAdapter.getScrapData(db, { startDate: win.from, endDate: gapTo }));
     if (extra.error) return { records: [], error: true, extraQuery: [win.from, gapTo] };
     return { records: extra.records.concat(best ? best.result.records : []), error: false, extraQuery: [win.from, gapTo] };
   }
 
-  function half(title, p, extraLine) {
-    if (p.status === 'NOT_STARTED') return `<div class="v5-budget-half"><h3>${title} ${chip(p.status)}</h3><div class="v5-budget-nums">Plan <b>${fmt(p.plan)}</b> pcs</div></div>`;
+  function half(title, p, extraLine, source) {
+    if (p.status === 'NOT_STARTED') return `<div class="v5-budget-half"><h3>${title} ${chip(p.status)}</h3><div class="v5-budget-nums">Plan <b>${fmt(p.plan)}</b> pcs ${srcTag(source)}</div></div>`;
     const actual = p.actual === null ? '–' : (p.noLog ? 'No log' : fmt(p.actual));
     const c = p.counts;
     const data = c.final === c.elapsed ? `${c.final}/${c.elapsed} days final`
       : `${c.final}/${c.elapsed} days final${c.noData ? ` · ${c.noData} without scrap log (not counted as 0)` : ''}`;
     return `<div class="v5-budget-half" data-k="${title.toLowerCase().startsWith('this week') ? 'week' : 'month'}">
-      <h3>${title} ${chip(p.status)}</h3>
-      <div class="v5-budget-nums">
-        <span>Actual <b data-v="actual">${actual}</b>${p.soFar && p.actual !== null && !p.noLog ? ' <span class="wp-sofar">so far</span>' : ''} of <span data-v="plan">${fmt(p.plan)}</span> pcs</span>
-        <span>Remaining <b data-v="remaining">${p.actual === null ? '–' : fmt(p.remaining)}</b></span>
-        <span>Used <b data-v="used">${p.noLog ? '–' : pct(p.used)}</b></span>
-      </div>
-      <div class="wp-bar" aria-hidden="true"><i style="width:${Math.min(100, (p.used || 0) * 100).toFixed(1)}%" class="${p.status === 'OVER' ? 'bad' : ''}"></i><b style="left:${p.plan ? Math.min(100, p.planToDate / p.plan * 100).toFixed(1) : 0}%"></b></div>
+      <h3>${title} ${chip(statusKey(p))}</h3>
+      <div class="v5-budget-plan">Plan <b data-v="plan">${fmt(p.plan)}</b> pcs ${srcTag(source)}</div>
+      <dl class="v5-budget-stats">
+        <div><dt>Actual${p.soFar && p.actual !== null && !p.noLog ? ' <span class="wp-sofar">so far</span>' : ''}</dt><dd data-v="actual">${actual}</dd></div>
+        <div><dt>Remaining</dt><dd data-v="remaining">${p.actual === null || p.noLog ? '–' : remain(p.remaining)}</dd></div>
+        <div><dt>Used</dt><dd data-v="used">${p.noLog ? '–' : pct(p.used)}</dd></div>
+      </dl>
+      <div class="wp-bar" title="Bar: used · line: plan to date" aria-hidden="true"><i style="width:${Math.min(100, (p.used || 0) * 100).toFixed(1)}%" class="${p.status === 'OVER' ? 'bad' : ''}"></i><b style="left:${p.plan ? Math.min(100, p.planToDate / p.plan * 100).toFixed(1) : 0}%"></b></div>
       <div class="v5-budget-data">${esc(data)}${extraLine ? ' · ' + extraLine : ''}</div>
     </div>`;
   }
@@ -71,11 +94,11 @@
       const sources = [ctx.range];
       if (ctx.lookback) sources.push(await ctx.lookback);
       if (!ctx.isCurrent()) return;
-      const [scrap, plans] = await Promise.all([monthRecords(ctx.db, win, sources), WeeklyPlanData.loadPlans(ctx.db, win.ym)]);
+      const [scrap, plans] = await Promise.all([monthRecords(ctx.db, win, sources), cached(`plans|${win.ym}`, () => WeeklyPlanData.loadPlans(ctx.db, win.ym))]);
       if (!ctx.isCurrent()) return;
       stats.extraScrapQuery = scrap.extraQuery;
       const dates = WeeklyPlanCalc.util.datesBetween(win.from, win.asOf);
-      const close = await WeeklyPlanData.closeStatus(ctx.db, dates, scrap.records, scrap.error, { dates: ctx.rangeDates || [], ctx: ctx.closeContext });
+      const close = await WeeklyPlanData.closeStatus(ctx.db, dates, scrap.records, scrap.error, { dates: ctx.rangeDates || [], ctx: ctx.closeContext }, cached);
       if (!ctx.isCurrent()) return;
       stats.closeQueries = close.queries;
       const m = WeeklyPlanCalc.buildMonth({ ym: win.ym, asOf: win.asOf, records: scrap.records, scrapReadFailed: scrap.error,
@@ -83,18 +106,22 @@
       const w = m.weeks.find(x => win.asOf >= x.start && win.asOf <= x.end);
       const day = m.days.find(d => d.date === win.asOf);
       stats.month = { budget: m.budget, actual: m.actual, remaining: m.remaining, used: m.used, status: m.status, final: m.counts.final, elapsed: m.counts.elapsed };
-      stats.week = { key: w.key, plan: w.plan, actual: w.actual, remaining: w.remaining, used: w.used, status: w.status };
+      stats.month.budgetSource = m.budgetSource;
+      stats.week = { key: w.key, planSource: w.planSource, plan: w.plan, actual: w.actual, remaining: w.remaining, used: w.used, status: w.status };
       const link = `weekly-plan.html?ym=${win.ym}&week=${w.key}${window.qdEmulator ? '&qdEmulator=1' : ''}`;
       const dayLine = day && day.qty !== null ? `${esc(day.label)}: ${fmt(day.qty)} pcs ${day.overDaily ? `&gt; ${fmt(m.dailyTarget)}` : `≤ ${fmt(m.dailyTarget)}`}` : `${esc(day ? day.label : '')}: no scrap log yet`;
       const notes = [];
-      if (plans.error) notes.push('Weekly plans could not be read — default plan (50 × days) shown.');
+      if (plans.error) notes.push(/permission/i.test(plans.error.code || plans.error.message || '')
+        ? 'Weekly plans are not readable (access denied): the default plan (50 × days) is shown, NOT a confirmed plan.'
+        : 'Weekly plans could not be read (read error): the default plan (50 × days) is shown, NOT a confirmed plan.');
+      else if (m.budgetSource === 'DEFAULT') notes.push(`${m.planSources.DEFAULT} of ${m.weeks.length} weeks have no plan set: their default (50 × days) is not an approved plan.`);
       if (!m.closeInUse) notes.push('Shift Close is not in use yet: figures are “so far”, days are not final.');
       container.innerHTML = `
         <div class="v5-budget-head"><h2>Scrap Budget · ${esc(m.monthLabel)}</h2><span class="wp-note">Door A+B+C · Day + Night · daily limit ≤${fmt(m.dailyTarget)} pcs · as of ${esc(WeeklyPlanCalc.util.shortDate(win.asOf))}</span>
           <a class="v5-budget-link" href="${link}">Weekly Plan →</a></div>
         <div class="v5-budget-grid">
-          ${half(`This week · ${w.key} (${w.label})`, w, dayLine)}
-          ${half('This month', Object.assign({}, m, { plan: m.budget }), m.counts.overDaily ? `${m.counts.overDaily} day${m.counts.overDaily === 1 ? '' : 's'} over ${fmt(m.dailyTarget)}` : `no day over ${fmt(m.dailyTarget)} so far`)}
+          ${half(`This week · ${w.key} (${w.label})`, w, dayLine, w.planSource)}
+          ${half('This month', Object.assign({}, m, { plan: m.budget }), m.counts.overDaily ? `${m.counts.overDaily} day${m.counts.overDaily === 1 ? '' : 's'} over ${fmt(m.dailyTarget)}` : `no day over ${fmt(m.dailyTarget)} so far`, m.budgetSource === 'CONFIRMED' ? 'OVERRIDE' : (m.budgetSource === 'UNAVAILABLE' ? 'UNAVAILABLE' : 'DEFAULT'))}
         </div>
         ${notes.length ? `<p class="wp-note">${notes.map(esc).join(' ')}</p>` : ''}`;
     } catch (e) {
@@ -103,5 +130,5 @@
     }
   }
 
-  window.PlanCard = { render, monthRecords };
+  window.PlanCard = { render, monthRecords, invalidate };
 })();

@@ -14,7 +14,7 @@
 .qd-v5 .wp-tile-value small { font-size: 13px; font-weight: 500; color: #64748b; }
 .qd-v5 .wp-tile-sub { font-size: 12px; color: #64748b; overflow-wrap: anywhere; }
 .qd-v5 .wp-sofar { font-size: 11px; font-weight: 600; color: #b45309; margin-left: 4px; vertical-align: super; }
-.qd-v5 .wp-bar { position: relative; height: 10px; border-radius: 6px; background: #e2e8f0; margin: 12px 0 8px; }
+.qd-v5 .wp-bar { position: relative; height: 8px; border-radius: 6px; background: #e2e8f0; margin: 10px 0 6px; }
 .qd-v5 .wp-bar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 6px; background: #0f766e; }
 .qd-v5 .wp-bar i.bad { background: #dc2626; }
 .qd-v5 .wp-bar b { position: absolute; top: -3px; bottom: -3px; width: 2px; background: #334155; }
@@ -36,6 +36,7 @@
 .qd-v5 #wpWeeksTable tbody tr:focus-visible { outline: 2px solid #0f766e; outline-offset: -2px; }
 .qd-v5 .wp-ov { font-size: 11px; color: #92400e; }
 .qd-v5 .wp-unknown { color: #94a3b8; }
+.qd-v5 .wp-over { color: #b91c1c; font-weight: 700; }
 .qd-v5 .wp-grid2 { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 16px; }
 .qd-v5 .wp-defects { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .qd-v5 .wp-defect { border: 1px solid #e2e8f0; border-radius: 10px; padding: 8px 10px; }
@@ -72,6 +73,14 @@
 .qd-v5 .v5-budget-nums { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 13px; color: #334155; }
 .qd-v5 .v5-budget-nums b { font-size: 18px; color: #0f172a; }
 .qd-v5 .v5-budget-data { font-size: 12px; color: #64748b; margin-top: 4px; overflow-wrap: anywhere; }
+.qd-v5 .v5-budget-plan { font-size: 13px; color: #334155; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; }
+.qd-v5 .v5-budget-plan b { font-size: 15px; color: #0f172a; }
+.qd-v5 .v5-budget-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 6px 0 0; }
+.qd-v5 .v5-budget-stats div { min-width: 0; }
+.qd-v5 .v5-budget-stats dt { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: #64748b; white-space: nowrap; }
+.qd-v5 .v5-budget-stats dt .wp-sofar { text-transform: none; letter-spacing: 0; vertical-align: baseline; }
+.qd-v5 .v5-budget-stats dd { margin: 0; font-size: 20px; font-weight: 700; color: #0f172a; font-variant-numeric: tabular-nums; }
+.qd-v5 .wp-src { font-weight: 600; font-size: 11px; padding: 1px 7px; }
 
 @media (max-width: 900px) {
   .qd-v5 .wp-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }

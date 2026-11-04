@@ -63,9 +63,10 @@
    * Shift Close status for the close-required dates in `dates`, judged by TargetEvaluator from
    * the public close summary and the scrap logs the caller already has.
    * reuse = { dates: [...], ctx } — a close context the page already loaded: only dates it does
-   * not cover are read (one query at most). -> { from, units, failed, queries, docs }
+   * not cover are read (one query at most). cache(key, fn) (optional) keeps that read for the session.
+   * -> { from, units, failed, queries, docs }
    */
-  async function closeStatus(db, dates, records, scrapReadFailed, reuse) {
+  async function closeStatus(db, dates, records, scrapReadFailed, reuse, cache) {
     const TE = window.TargetEvaluator;
     const from = TE.closeRequiredFrom();
     const need = dates.filter(d => TE.closeRequired(d, from));
@@ -76,7 +77,8 @@
     let failed = !!(reuse && reuse.ctx && reuse.ctx.failed && need.some(d => covered.has(d)));
     let queries = 0, docs = 0;
     if (missing.length) {
-      const ctx = await TE.loadCloseContext(db, missing);
+      const load = () => TE.loadCloseContext(db, missing);
+      const ctx = await (cache ? cache(`close|${missing.join(',')}`, load) : load());   // cache: optional, the card's session cache
       queries = ctx.queries; docs = ctx.docs;
       ctx.summaries.forEach((v, k) => summaries.set(k, v));
       failed = failed || ctx.failed;

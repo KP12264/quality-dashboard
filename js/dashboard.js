@@ -50,6 +50,11 @@
     line: 'all'     // 'all' | 'A' | 'B' | 'C'
   };
   let renderSeq = 0;   // lets a newer render() discard the results of an older, slower one
+  // Release readiness (read cost): a Line / Shift filter click re-renders from the data already
+  // loaded when the reads would be IDENTICAL (same dates and, for dates before the daily rule,
+  // the same shifts) and that load had no error. Dates changes and Refresh always read fresh.
+  let loaded = null;        // { key, ok, productionResult, scrapResult, shiftTargets, closeContext, lookback, imp }
+  let reuseNextLoad = false;
   let scrapLoadFailed = false;   // a failed scrap read must never look like "scrap = 0" or WITHIN
 
   let trendChart = null;
@@ -153,8 +158,12 @@
     // filter says, so a single-shift filter reads more production documents
     // for those dates (documented); legacy dates read only the active shifts.
     const fetchPlan = TargetEvaluator.productionFetchPlan(dates, activeShifts());
+    const loadKey = JSON.stringify([state.dateFrom, state.dateTo, fetchPlan, dates.some(d => TargetEvaluator.ruleFor(d) === 'SHIFT') ? activeShifts() : null]);
+    const reuse = reuseNextLoad && !!loaded && loaded.ok && loaded.key === loadKey;
+    reuseNextLoad = false;
     let productionResult, scrapResult;
-    try {
+    if (reuse) { productionResult = loaded.productionResult; scrapResult = loaded.scrapResult; }
+    else try {
       const results = await Promise.all([
         ...fetchPlan.map(g => ProductionDataAdapter.getProductionData(window.qdDb, { dates: g.dates, lines: ALL_LINE_CODES, shifts: g.shifts })),
         ScrapDataAdapter.getScrapData(window.qdDb, { startDate: state.dateFrom, endDate: state.dateTo })
@@ -193,11 +202,15 @@
     // Shift Close (Phase 4): the public, e-mail-free close summary for close-required dates
     // (one query; none at all while QD_CLOSE_REQUIRED_FROM is not in use). The scrap logs are
     // the ones already loaded above — never read twice.
-    const [shiftTargets, closeContext] = await Promise.all([
+    const [shiftTargets, closeContext] = reuse ? [loaded.shiftTargets, loaded.closeContext] : await Promise.all([
       TargetEvaluator.loadShiftTargetContext(window.qdDb, dates, activeShifts()),
       TargetEvaluator.loadCloseContext(window.qdDb, dates)
     ]);
     if (seq !== renderSeq) return;
+    if (!reuse) {
+      loaded = { key: loadKey, productionResult, scrapResult, shiftTargets, closeContext, lookback: null, imp: null,
+        ok: !scrapResult.error && productionResult.errors.length === 0 && !closeContext.failed && !(shiftTargets.failedShifts || []).length };
+    }
     if (closeContext.failed && !scrapLoadFailed && productionResult.errors.length === 0) {
       showBanner('warn', `⚠ Shift close status could not be read for this ${scopeWord} — the daily status shows READ ERROR instead of a result. Try refreshing.`);
     }
@@ -236,14 +249,21 @@
 
     // ---- Attention Required: re-runs on every render() so it follows the range ----
     // One date: the 30-day look-back query (started once, shared with the Scrap Budget card).
-    const lookback = isMultiDay() ? null : loadLookback();
-    renderAttentionRequired(scrapResult, lookback);
+    const lookback = isMultiDay() ? null : (loaded.lookback || (loaded.lookback = loadLookback()));
+    if (!loaded.imp) loaded.imp = fetchImprovementStatusCounts();
+    const imp = loaded.imp;
+    // a failed look-back or improvements read is never kept: the next filter click reads it again
+    if (lookback) lookback.then(lb => { if (lb.result.error && loaded && loaded.lookback === lookback) loaded.lookback = null; });
+    imp.then(r => { if (r.error && loaded && loaded.imp === imp) loaded.imp = null; });
+    renderAttentionRequired(scrapResult, lookback, imp);
 
     // ---- Scrap Budget card (Weekly Plan V5): built from the scrap already loaded above ----
     renderPlanCard(scrapResult, lookback, dates, closeContext);
 
     // Same moment as before (new Date()); only the layout changed: time on line 1, date on line 2.
     // The data-source note that used to share this chip stays in the page footer.
+    // (a filter change that re-used the loaded data keeps the time of the actual read)
+    if (reuse) return;
     const refreshedAt = new Date();
     $('lastUpdated').textContent = 'Last refreshed ' + refreshedAt.toLocaleTimeString('en-US') + '\n'
       + `${String(refreshedAt.getDate()).padStart(2, '0')} ${MONTH_ABBR[refreshedAt.getMonth()]} ${refreshedAt.getFullYear()}`;
@@ -1346,12 +1366,12 @@
   const ATTN_ACTION_STATUSES = ['Not Effective', 'Recurring'];
   const ATTN_ARROW = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>';
 
-  async function renderAttentionRequired(rangeScrapResult, lookback) {
+  async function renderAttentionRequired(rangeScrapResult, lookback, impPromise) {
     const seq = renderSeq;
     const container = $('attentionSummary');
     container.innerHTML = '<div class="v5-attn-loading">Loading…</div>';
 
-    const [impResult, recResult] = await Promise.all([fetchImprovementStatusCounts(), fetchRecurringProblems(rangeScrapResult, lookback)]);
+    const [impResult, recResult] = await Promise.all([impPromise || fetchImprovementStatusCounts(), fetchRecurringProblems(rangeScrapResult, lookback)]);
     if (seq !== renderSeq) return;   // a newer render() owns this panel now
 
     // ---- Recurring Problems card ----
@@ -1461,6 +1481,7 @@
     if (!btn) return;
     state.shift = btn.dataset.shift;
     $('shiftFilter').querySelectorAll('button').forEach(b => b.classList.toggle('active', b === btn));
+    reuseNextLoad = true;   // same dates: re-use the loaded data when the reads would be identical
     render();
   });
 
@@ -1469,13 +1490,15 @@
     if (!btn) return;
     state.line = btn.dataset.line;
     $('lineFilter').querySelectorAll('button').forEach(b => b.classList.toggle('active', b === btn));
+    reuseNextLoad = true;   // the Line filter never changes what is read
     render();
   });
 
   // Refresh button: just re-runs the existing render() pipeline on
   // demand — no new fetch, no new adapter call, purely a convenience
   // trigger for the same data flow the filters already use.
-  $('refreshBtn').addEventListener('click', () => { render(); });
+  // Weekly Plan V5: Refresh also re-reads what the Scrap Budget card keeps for the session.
+  $('refreshBtn').addEventListener('click', () => { if (typeof PlanCard !== 'undefined') PlanCard.invalidate(); render(); });
 
   // ---- Mobile sidebar drawer (UI-only — no data/business logic) ---------
   // Dashboard-only; the sidebar itself replaces the shared top nav on

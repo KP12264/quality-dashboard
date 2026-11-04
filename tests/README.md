@@ -143,3 +143,11 @@ date for that page only (emulator only).
 - `tests/e2e/weekly-plan.e2e.test.js` — weekly-plan.html vs an independent count, Dashboard card = page,
   Firestore reads (queries and documents), Admin override with reason + history, Leader / Viewer / public,
   reduction goal on demand, 390 px, old plan pages redirect.
+
+## Final UI review & release readiness
+
+- `tests/e2e/release-readiness.e2e.test.js` — seeds a realistic month (`tests/support/release-seed.js`),
+  checks the Dashboard layout with the Scrap Budget card at 1440 / 1024 / 820 / 390 px, every important
+  weekly-plan.html state, the default / unconfirmed plan (no document, rules deny, read error), and
+  Firestore reads (queries and documents). Writes screenshots to `docs/release-readiness/screens`
+  (`QD_SHOT_DIR`, `QD_SHOT_SCALE`) and `docs/release-readiness/generated/read-cost.md`.

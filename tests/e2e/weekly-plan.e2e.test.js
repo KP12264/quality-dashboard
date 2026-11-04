@@ -181,7 +181,7 @@ describe('Weekly Plan V5 (emulator)', () => {
     assert.doesNotMatch(await page.evaluate(() => document.body.innerText), /\[object|undefined|NaN/);
     // a week with no scrap log on any day shows "No log", never an actual of 0
     const noLogWeeks = weeks.filter(w => !IN.some(x => x.day >= w.from && x.day <= w.to)).map(w => w.key);
-    for (const k of noLogWeeks) assert.equal(await page.textContent(`#wpWeeksTable tr[data-week="${k}"] td:nth-child(6)`), 'No log', k);
+    for (const k of noLogWeeks) assert.equal(await page.textContent(`#wpWeeksTable tr[data-week="${k}"] td:nth-child(7)`), 'No log', k);
     // what the user sees
     const text = await page.evaluate(() => document.body.innerText);
     assert.match(text, /Monthly budget/); assert.match(text, /so far/); assert.match(text, /not counted as 0/);
