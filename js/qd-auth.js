@@ -132,7 +132,14 @@
   function init() {
     if (!enforce()) { state.ready = true; return; }
     if (!window.qdAuth) { state.ready = true; state.profileError = window.qdFirebaseError || "Sign-in is unavailable."; render(); return; }
+    let lastUid;   // undefined until the first auth callback
+    window.addEventListener("pageshow", e => { if (e.persisted) location.reload(); });   // back/forward cache: never show an old session
     window.qdAuth.onAuthStateChanged(async user => {
+      const uid = user ? user.uid : null;
+      // A signed-in user signed out, or another account took over (e.g. in another tab): reload, so
+      // private data shown for the previous user (Recorded By, owners, plan history, notes) is gone.
+      if (lastUid && uid !== lastUid) { state.leaving = true; render(); location.reload(); return; }
+      lastUid = uid;
       state.user = user; state.email = user && user.email ? user.email.toLowerCase() : null;
       state.profile = null; state.profileError = null;
       // While the role is being read, show "checking" — never "no role" — and refuse writes.
@@ -248,6 +255,7 @@
 
   function render() {
     if (!host) return;
+    if (state.leaving) { host.innerHTML = "<small>Signing out… (clearing the page)</small>"; return; }
     if (!state.ready) { host.innerHTML = "<small>Checking sign-in…</small>"; return; }
     if (state.user) {
       const code = state.email ? state.email.replace(domain, "").toUpperCase() : "";

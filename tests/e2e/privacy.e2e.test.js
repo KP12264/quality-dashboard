@@ -112,6 +112,22 @@ describe('privacy policy in the pages (sign-in on)', () => {
     assert.equal(signed.v, 'KP0042');
     assert.equal(pub.v, '–'); assert.equal(pub.privReads, 0);
   });
+  it('Scrap Detail: after sign-out the shown "Recorded By" is gone (the page reloads; nothing private kept on screen)', async () => {
+    const p = await newPage();
+    await p.page.goto(`${BASE}/scrap-detail.html?qdEmulator=1`);
+    await signIn(p.page, 'LEADA');
+    await p.page.waitForSelector('.qd-detail-row', { timeout: 20000 });
+    await p.page.click('#applyFilters'); await p.page.waitForTimeout(1500);
+    await p.page.waitForSelector('.qd-detail-row', { timeout: 20000 });
+    await p.page.click('.qd-detail-row td:nth-child(2)'); await p.page.waitForTimeout(1500);
+    assert.equal((await p.page.textContent('[data-recorded-by]')).trim(), 'KP0042');
+    const nav = p.page.waitForNavigation({ timeout: 15000 });
+    await p.page.click('#qdAuthSignOut'); await nav;
+    await p.page.waitForSelector('#qdAuthOpen', { timeout: 15000 });
+    await p.page.waitForSelector('.qd-detail-row', { timeout: 20000 });
+    assert.doesNotMatch(await p.page.evaluate(() => document.body.innerText), /KP0042/);
+    await p.context.close();
+  });
   it('Improvement with an action owner: the public document has no name; signed-in edit shows it again', async () => {
     const { context, page } = await newPage();
     await page.goto(`${BASE}/improvement.html?qdEmulator=1`);

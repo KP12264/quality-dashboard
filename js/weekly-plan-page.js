@@ -96,10 +96,20 @@
     const close = await WeeklyPlanData.closeStatus(db, dates, scrap.records, !!scrap.error, null);
     if (seq !== state.loadSeq) return;
     state.data = { scrap, plans, close };
+    state.readAt = Date.now();
     if (!scrap.error && !close.failed && !plans.error) state.cache.set(ym, { asOf, at: Date.now(), data: state.data });   // never keep a failed read
     finishLoad(seq);
   }
+  function loadedAtText() {
+    const hit = state.cache.get(state.ym), at = hit ? hit.at : state.readAt;
+    if (!at) return '';
+    const maxAge = (typeof QD_VIEW_CACHE_MINUTES === 'number' ? QD_VIEW_CACHE_MINUTES : 5) * 60000;
+    const t = new Date(at).toLocaleTimeString('en-GB', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit' });
+    return Date.now() - at >= maxAge ? `Loaded ${t} (TH) · older than ${maxAge / 60000} min — press Reload` : `Loaded ${t} (TH)`;
+  }
+  function showLoadedAt() { const el = $('wpLoadedAt'); if (el) { el.textContent = loadedAtText(); el.classList.toggle('stale', /older/.test(el.textContent)); } }
   function finishLoad(seq) {
+    showLoadedAt();
     const { scrap, plans, close } = state.data;
     const msgs = [];
     if (scrap.error) msgs.push('Scrap data could not be read — no figures are shown (never shown as 0).');
@@ -364,6 +374,10 @@
     $('wpEditClear').addEventListener('click', () => saveEditor(true));
     $('wpEditCancel').addEventListener('click', () => { const d = $('wpEditDialog'); if (typeof d.close === 'function') d.close(); else d.removeAttribute('open'); });
     if (window.QDAuth) QDAuth.onChange(() => { if (state.month) { renderWeeks(); loadReviews(state.loadSeq); } });
+    window.addEventListener('pageshow', e => { if (e.persisted) location.reload(); });   // back/forward cache: never old data
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) showLoadedAt(); });
+    window.addEventListener('focus', showLoadedAt);
+    setInterval(showLoadedAt, 30000);   // clock only, no reads
     load();
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

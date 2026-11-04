@@ -265,6 +265,7 @@
     // The data-source note that used to share this chip stays in the page footer.
     // (a filter change that re-used the loaded data keeps the time of the actual read)
     if (reuse) return;
+    if (typeof window.__qdCheckStale === 'function') window.__qdCheckStale();
     const refreshedAt = new Date();
     $('lastUpdated').textContent = 'Last refreshed ' + refreshedAt.toLocaleTimeString('en-US') + '\n'
       + `${String(refreshedAt.getDate()).padStart(2, '0')} ${MONTH_ABBR[refreshedAt.getMonth()]} ${refreshedAt.getFullYear()}`;
@@ -1498,6 +1499,23 @@
   // Refresh button: just re-runs the existing render() pipeline on
   // demand — no new fetch, no new adapter call, purely a convenience
   // trigger for the same data flow the filters already use.
+  // Back / forward cache (e.g. Back from Scrap Entry after a save): reload, never show old data.
+  window.addEventListener('pageshow', e => { if (e.persisted) location.reload(); });
+  // Data older than QD_VIEW_CACHE_MINUTES (tab left open, saves made in another tab): say so next to
+  // Refresh. Only a clock check — it reads nothing.
+  (function staleHint() {
+    const btn = $('refreshBtn');
+    if (!btn) return;
+    const hint = document.createElement('span');
+    hint.id = 'dataStaleHint'; hint.className = 'v5-stale-hint'; hint.hidden = true;
+    hint.textContent = `Data older than ${typeof QD_VIEW_CACHE_MINUTES === 'number' ? QD_VIEW_CACHE_MINUTES : 5} min — press Refresh`;
+    btn.insertAdjacentElement('afterend', hint);
+    const check = () => { hint.hidden = !(loaded && Date.now() - loaded.at >= cacheMs()); };
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) check(); });
+    window.addEventListener('focus', check);
+    setInterval(check, 30000);
+    window.__qdCheckStale = check;
+  })();
   // Weekly Plan V5: Refresh also re-reads what the Scrap Budget card keeps for the session.
   $('refreshBtn').addEventListener('click', () => { if (typeof PlanCard !== 'undefined') PlanCard.invalidate(); render(); });
 

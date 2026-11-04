@@ -37,6 +37,8 @@
 .qd-v5 .wp-ov { font-size: 11px; color: #92400e; }
 .qd-v5 .wp-unknown { color: #94a3b8; }
 .qd-v5 .wp-over { color: #b91c1c; font-weight: 700; }
+.qd-v5 #wpLoadedAt.stale, .qd-v5 .v5-stale-hint { color: #92400e; font-weight: 600; }
+.qd-v5 .v5-stale-hint { font-size: 12px; margin-left: 8px; align-self: center; }
 .qd-v5 .wp-grid2 { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 16px; }
 .qd-v5 .wp-defects { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .qd-v5 .wp-defect { border: 1px solid #e2e8f0; border-radius: 10px; padding: 8px 10px; }
