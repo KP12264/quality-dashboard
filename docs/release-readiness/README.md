@@ -160,6 +160,7 @@ A day over 50 therefore never hides; it does not by itself turn a week that is w
 | 17 | A page restored from the back/forward cache could show data from before a save | logic | reload on restore | e2e §6 |
 | 18 | No sign that the shown data was old (other tab saves) | UI | stale hint next to Refresh / "Loaded hh:mm (TH)" on Weekly Plan | e2e §6 |
 | 19 | Read report showed only documents returned | report | + billed estimate and the limitation | read-cost.md |
+| 20 | Pre-existing: a period with no data kept the previous range's trend legend ("Over target") | UI | legend and note cleared with the empty state | e2e §1b, off-mode matrix |
 
 Open (not fixed; decisions):
 
