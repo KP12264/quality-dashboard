@@ -1,28 +1,39 @@
 # Final Release Readiness — Test Results
 
-**Final code: commit `1363aae`.** Later commits (`c8fcc87` and the report commits) add tests and regenerated reports only; no file under `js/`, `css/` or `*.html` changed after `1363aae`.
-Emulator `demo-quality-dashboard` only. Nothing deployed, published, merged or written to Firebase Production; Production V2 untouched.
+**Final code: commit `2a031c0`** (D1 + CSV guard + monthly No data). Later commits only add regenerated screenshots / reports and documents; no file under `js/`, `css/` or `*.html` changed after `2a031c0`.
+Emulator `demo-quality-dashboard` only. Nothing deployed, published, merged or written to Firebase Production; Production V2 untouched; no real migration.
 
-## Suites
+## Suites on `2a031c0`
 
-| Suite | Code | Result |
+| Suite | Result |
+|---|---|
+| Unit | **PASS 59/59** |
+| Rules (emulator) | **PASS 144/144** |
+| E2E (emulator) | **PASS 111/111** (release-readiness 36, incl. D1, CSV §8, privacy §6–7, responsive at 1440 / 1024 / 820 / 390) |
+| Dashboard Regression (sign-in off, vs independent oracle) | **PASS 15/15** |
+| Off-mode matrix (107 scenarios, 97 snapshots), same day as the `a32af2b` baseline, same mock data | **PASS**: KPI, target detail, trend, trend KPIs, Pareto, Top 5, Door Line identical; differences only in reads (expected) and the legend of 12 No-data snapshots (stale legend removed, fix #20); 0 errors |
+| ix (whole system incl. Executive Report) | **PASS 21/21** |
+| PV2 Compatibility | **PASS 4/4** (PV2 + legacy identical in all four rule sets; PV2 block verbatim; changes all in the reviewed list) |
+| Bridge `--check` | **PASS** |
+
+Git evidence:
+- `emulator/production.firestore.rules.snapshot` (sha256 `0967944b…`) and `emulator/production-v2.firestore.rules.snapshot` (sha256 `77787f32…`) have not changed since they were added.
+- Rules and rules tests have not changed since `770d500` (Weekly Plan V5).
+- Production V2 code is not in this repository.
+
+## D1 · CSV · monthly No data (this round)
+
+| Check | Result | Test |
 |---|---|---|
-| Unit | `1363aae` | **PASS 57/57** |
-| Rules (emulator) | `2215148` | **PASS 144/144**. Rules and rules tests are unchanged in `1363aae`: `git diff --stat 2215148 1363aae -- emulator/ tests/rules/` is empty |
-| E2E (emulator) | `1363aae` | **PASS 102/102** |
-| E2E release-readiness incl. the final privacy / legend checks | `1363aae` (tests from `c8fcc87`) | **PASS 30/30** |
-| Dashboard Regression (sign-in off, vs independent oracle) | `1363aae` | **PASS 15/15** |
-| Off-mode Dashboard matrix (107 scenarios, 97 data snapshots) | `1363aae` vs `a32af2b`, **same day (2026-11-04), same mock data** | **PASS**: KPI, target detail, trend, trend KPIs, Pareto, Top 5, Door Line identical. Differences: reads (expected); legend in 12 No-data snapshots (stale "Within target" removed = fix #20); 0 errors |
-| Attention Required | `1363aae` | **PASS**: recurring count = oracle in every Regression scenario; ix navigation / failure checks |
-| ix (whole system incl. Executive Report) | `1363aae` | **PASS 21/21** |
-| PV2 Compatibility (`pv2-compat.test.js`, part of Rules) | rules of `2215148` = `1363aae` | **PASS 4/4**: PV2 + legacy identical in all four rule sets; PV2 block verbatim; changes all in the reviewed list |
-| Bridge rules `--check` | `1363aae` | **PASS** (up to date) |
-
-Earlier runs, for reference:
-- `2215148`: Unit 57/57 · Rules 144/144 · E2E 101/101 · Regression 15/15.
-- `4cb487d`: Unit 57/57 · Rules 144/144 · E2E 96/96 · Regression 15/15.
-
-Tablet hover in the matrix: the matrix moves the mouse to a fixed screen point. That point now falls below the window, because the new card pushes the chart down. With the chart scrolled into view the tooltip works on desktop, tablet and phone (checked separately).
+| Dashboard card, Weekly Plan and CSV: the same three D1 results with the same wording | PASS (week and month) | e2e §2b, §8 |
+| CSV = screen for a mixed month, the current month (so far), a No data month and a future month | PASS (plan, actual / No log / empty, budget, daily, data) | e2e §8 |
+| Not final never shown as confirmed ("so far") | PASS | unit D1, e2e §8 |
+| Day over 50 inside the budget = "Within plan" + "Daily limit breached" | PASS | unit, e2e §2b |
+| Monthly No data: tile, total row, card and CSV say "No log" (never 0); confirmed-zero month = 0, Final; partly confirmed = so far | PASS | unit, e2e §8 |
+| CSV has no private data (also exported by a signed-in Admin) | PASS | e2e §8 |
+| CSV export reads nothing from Firestore | PASS (0 queries) | e2e §8 |
+| Formula injection: = + - @, also after spaces / tab / CR / LF / NBSP / zero-width / BOM and full-width forms; Executive Report (user text) + Weekly Plan | PASS; numbers, dates, D1 and target statuses unchanged | e2e §8 |
+| Responsive 1440 / 1024 / 820 / 390: no page scroll; the weeks table fits at 1440 without its own scrollbar; card ≤ 280 px from 820 px up | PASS | e2e §1, §2 |
 
 ## Final checks requested
 

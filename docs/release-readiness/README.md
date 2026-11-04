@@ -3,7 +3,7 @@
 Branch `claude/vigilant-pasteur-l91qt3`, Emulator `demo-quality-dashboard` only. Nothing was deployed, published or merged. Firestore Production and Production V2 were not touched.
 The flags are unchanged: `QD_AUTH_MODE = "off"`, `QD_CLOSE_REQUIRED_FROM = null`, `QD_OPS_WRITE_ENABLED = false`.
 
-**Final code: `1363aae`.** **Overall: NO-GO for production.**
+**Final code: `2a031c0`.** **Overall: NO-GO for production.**
 
 The code is ready and fully tested on the development branch, but every gate below that needs an owner decision is still open (⛔).
 GO requires all ⛔ to be resolved and approved. NO-GO also applies if any suite fails or the re-copied production rules hash differs.
@@ -190,7 +190,7 @@ Open (not fixed; decisions):
 | Production V2 compatibility | ✅ PV2 block identical to production in candidate and bridge; PV2 users get nothing in QD | `pv2-compat.test.js`, `docs/phase6/generated/compatibility-matrix.md` |
 | B1 / B2 close date, first admin + roles | ⛔ decision | — |
 | C1 / C2 cost acceptance | ⛔ decision (see §4) | `generated/read-cost.md`, `generated/read-cost-before-after.md` |
-| D1 weekly status rule with a day over 50 | ⛔ decision (see §4) | — |
+| D1 weekly status rule with a day over 50 | ✅ approved and implemented (`c4a165e`): Budget status · Daily compliance · Data completeness | unit + e2e §2b, §8 |
 
 ## 7. Test results
 
