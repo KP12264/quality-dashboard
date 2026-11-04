@@ -5,6 +5,8 @@ The flags are unchanged: `QD_AUTH_MODE = "off"`, `QD_CLOSE_REQUIRED_FROM = null`
 
 **Final code: `2a031c0`.** **Overall: NO-GO for production.**
 
+For the owner's decisions: **[approval-package.md](approval-package.md)** (gates G1 … C2, proposed deployment sequence, monitoring and rollback criteria). Step-by-step checks: [cutover-checklist.md](cutover-checklist.md).
+
 The code is ready and fully tested on the development branch, but every gate below that needs an owner decision is still open (⛔).
 GO requires all ⛔ to be resolved and approved. NO-GO also applies if any suite fails or the re-copied production rules hash differs.
 
