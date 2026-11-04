@@ -253,7 +253,7 @@ describe('plan-tracking.html and weekly-review.html → weekly-plan.html (Weekly
         assert.deepEqual(errors, [], page);
         assert.equal(st.budget, 50 * 31);
         assert.equal(st.plansFailed, rules === 'production');
-        if (rules === 'production') assert.match(st.banner, /Weekly plans could not be read — the default plan/);
+        if (rules === 'production') assert.match(st.banner, /access denied by the Firestore rules\) — the default plan \(50 × days\) is shown and is NOT a confirmed plan/);
         summary.push(`${rules} :: ${page} (public) :: retired → weekly-plan.html; ${rules === 'production' ? 'plans not readable under production rules: default plan 50 × days shown with a notice' : 'plans readable'}`);
       }
     });
