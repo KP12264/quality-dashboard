@@ -82,7 +82,7 @@ test('actual / remaining / used / plan to date; scope = Door A/B/C × DAY/NIGHT 
   assert.equal(w2.planToDate, 150); assert.equal(w2.remaining, 305); assert.equal(Math.round(w2.used * 1000), 129);
   assert.equal(m.actual, 45, 'days after as-of are not counted'); assert.equal(m.elapsedDays, 7);
   assert.equal(m.planToDate, 200 + 150); assert.equal(m.remaining, m.budget - 45);
-  assert.deepEqual(plain(m.weeks.slice(2).map(w => w.status)), ['NOT_STARTED', 'NOT_STARTED', 'NOT_STARTED']);
+  assert.deepEqual(plain(m.weeks.slice(2).map(w => [w.budgetStatus, w.dailyCompliance, w.completeness])), [['NOT_STARTED', 'NOT_STARTED', 'NOT_STARTED'], ['NOT_STARTED', 'NOT_STARTED', 'NOT_STARTED'], ['NOT_STARTED', 'NOT_STARTED', 'NOT_STARTED']]);
 });
 
 test('Line × Shift detail always adds up to the Door A+B+C total', () => {
@@ -101,7 +101,8 @@ test('no data is never 0: a day without any log is NO_DATA (qty unknown), the we
   const d5 = m.days.find(d => d.date === '2026-10-05'), d6 = m.days.find(d => d.date === '2026-10-06');
   assert.equal(d5.state, 'LOGGED'); assert.equal(d5.qty, 10); assert.equal(d5.final, false);
   assert.equal(d6.state, 'NO_DATA'); assert.equal(d6.qty, null);
-  assert.equal(m.weeks[1].status, 'NOT_FINAL'); assert.equal(m.weeks[1].soFar, true);
+  assert.equal(m.weeks[1].budgetStatus, 'WITHIN_PLAN'); assert.equal(m.weeks[1].completeness, 'NOT_FINAL'); assert.equal(m.weeks[1].soFar, true);
+  assert.equal(m.weeks[0].dailyCompliance, 'NO_DATA', '1–4 Oct: no day with a known quantity');
   assert.equal(m.weeks[0].noLog, true, '1–4 Oct: no log at all'); assert.equal(m.weeks[1].noLog, false); assert.equal(m.noLog, false);
   assert.equal(m.counts.noData, 5, '1–4 and 6 Oct have no log'); assert.equal(m.projection, null, 'no projection with unknown days');
   assert.equal(m.closeInUse, false);
@@ -109,22 +110,23 @@ test('no data is never 0: a day without any log is NO_DATA (qty unknown), the we
 
 test('scrap read failure: no number at all (READ_ERROR), never 0', () => {
   const m = P.buildMonth({ ym: '2026-10', asOf: '2026-10-06', records: [rec('2026-10-05', 'A', 'DAY', 10)], scrapReadFailed: true });
-  assert.equal(m.actual, null); assert.equal(m.remaining, null); assert.equal(m.status, 'READ_ERROR');
-  assert.ok(m.weeks.slice(0, 2).every(w => w.actual === null && w.status === 'READ_ERROR'));
+  assert.equal(m.actual, null); assert.equal(m.remaining, null);
+  assert.deepEqual([m.budgetStatus, m.dailyCompliance, m.completeness], ['READ_ERROR', 'READ_ERROR', 'READ_ERROR']);
+  assert.ok(m.weeks.slice(0, 2).every(w => w.actual === null && w.budgetStatus === 'READ_ERROR'));
   assert.ok(m.days.filter(d => d.elapsed).every(d => d.state === 'READ_ERROR' && d.qty === null));
 });
 
-test('Shift Close decides finality: all 6 closed → FINAL, ON_TRACK; pending / changed / conflict → not final', () => {
+test('Shift Close decides finality: all 6 closed → days FINAL; the week is FINAL only when it has ended; pending / changed / conflict → not final', () => {
   const dates = ['2026-11-02', '2026-11-03', '2026-11-04'];
   const r = [rec(dates[0], 'A', 'DAY', 20), rec(dates[1], 'B', 'DAY', 5), rec(dates[2], 'C', 'NIGHT', 4)];
   const allClosed = closeUnits(dates, r);
   const m = P.buildMonth({ ym: '2026-11', asOf: dates[2], records: r, closeFrom: '2026-11-02', closeUnits: allClosed });
   assert.deepEqual(plain(m.days.slice(1, 4).map(d => d.state)), ['FINAL', 'FINAL', 'FINAL']);
-  assert.equal(m.weeks[1].status, 'ON_TRACK'); assert.equal(m.weeks[1].soFar, true, 'week not over yet');
+  assert.equal(m.weeks[1].budgetStatus, 'WITHIN_PLAN'); assert.equal(m.weeks[1].completeness, 'NOT_FINAL', 'week not over yet'); assert.equal(m.weeks[1].soFar, true);
   assert.equal(m.days[0].state, 'NO_DATA', '1 Nov is before the close date and has no log');
   const pend = closeUnits(dates, r, { [dates[1]]: { B_DAY: null } });
   const m2 = P.buildMonth({ ym: '2026-11', asOf: dates[2], records: r, closeFrom: '2026-11-02', closeUnits: pend });
-  assert.equal(m2.days.find(d => d.date === dates[1]).state, 'PENDING'); assert.equal(m2.weeks[1].status, 'NOT_FINAL');
+  assert.equal(m2.days.find(d => d.date === dates[1]).state, 'PENDING'); assert.equal(m2.weeks[1].completeness, 'NOT_FINAL');
   assert.equal(m2.days.find(d => d.date === dates[1]).closeText, '5/6');
   // a log written after the close (CHANGED) → not final, qty still shown so far
   const later = r.concat([rec(dates[2], 'C', 'NIGHT', 1)]);
@@ -137,13 +139,13 @@ test('Shift Close decides finality: all 6 closed → FINAL, ON_TRACK; pending / 
   assert.equal(d3.final, false); assert.ok(['PENDING', 'CONFLICT'].includes(d3.state), d3.state); assert.equal(d3.qty, 5);
   // close summary read failure → READ_ERROR, not final
   const m4 = P.buildMonth({ ym: '2026-11', asOf: dates[2], records: r, closeFrom: '2026-11-02', closeUnits: allClosed, closeReadFailed: true });
-  assert.equal(m4.weeks[1].status, 'READ_ERROR');
+  assert.equal(m4.weeks[1].completeness, 'READ_ERROR'); assert.equal(m4.weeks[1].budgetStatus, 'WITHIN_PLAN', 'the scrap itself was read: the budget result stands');
 });
 
 test('OVER is certain even when days are not final; over the daily 50 is flagged per day', () => {
   const r = [rec('2026-10-05', 'A', 'DAY', 120), rec('2026-10-06', 'A', 'DAY', 51)];
   const m = P.buildMonth({ ym: '2026-10', asOf: '2026-10-06', records: r });
-  assert.equal(m.weeks[1].status, 'OVER', '171 > 100 plan to date');
+  assert.equal(m.weeks[1].budgetStatus, 'OVER_PLAN', '171 > 100 plan to date'); assert.equal(m.weeks[1].dailyCompliance, 'BREACHED');
   assert.deepEqual(plain(m.days.filter(d => d.qty !== null).map(d => [d.date, d.overDaily])), [['2026-10-05', true], ['2026-10-06', true]]);
   assert.equal(m.counts.overDaily, 2);
   const at50 = P.buildMonth({ ym: '2026-10', asOf: '2026-10-05', records: [rec('2026-10-05', 'A', 'DAY', 50)] });
@@ -220,3 +222,35 @@ test('plan source: no document = DEFAULT (not set), Admin default = ADMIN_DEFAUL
   const bad = P.buildMonth({ ym: '2026-10', asOf: '2026-10-31', records: [], overrides: { W1: 999 } });
   assert.equal(bad.weeks[0].planSource, 'DEFAULT'); assert.equal(bad.weeks[0].plan, 200);
 });
+
+test('D1: budget status, daily compliance and data completeness are separate — a day over 50 inside the budget = Within plan + Daily limit breached', () => {
+  // Week 5–11 Oct 2026 (7 days, plan 350): one day at 55, the rest small → 85 pcs, within the budget
+  const r = [rec('2026-10-05', 'A', 'DAY', 55), rec('2026-10-06', 'B', 'DAY', 10), rec('2026-10-07', 'C', 'NIGHT', 20)];
+  const recs = r;
+  const closed = closeUnits(P.util.datesBetween('2026-10-05', '2026-10-31'), recs);   // every day from 5 Oct closed (6/6)
+  const m = P.buildMonth({ ym: '2026-10', asOf: '2026-10-31', records: recs, closeFrom: '2026-10-05', closeUnits: closed });
+  const w = m.weeks[1];
+  assert.deepEqual([w.budgetStatus, w.dailyCompliance, w.completeness], ['WITHIN_PLAN', 'BREACHED', 'FINAL']);
+  const l = P.labels(w, 50);
+  assert.equal(l.budget.text, 'Within plan'); assert.equal(l.daily.text, 'Daily limit breached · 1 day >50'); assert.equal(l.data.text, 'Final');
+  assert.equal(l.budget.tone, 'good'); assert.equal(l.daily.tone, 'bad');
+  // the same week while not final: never shown as confirmed ("so far"), a breach is certain anyway
+  const open = P.buildMonth({ ym: '2026-10', asOf: '2026-10-31', records: recs });
+  const lo = P.labels(open.weeks[1], 50);
+  assert.deepEqual([open.weeks[1].budgetStatus, open.weeks[1].dailyCompliance, open.weeks[1].completeness], ['WITHIN_PLAN', 'BREACHED', 'NOT_FINAL']);
+  assert.equal(lo.budget.text, 'Within plan · so far'); assert.equal(lo.daily.text, 'Daily limit breached · 1 day >50'); assert.equal(lo.data.text, 'Not final');
+  // no day over the limit while not final: "All days within limit · so far"
+  const ok = P.buildMonth({ ym: '2026-10', asOf: '2026-10-31', records: [rec('2026-10-06', 'B', 'DAY', 10)] });
+  assert.equal(P.labels(ok.weeks[1], 50).daily.text, 'All days within limit (≤50) · so far');
+  // exactly 50 is within the limit
+  const at50 = P.buildMonth({ ym: '2026-10', asOf: '2026-10-31', records: [rec('2026-10-06', 'B', 'DAY', 50)] });
+  assert.equal(at50.weeks[1].dailyCompliance, 'ALL_WITHIN');
+  // over the budget and a breach: both shown, independently
+  const both = P.buildMonth({ ym: '2026-10', asOf: '2026-10-06', records: [rec('2026-10-05', 'A', 'DAY', 120)] });
+  assert.deepEqual([both.weeks[1].budgetStatus, both.weeks[1].dailyCompliance], ['OVER_PLAN', 'BREACHED']);
+  assert.equal(P.labels(both.weeks[1], 50).budget.text, 'Over plan');
+  // the month carries the same three results
+  assert.deepEqual([m.budgetStatus, m.dailyCompliance], ['WITHIN_PLAN', 'BREACHED']);
+  assert.equal(m.completeness, 'NOT_FINAL', '1–4 Oct (before the close date) are not final');
+});
+

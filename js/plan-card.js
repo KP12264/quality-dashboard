@@ -21,11 +21,9 @@
   const pct = n => Number.isFinite(n) ? (n * 100).toFixed(0) + '%' : '–';
   // Remaining below zero is shown as "N over" (never as a negative budget).
   const remain = n => !Number.isFinite(n) ? '–' : (n < 0 ? `<span class="wp-over">${Math.round(-n).toLocaleString('en-US')} over</span>` : Math.round(n).toLocaleString('en-US'));
-  // ON_TRACK on a week / month that is complete and final reads "Within plan".
-  const statusKey = p => (p.status === 'ON_TRACK' && p.final ? 'WITHIN_PLAN' : p.status);
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const STATUS = { ON_TRACK: ['On track', 'good'], WITHIN_PLAN: ['Within plan', 'good'], OVER: ['Over plan', 'bad'], NOT_FINAL: ['Not final', 'warn'], NOT_STARTED: ['Not started', 'neutral'], READ_ERROR: ['Read error', 'bad'] };
-  const chip = k => { const [t, c] = STATUS[k] || [k, 'neutral']; return `<span class="wp-chip ${c}" data-status="${k}">${t}</span>`; };
+  // D1: three separate results (budget · daily limit · data), the same wording as weekly-plan.html.
+  const d1 = (p, dims) => { const L = WeeklyPlanCalc.labels(p, DAILY_TARGET_PCS); return dims.map(k => `<span class="wp-chip ${L[k].tone}" data-dim="${k}" data-status="${L[k].key}">${esc(L[k].text)}</span>`).join(' '); };
   const todayBkk = () => new Date(Date.now() + 7 * 3600000).toISOString().slice(0, 10);
   let cache = new Map();
   const cacheMs = () => (typeof QD_VIEW_CACHE_MINUTES === 'number' ? QD_VIEW_CACHE_MINUTES : 5) * 60000;
@@ -63,20 +61,21 @@
   }
 
   function half(title, p, extraLine, source) {
-    if (p.status === 'NOT_STARTED') return `<div class="v5-budget-half"><h3>${title} ${chip(p.status)}</h3><div class="v5-budget-nums">Plan <b>${fmt(p.plan)}</b> pcs ${srcTag(source)}</div></div>`;
+    if (p.budgetStatus === 'NOT_STARTED') return `<div class="v5-budget-half"><h3>${title} ${d1(p, ['budget'])}</h3><div class="v5-budget-nums">Plan <b>${fmt(p.plan)}</b> pcs ${srcTag(source)}</div></div>`;
     const actual = p.actual === null ? '–' : (p.noLog ? 'No log' : fmt(p.actual));
     const c = p.counts;
     const data = c.final === c.elapsed ? `${c.final}/${c.elapsed} days final`
       : `${c.final}/${c.elapsed} days final${c.noData ? ` · ${c.noData} without scrap log (not counted as 0)` : ''}`;
     return `<div class="v5-budget-half" data-k="${title.toLowerCase().startsWith('this week') ? 'week' : 'month'}">
-      <h3>${title} ${chip(statusKey(p))}</h3>
-      <div class="v5-budget-plan">Plan <b data-v="plan">${fmt(p.plan)}</b> pcs ${srcTag(source)}</div>
+      <h3>${title}</h3>
+      <div class="v5-budget-d1">${d1(p, ['budget', 'daily', 'data'])} ${srcTag(source)}</div>
       <dl class="v5-budget-stats">
-        <div><dt>Actual${p.soFar && p.actual !== null && !p.noLog ? ' <span class="wp-sofar">so far</span>' : ''}</dt><dd data-v="actual">${actual}</dd></div>
+        <div><dt>Plan</dt><dd data-v="plan">${fmt(p.plan)}</dd></div>
+        <div><dt>Actual</dt><dd><span data-v="actual">${actual}</span>${p.soFar && p.actual !== null && !p.noLog ? ' <small class="wp-sofar">so far</small>' : ''}</dd></div>
         <div><dt>Remaining</dt><dd data-v="remaining">${p.actual === null || p.noLog ? '–' : remain(p.remaining)}</dd></div>
         <div><dt>Used</dt><dd data-v="used">${p.noLog ? '–' : pct(p.used)}</dd></div>
       </dl>
-      <div class="wp-bar" title="Bar: used · line: plan to date" aria-hidden="true"><i style="width:${Math.min(100, (p.used || 0) * 100).toFixed(1)}%" class="${p.status === 'OVER' ? 'bad' : ''}"></i><b style="left:${p.plan ? Math.min(100, p.planToDate / p.plan * 100).toFixed(1) : 0}%"></b></div>
+      <div class="wp-bar" title="Bar: used · line: plan to date" aria-hidden="true"><i style="width:${Math.min(100, (p.used || 0) * 100).toFixed(1)}%" class="${p.budgetStatus === 'OVER_PLAN' ? 'bad' : ''}"></i><b style="left:${p.plan ? Math.min(100, p.planToDate / p.plan * 100).toFixed(1) : 0}%"></b></div>
       <div class="v5-budget-data">${esc(data)}${extraLine ? ' · ' + extraLine : ''}</div>
     </div>`;
   }
@@ -108,9 +107,9 @@
         closeFrom: close.from, closeUnits: close.units, closeReadFailed: close.failed, overrides: plans.overrides, plansReadFailed: !!plans.error, dailyTarget: DAILY_TARGET_PCS });
       const w = m.weeks.find(x => win.asOf >= x.start && win.asOf <= x.end);
       const day = m.days.find(d => d.date === win.asOf);
-      stats.month = { budget: m.budget, actual: m.actual, remaining: m.remaining, used: m.used, status: m.status, final: m.counts.final, elapsed: m.counts.elapsed };
+      stats.month = { budget: m.budget, actual: m.actual, remaining: m.remaining, used: m.used, budgetStatus: m.budgetStatus, dailyCompliance: m.dailyCompliance, completeness: m.completeness, final: m.counts.final, elapsed: m.counts.elapsed };
       stats.month.budgetSource = m.budgetSource;
-      stats.week = { key: w.key, planSource: w.planSource, plan: w.plan, actual: w.actual, remaining: w.remaining, used: w.used, status: w.status };
+      stats.week = { key: w.key, planSource: w.planSource, plan: w.plan, actual: w.actual, remaining: w.remaining, used: w.used, budgetStatus: w.budgetStatus, dailyCompliance: w.dailyCompliance, completeness: w.completeness };
       const link = `weekly-plan.html?ym=${win.ym}&week=${w.key}${window.qdEmulator ? '&qdEmulator=1' : ''}`;
       const dayLine = day && day.qty !== null ? `${esc(day.label)}: ${fmt(day.qty)} pcs ${day.overDaily ? `&gt; ${fmt(m.dailyTarget)}` : `≤ ${fmt(m.dailyTarget)}`}` : `${esc(day ? day.label : '')}: no scrap log yet`;
       const notes = [];

@@ -66,7 +66,7 @@ const FAIL = kind => {
 };
 
 async function newPage(width = 1440, opts = {}) {
-  const context = await browser.newContext({ viewport: { width, height: 900 }, deviceScaleFactor: SCALE });
+  const context = await browser.newContext({ viewport: { width, height: 900 }, deviceScaleFactor: SCALE, acceptDownloads: true });
   await context.addInitScript(COUNT);
   if (opts.fail) await context.addInitScript(FAIL, opts.fail);
   await context.route('**/*', route => {
@@ -129,7 +129,7 @@ async function planSettled(page, ym) {
 }
 const weekRow = (page, w) => page.evaluate(k => {
   const tr = document.querySelector(`#wpWeeksTable tr[data-week="${k}"]`);
-  return { status: tr.querySelector('[data-status]').dataset.status, source: tr.querySelector('[data-source]').dataset.source, text: tr.textContent.replace(/\s+/g, ' ').trim() };
+  return { budget: tr.querySelector('[data-dim="budget"]').dataset.status, daily: tr.querySelector('[data-dim="daily"]').dataset.status, data: tr.querySelector('[data-dim="data"]').dataset.status, status: tr.querySelector('[data-dim="budget"]').dataset.status, source: tr.querySelector('[data-source]').dataset.source, text: tr.textContent.replace(/\s+/g, ' ').trim() };
 }, w);
 
 before(async () => {
@@ -184,7 +184,8 @@ describe('1. Dashboard V5 with the Scrap Budget card', () => {
       });
       assert.ok(lay.kpi < lay.card && lay.card < lay.trend && lay.trend < lay.attn && lay.attn < lay.pareto, JSON.stringify(lay));
       assert.ok(lay.sw <= lay.cw + 1, `horizontal scroll ${JSON.stringify(lay)}`);
-      assert.ok(lay.cardH <= (width >= 820 ? 260 : 560), `card height ${lay.cardH}px at ${width}px`);
+      // limits: 280 px from 820 px up (D1 adds a chip row: budget · daily limit · data), 560 px on a phone
+      assert.ok(lay.cardH <= (width >= 820 ? 280 : 560), `card height ${lay.cardH}px at ${width}px`);
       assert.ok(lay.cardH / lay.page < 0.16, `card is ${Math.round(lay.cardH / lay.page * 100)}% of the page`);
       await shot(page, `dashboard-${width}`);
       if (width === 1440 || width === 390) await shot(page, `dashboard-card-${width}`, '#planCard');
@@ -212,11 +213,13 @@ describe('2. weekly-plan.html — every important state', () => {
   it('month summary + weeks table: Over plan, Within plan (final), Not final; plan sources', async () => {
     const { page, context, errors } = await newPage();
     await planOpen(page, M.ym, '&week=W4');
-    const w2 = await weekRow(page, 'W2'); assert.equal(w2.status, 'OVER'); assert.equal(w2.source, 'OVERRIDE'); assert.match(w2.text, /\d+ over/);
-    const w4 = await weekRow(page, 'W4'); assert.equal(w4.status, 'WITHIN_PLAN'); assert.equal(w4.source, 'ADMIN_DEFAULT'); assert.match(w4.text, /7\/7 final/); assert.match(w4.text, /1 day >50/);
-    const w1 = await weekRow(page, 'W1'); assert.equal(w1.status, 'NOT_FINAL'); assert.equal(w1.source, 'DEFAULT'); assert.match(w1.text, /Default · not set/);
+    const w2 = await weekRow(page, 'W2'); assert.equal(w2.budget, 'OVER_PLAN'); assert.equal(w2.daily, 'BREACHED'); assert.equal(w2.source, 'OVERRIDE'); assert.match(w2.text, /\d+ over/);
+    const w4 = await weekRow(page, 'W4'); assert.equal(w4.budget, 'WITHIN_PLAN'); assert.equal(w4.daily, 'BREACHED'); assert.equal(w4.data, 'FINAL'); assert.equal(w4.source, 'ADMIN_DEFAULT'); assert.match(w4.text, /Within plan(?! · so far)/); assert.match(w4.text, /Daily limit breached · 1 day >50/); assert.match(w4.text, /7\/7 days final/);
+    const w1 = await weekRow(page, 'W1'); assert.equal(w1.data, 'NOT_FINAL'); assert.match(w1.text, /so far/); assert.equal(w1.source, 'DEFAULT'); assert.match(w1.text, /Default · not set/);
     assert.match(await page.textContent('#wpMonth'), /Monthly budget · default/);
     assert.match(await page.textContent('#wpMonth'), /2 of 5 weeks set by an Admin, 3 default \(not set\)/);
+    const fit = await page.$eval('#wpWeeks .wp-scroll', e => e.scrollWidth - e.clientWidth);
+    assert.ok(fit <= 1, `weeks table fits at 1440 px without its own scrollbar (${fit}px)`);
     await shot(page, 'weekly-plan-full-1440');
     await shot(page, 'weekly-plan-month-summary', '#wpMonth');
     await shot(page, 'weekly-plan-weeks-table', '#wpWeeks');
@@ -310,7 +313,7 @@ describe('2. weekly-plan.html — every important state', () => {
     const future = `${cm === 12 ? cy + 1 : cy}-${String(cm === 12 ? 1 : cm + 1).padStart(2, '0')}`;
     await page.fill('#wpMonthInput', future); await page.dispatchEvent('#wpMonthInput', 'change');
     await planSettled(page, future);
-    assert.equal(await page.getAttribute('#wpMonth [data-status]', 'data-status'), 'NOT_STARTED');
+    assert.equal(await page.getAttribute('#wpMonth [data-dim="budget"]', 'data-status'), 'NOT_STARTED');
     await shot(page, 'weekly-plan-future-not-started', '#wpMonth');
     await context.close();
   });
@@ -327,11 +330,44 @@ describe('2. weekly-plan.html — every important state', () => {
   }
 });
 
+describe('2b. D1: Budget status · Daily compliance · Data completeness (page, card, CSV)', () => {
+  it('a week with a day over 50 inside its budget: "Within plan" + "Daily limit breached"; same wording on the card and in the CSV; not final = "so far"', async () => {
+    const { page, context } = await newPage();
+    await planOpen(page, M.ym, '&week=W4');
+    const chips = sel => page.$$eval(sel, cs => cs.map(c => `${c.dataset.dim}:${c.dataset.status}:${c.textContent.trim()}`));
+    const w4 = await chips('#wpWeekDetail .wp-d1 .wp-chip');
+    assert.deepEqual(w4, ['budget:WITHIN_PLAN:Within plan', 'daily:BREACHED:Daily limit breached · 1 day >50', 'data:FINAL:Final']);
+    const month = await chips('#wpMonth .wp-d1 .wp-chip');
+    assert.ok(month[0].startsWith('budget:') && /so far|Over plan/.test(month[0]), 'month not final: never shown as confirmed — ' + month[0]);
+    assert.equal(month[2], 'data:NOT_FINAL:Not final');
+    await shot(page, 'd1-week-within-plan-daily-breached', '#wpWeekDetail .wp-section-head');
+    // CSV: the same three results, same wording, and the "so far" note
+    const csv = await page.evaluate(() => window.__qdWeeklyPlanCsv());
+    assert.match(csv[1], /NOT final.*not confirmed/);
+    assert.deepEqual(csv[3].split(',').slice(9), ['Budget status', 'Daily compliance', 'Days over limit', 'Data completeness', 'Final days / elapsed']);
+    const row = k => csv.find(l => l.startsWith(k + ','));
+    assert.match(row('W4'), /,Within plan,Daily limit breached · 1 day >50,1,Final,7\/7$/);
+    assert.match(row('W1'), /,Within plan · so far,/);
+    assert.match(row('Month'), /,Not final,/);
+    const dl = page.waitForEvent('download');
+    await page.click('#wpCsv');
+    assert.equal((await dl).suggestedFilename(), `weekly-plan_${M.ym}.csv`);
+    // the Dashboard card shows the same three results with the same wording for the same month
+    const d = await newPage();
+    await dashOpen(d.page); await dashRange(d.page, M.d(1), M.d(M.nDays));
+    const card = await d.page.$$eval('#planCard [data-k="month"] .v5-budget-d1 .wp-chip[data-dim]', cs => cs.map(c => `${c.dataset.dim}:${c.dataset.status}:${c.textContent.trim()}`));
+    assert.deepEqual(card, month, 'card = page');
+    await shot(d.page, 'd1-dashboard-card', '#planCard');
+    await d.context.close();
+    await context.close();
+  });
+});
+
 describe('3. Default plan is never shown as a confirmed plan', () => {
   it('scrap read error: no figures (Read error), never 0', async () => {
     const { page, context } = await newPage(1440, { fail: 'scrap' });
     await planOpen(page, M.ym);
-    const m = await page.evaluate(() => ({ actual: window.__qdWeeklyPlan.month.actual, status: window.__qdWeeklyPlan.month.status }));
+    const m = await page.evaluate(() => ({ actual: window.__qdWeeklyPlan.month.actual, status: window.__qdWeeklyPlan.month.budgetStatus }));
     assert.deepEqual(m, { actual: null, status: 'READ_ERROR' });
     assert.match(await page.textContent('#connectionBanner'), /never shown as 0/);
     await shot(page, 'state-scrap-read-error', '#wpMonth');

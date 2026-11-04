@@ -25,13 +25,18 @@
  * WITHIN / OVER / NO PRODUCTION. Before that date (or while it is not in use) a day with scrap
  * logs is LOGGED (not final) and a day without any log is NO_DATA — unknown, never 0.
  *
- * Status of a week / the month (same principle as the daily status: OVER is certain because
- * scrap can only grow):
- *   NOT_STARTED  no elapsed day
- *   READ_ERROR   scrap could not be read (no number is shown), or a close status could not be read
- *   OVER         actual > plan to date
- *   ON_TRACK     actual <= plan to date and every elapsed day is final
- *   NOT_FINAL    actual <= plan to date so far, but some elapsed day is not final
+ * D1 (approved): a week / the month has THREE separate results, never merged into one:
+ *   budgetStatus     WITHIN_PLAN  actual <= plan to date
+ *                    OVER_PLAN    actual > plan to date (certain: scrap can only grow)
+ *                    NOT_STARTED / READ_ERROR (scrap could not be read: no number)
+ *   dailyCompliance  ALL_WITHIN   no day above the daily limit (DAILY_TARGET_PCS) among the days known
+ *                    BREACHED     at least one day above the limit (certain)
+ *                    NO_DATA      no day with a known quantity yet · NOT_STARTED / READ_ERROR
+ *   completeness     FINAL        the whole period has ended and every day is final (Shift Close)
+ *                    NOT_FINAL    otherwise — the results above are then "so far", never confirmed
+ *                    NOT_STARTED / READ_ERROR (scrap or a close status could not be read)
+ * A day over 50 while the week is within its budget = WITHIN_PLAN + BREACHED (shown as
+ * "Within plan" with the warning "Daily limit breached").
  * noLog = no elapsed day has any scrap log: the page shows "No log", never an actual of 0.
  *
  * Exposed as window.WeeklyPlanCalc (module.exports under Node).
@@ -114,12 +119,15 @@
     return logs > 0 ? { state: 'LOGGED', final: false, known: true } : { state: 'NO_DATA', final: false, known: false };
   }
 
-  function periodStatus({ elapsedDays, actual, planToDate, anyReadError, allFinal }) {
-    if (elapsedDays === 0) return 'NOT_STARTED';
-    if (actual === null) return 'READ_ERROR';
-    if (actual > planToDate + 1e-9) return 'OVER';
-    if (anyReadError) return 'READ_ERROR';
-    return allFinal ? 'ON_TRACK' : 'NOT_FINAL';
+  // D1: three separate results for a week / the month.
+  function periodResults({ elapsedDays, totalDays, actual, planToDate, counts }) {
+    if (elapsedDays === 0) return { budgetStatus: 'NOT_STARTED', dailyCompliance: 'NOT_STARTED', completeness: 'NOT_STARTED' };
+    if (actual === null) return { budgetStatus: 'READ_ERROR', dailyCompliance: 'READ_ERROR', completeness: 'READ_ERROR' };
+    const budgetStatus = actual > planToDate + 1e-9 ? 'OVER_PLAN' : 'WITHIN_PLAN';
+    const known = counts.elapsed - counts.noData - counts.readError;
+    const dailyCompliance = counts.overDaily > 0 ? 'BREACHED' : (known > 0 ? 'ALL_WITHIN' : 'NO_DATA');
+    const completeness = counts.readError > 0 ? 'READ_ERROR' : (counts.final === elapsedDays && elapsedDays === totalDays ? 'FINAL' : 'NOT_FINAL');
+    return { budgetStatus, dailyCompliance, completeness };
   }
 
   function countStates(days) {
@@ -205,7 +213,7 @@
         budgetExceeded: actual !== null && actual > plan,
         noLog: elapsedDays > 0 && counts.noData === elapsedDays,
         final: allFinal && elapsedDays === w.days, soFar: !(allFinal && elapsedDays === w.days),
-        counts, status: periodStatus({ elapsedDays, actual, planToDate, anyReadError: counts.readError > 0, allFinal }),
+        counts, ...periodResults({ elapsedDays, totalDays: w.days, actual, planToDate, counts }),
         lineShift: ls, dayList: wDays
       });
     });
@@ -231,7 +239,7 @@
       noLog: elapsedDays > 0 && counts.noData === elapsedDays,
       projection: actual !== null && elapsedDays > 0 && counts.noData === 0 ? actual / elapsedDays * nDays : null,
       final: allFinal && elapsedDays === nDays, soFar: !(allFinal && elapsedDays === nDays),
-      counts, status: periodStatus({ elapsedDays, actual, planToDate, anyReadError: counts.readError > 0, allFinal }),
+      counts, ...periodResults({ elapsedDays, totalDays: nDays, actual, planToDate, counts }),
       closeFrom, closeInUse: !!closeFrom && closeFrom <= asOf && asOf >= dailyFrom,
       budgetSource, planSources, lineShift: ls, weeks, days, warnings
     };
@@ -300,8 +308,26 @@
     return { ym, asOf, from: monthStart(ym), to: asOf };
   }
 
+  /**
+   * D1 labels — ONE wording for the Dashboard card, weekly-plan.html and the CSV export.
+   * A result that is not final is always marked "so far" (never shown as confirmed), except a
+   * certain one (Over plan, Daily limit breached), which can only get worse.
+   * -> { budget, daily, data }: each { key, text, tone }
+   */
+  function labels(p, dailyLimit) {
+    const lim = Number.isFinite(dailyLimit) ? dailyLimit : dailyTargetDefault();
+    const final = p.completeness === 'FINAL', sofar = final ? '' : ' · so far';
+    const n = (p.counts && p.counts.overDaily) || 0;
+    const B = { WITHIN_PLAN: ['Within plan' + sofar, 'good'], OVER_PLAN: ['Over plan', 'bad'], NOT_STARTED: ['Not started', 'neutral'], READ_ERROR: ['Read error', 'bad'] };
+    const D = { ALL_WITHIN: [`All days within limit (≤${lim})` + sofar, 'good'], BREACHED: [`Daily limit breached · ${n} day${n === 1 ? '' : 's'} >${lim}`, 'bad'],
+      NO_DATA: ['No daily data yet', 'neutral'], NOT_STARTED: ['Not started', 'neutral'], READ_ERROR: ['Read error', 'bad'] };
+    const C = { FINAL: ['Final', 'good'], NOT_FINAL: ['Not final', 'warn'], NOT_STARTED: ['Not started', 'neutral'], READ_ERROR: ['Read error', 'bad'] };
+    const mk = (map, key) => ({ key, text: map[key][0], tone: map[key][1] });
+    return { budget: mk(B, p.budgetStatus), daily: mk(D, p.dailyCompliance), data: mk(C, p.completeness) };
+  }
+
   const api = {
-    buildMonth, buildWeeks, weekOf, reductionGoal, topDefects, inScope, resolveOverride, dayState, cardWindow,
+    buildMonth, buildWeeks, weekOf, reductionGoal, labels, topDefects, inScope, resolveOverride, dayState, cardWindow,
     util: { addDays, daysBetween, daysInMonth, monthStart, monthEnd, prevMonth, nextMonth, shortDate, monthLabel, datesBetween }
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

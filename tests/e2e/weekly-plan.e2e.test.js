@@ -140,7 +140,7 @@ async function openPlan(page, extra = '') {
   await page.goto(`${BASE}/weekly-plan.html?${q}&ym=${YM}${extra}`);
   await page.waitForFunction(() => window.__qdWeeklyPlan && window.__qdWeeklyPlan.month && document.getElementById('wpWeeksTable'), null, { timeout: 20000 });
 }
-const monthOf = page => page.evaluate(() => { const m = window.__qdWeeklyPlan.month; return JSON.parse(JSON.stringify({ budget: m.budget, actual: m.actual, remaining: m.remaining, used: m.used, status: m.status, counts: m.counts, weeks: m.weeks.map(w => ({ key: w.key, plan: w.plan, actual: w.actual, status: w.status, ls: w.lineShift })), days: m.days.map(x => ({ date: x.date, state: x.state, qty: x.qty })), ls: m.lineShift })); });
+const monthOf = page => page.evaluate(() => { const m = window.__qdWeeklyPlan.month; return JSON.parse(JSON.stringify({ budget: m.budget, actual: m.actual, remaining: m.remaining, used: m.used, budgetStatus: m.budgetStatus, dailyCompliance: m.dailyCompliance, completeness: m.completeness, counts: m.counts, weeks: m.weeks.map(w => ({ key: w.key, plan: w.plan, actual: w.actual, budgetStatus: w.budgetStatus, dailyCompliance: w.dailyCompliance, completeness: w.completeness, ls: w.lineShift })), days: m.days.map(x => ({ date: x.date, state: x.state, qty: x.qty })), ls: m.lineShift })); });
 
 before(async () => {
   env = await initializeTestEnvironment({ projectId: PROJECT, firestore: { rules: fs.readFileSync(path.join(ROOT, 'emulator/firestore.rules'), 'utf8'), host: '127.0.0.1', port: 8080 } });
@@ -174,14 +174,14 @@ describe('Weekly Plan V5 (emulator)', () => {
     assert.equal(st[d(2)].state, 'LOGGED'); assert.equal(st[d(4)].state, 'NO_DATA'); assert.equal(st[d(4)].qty, null);
     assert.equal(st[d(21)].state, 'FINAL'); assert.equal(st[d(22)].state, 'PENDING'); assert.equal(st[d(23)].state, 'FINAL'); assert.equal(st[d(23)].qty, 0);
     assert.equal(st[d(24)].state, 'CONFLICT'); assert.equal(st[d(25)].state, 'NO_DATA');
-    assert.equal(pageMonth.status, 'NOT_FINAL');
+    assert.equal(pageMonth.completeness, 'NOT_FINAL'); assert.equal(pageMonth.budgetStatus, 'WITHIN_PLAN');
     // weeks table as shown: Days column = number of days of each week; the plan sentence names it too
     const shownDays = await page.$$eval('#wpWeeksTable tbody tr', trs => trs.map(tr => tr.children[2].textContent.trim()));
     assert.deepEqual(shownDays, weeks.map(w => String(w.days)));
     assert.doesNotMatch(await page.evaluate(() => document.body.innerText), /\[object|undefined|NaN/);
     // a week with no scrap log on any day shows "No log", never an actual of 0
     const noLogWeeks = weeks.filter(w => !IN.some(x => x.day >= w.from && x.day <= w.to)).map(w => w.key);
-    for (const k of noLogWeeks) assert.equal(await page.textContent(`#wpWeeksTable tr[data-week="${k}"] td:nth-child(7)`), 'No log', k);
+    for (const k of noLogWeeks) assert.equal(await page.textContent(`#wpWeeksTable tr[data-week="${k}"] td:nth-child(6)`), 'No log', k);
     // what the user sees
     const text = await page.evaluate(() => document.body.innerText);
     assert.match(text, /Monthly budget/); assert.match(text, /so far/); assert.match(text, /not counted as 0/);
@@ -225,7 +225,7 @@ describe('Weekly Plan V5 (emulator)', () => {
     const card = await page.evaluate(() => JSON.parse(JSON.stringify(window.__qdPlanCard)));
     assert.equal(card.ym, YM); assert.equal(card.asOf, d(NDAYS));
     assert.equal(card.extraScrapQuery, null, 'the Attention look-back already covers the month');
-    for (const k of ['budget', 'actual', 'remaining', 'status']) assert.equal(card.month[k], pageMonth[k], k);
+    for (const k of ['budget', 'actual', 'remaining', 'budgetStatus', 'dailyCompliance', 'completeness']) assert.equal(card.month[k], pageMonth[k], k);
     assert.equal(card.month.final, pageMonth.counts.final);
     const lastWeek = pageMonth.weeks[pageMonth.weeks.length - 1];
     assert.equal(card.week.key, lastWeek.key); assert.equal(card.week.actual, lastWeek.actual); assert.equal(card.week.plan, lastWeek.plan);
@@ -255,7 +255,7 @@ describe('Weekly Plan V5 (emulator)', () => {
     await page.waitForFunction(ym => window.__qdPlanCard && window.__qdPlanCard.ym === ym && window.__qdPlanCard.month, YM, { timeout: 20000 });
     const card = await page.evaluate(() => JSON.parse(JSON.stringify(window.__qdPlanCard)));
     assert.deepEqual(card.extraScrapQuery, [d(1), d(14)]);
-    assert.equal(card.month.actual, pageMonth.actual); assert.equal(card.month.status, pageMonth.status);
+    assert.equal(card.month.actual, pageMonth.actual); assert.equal(card.month.budgetStatus, pageMonth.budgetStatus); assert.equal(card.month.dailyCompliance, pageMonth.dailyCompliance); assert.equal(card.month.completeness, pageMonth.completeness);
     const r = await page.evaluate(() => window.__qdReads);
     console.log('  reads Dashboard, range 15 → end:', JSON.stringify(r));
     assert.equal(r.scrapLogs.gets, 2, 'range + the gap (1 … 14)');

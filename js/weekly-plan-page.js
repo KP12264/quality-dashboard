@@ -15,15 +15,15 @@
   const pct = n => Number.isFinite(n) ? (n * 100).toFixed(0) + '%' : '–';
   // Remaining below zero is shown as "N over" (never as a negative budget).
   const remain = n => !Number.isFinite(n) ? '–' : (n < 0 ? `<span class="wp-over">${Math.round(-n).toLocaleString('en-US')} over</span>` : Math.round(n).toLocaleString('en-US'));
-  // ON_TRACK on a week / month that is complete and final reads "Within plan".
-  const statusKey = p => (p.status === 'ON_TRACK' && p.final ? 'WITHIN_PLAN' : p.status);
+  // D1: three separate results (budget · daily limit · data), one wording (WeeklyPlanCalc.labels).
+  const d1Chip = (dim, l) => `<span class="wp-chip ${l.tone}" data-dim="${dim}" data-status="${l.key}">${esc(l.text)}</span>`;
+  function d1Chips(p, dims) {
+    const L = C().labels(p, DAILY_TARGET_PCS);
+    return (dims || ['budget', 'daily', 'data']).map(k => d1Chip(k, L[k])).join(' ');
+  }
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const LINE_LABEL = code => { const l = LINES.find(x => x.code === code); return l ? l.label : code; };
 
-  const STATUS = {
-    ON_TRACK: ['On track', 'good'], WITHIN_PLAN: ['Within plan', 'good'], OVER: ['Over plan', 'bad'], NOT_FINAL: ['Not final', 'warn'],
-    NOT_STARTED: ['Not started', 'neutral'], READ_ERROR: ['Read error', 'bad']
-  };
   const DAY_STATE = {
     FINAL: ['Final', 'good'], LOGGED: ['Logged · not closed', 'warn'], PENDING: ['Pending close', 'warn'],
     CONFLICT: ['Conflict', 'bad'], NO_DATA: ['No data (not 0)', 'neutral'], READ_ERROR: ['Read error', 'bad'], FUTURE: ['—', 'neutral']
@@ -168,7 +168,7 @@
     const tile = (k, label, value, sub, extra = '') => `<div class="wp-tile" data-k="${k}"${extra}><div class="wp-tile-label">${label}</div><div class="wp-tile-value">${value}</div><div class="wp-tile-sub">${sub}</div></div>`;
     const remainSub = m.actual === null ? '' : (m.remaining < 0 ? 'over the budget' : (m.soFar ? 'at most, while days are not final' : 'left in the budget'));
     $('wpMonth').innerHTML = `
-      <div class="wp-month-head"><h2>${esc(m.monthLabel)}</h2>${chip(STATUS, statusKey(m))}<span class="wp-asof">as of ${esc(m.elapsedDays ? U().shortDate(m.asOf) : '—')}</span></div>
+      <div class="wp-month-head"><h2>${esc(m.monthLabel)}</h2><span class="wp-d1">${d1Chips(m)}</span><span class="wp-asof">as of ${esc(m.elapsedDays ? U().shortDate(m.asOf) : '—')}</span></div>
       <div class="wp-tiles">
         ${tile('budget', m.budgetSource === 'CONFIRMED' ? 'Monthly budget' : 'Monthly budget · default', fmt(m.budget) + ' <small>pcs</small>' + (m.budgetSource === 'CONFIRMED' ? '' : ' ' + planTag(m.budgetSource === 'UNAVAILABLE' ? 'UNAVAILABLE' : 'DEFAULT')),
           `= sum of ${m.weeks.length} weekly plans · ${budgetSourceText(m)} · base ${fmt(m.dailyTarget)} × ${m.daysInMonth} days = ${fmt(m.baseBudget)}`)}
@@ -176,7 +176,7 @@
         ${tile('remaining', 'Remaining', m.actual === null ? '–' : remain(m.remaining) + (m.remaining < 0 ? '' : ' <small>pcs</small>'), remainSub)}
         ${tile('used', '% Used', pct(m.used), m.projection === null ? 'projection: needs a log every day' : `projection ${fmt(m.projection)} pcs`)}
       </div>
-      <div class="wp-bar" aria-hidden="true"><i style="width:${Math.min(100, (m.used || 0) * 100).toFixed(1)}%" class="${m.status === 'OVER' ? 'bad' : ''}"></i><b style="left:${m.budget ? Math.min(100, m.planToDate / m.budget * 100).toFixed(1) : 0}%" title="plan to date"></b></div>
+      <div class="wp-bar" aria-hidden="true"><i style="width:${Math.min(100, (m.used || 0) * 100).toFixed(1)}%" class="${m.budgetStatus === 'OVER_PLAN' ? 'bad' : ''}"></i><b style="left:${m.budget ? Math.min(100, m.planToDate / m.budget * 100).toFixed(1) : 0}%" title="plan to date"></b></div>
       <div class="wp-data" id="wpMonthData">Data: ${esc(dataLine(m.counts, m))}</div>
       ${m.warnings.filter(w => w.startsWith('override-invalid')).map(w => `<div class="wp-warn">Override for ${esc(w.split(':')[1])} is above ${fmt(m.dailyTarget)}/day and was not applied (default plan used).</div>`).join('')}`;
   }
@@ -187,21 +187,21 @@
       <tr data-week="${w.key}" class="${w.key === state.week ? 'selected' : ''}" tabindex="0">
         <th scope="row">${w.key}</th>
         <td>${esc(w.label)}</td><td class="n">${w.days}</td>
-        <td class="n"><span class="wp-plan">${fmt(w.plan)}</span>${w.override !== null ? ` <span class="wp-ov" title="Admin override (base ${fmt(w.basePlan)})">base ${fmt(w.basePlan)}</span>` : ''}</td>
-        <td>${planTag(w.planSource)}</td>
+        <td class="n"><span class="wp-plan">${fmt(w.plan)}</span>${w.override !== null ? ` <span class="wp-ov" title="Admin override (base ${fmt(w.basePlan)})">base ${fmt(w.basePlan)}</span>` : ''}<div class="wp-plan-src">${planTag(w.planSource)}</div></td>
         <td class="n">${w.elapsedDays ? fmt(w.planToDate) : '–'}</td>
         <td class="n">${w.elapsedDays ? (w.actual === null ? '–' : (w.noLog ? '<span class="wp-unknown" title="No scrap log on any day yet — not counted as 0">No log</span>' : fmt(w.actual) + soFar(w))) : '–'}</td>
         <td class="n">${w.elapsedDays && w.actual !== null && !w.noLog ? remain(w.remaining) : '–'}</td>
         <td class="n">${w.elapsedDays && !w.noLog ? pct(w.used) : '–'}</td>
-        <td>${chip(STATUS, statusKey(w))}</td>
-        <td>${w.elapsedDays ? `${w.counts.final}/${w.elapsedDays} final` : '—'}${w.counts.overDaily ? ` <span class="wp-chip bad" title="Days over the daily limit">${w.counts.overDaily} day${w.counts.overDaily === 1 ? '' : 's'} &gt;${fmt(m.dailyTarget)}</span>` : ''}</td>
+        <td>${d1Chips(w, ['budget'])}</td>
+        <td>${d1Chips(w, ['daily'])}</td>
+        <td>${d1Chips(w, ['data'])}${w.elapsedDays ? ` <small>${w.counts.final}/${w.elapsedDays} days final</small>` : ''}</td>
         ${edit ? `<td><button type="button" class="sc-btn wp-edit" data-edit="${w.key}">Edit plan</button></td>` : ''}
       </tr>`).join('');
     $('wpWeeks').innerHTML = `
       <div class="wp-scroll"><table class="wp-table" id="wpWeeksTable">
-        <thead><tr><th>Week</th><th>Dates</th><th class="n">Days</th><th class="n">Plan</th><th>Plan source</th><th class="n">Plan to date</th><th class="n">Actual</th><th class="n">Remaining</th><th class="n">Used</th><th>Status</th><th>Data</th>${edit ? '<th></th>' : ''}</tr></thead>
+        <thead><tr><th>Week</th><th>Dates</th><th class="n">Days</th><th class="n">Plan · source</th><th class="n">Plan to date</th><th class="n">Actual</th><th class="n">Remaining</th><th class="n">Used</th><th>Budget</th><th>Daily limit</th><th>Data</th>${edit ? '<th></th>' : ''}</tr></thead>
         <tbody>${rows}</tbody>
-        <tfoot><tr><th>Month</th><td></td><td class="n">${m.daysInMonth}</td><td class="n">${fmt(m.budget)}</td><td>${m.budgetSource === 'CONFIRMED' ? '' : planTag(m.budgetSource === 'UNAVAILABLE' ? 'UNAVAILABLE' : 'DEFAULT')}</td><td class="n">${m.elapsedDays ? fmt(m.planToDate) : '–'}</td><td class="n">${m.actual === null ? '–' : fmt(m.actual)}</td><td class="n">${m.actual === null ? '–' : remain(m.remaining)}</td><td class="n">${pct(m.used)}</td><td>${chip(STATUS, statusKey(m))}</td><td>${m.elapsedDays ? `${m.counts.final}/${m.elapsedDays} final` : '—'}</td>${edit ? '<td></td>' : ''}</tr></tfoot>
+        <tfoot><tr><th>Month</th><td></td><td class="n">${m.daysInMonth}</td><td class="n">${fmt(m.budget)}${m.budgetSource === 'CONFIRMED' ? '' : `<div class="wp-plan-src">${planTag(m.budgetSource === 'UNAVAILABLE' ? 'UNAVAILABLE' : 'DEFAULT')}</div>`}</td><td class="n">${m.elapsedDays ? fmt(m.planToDate) : '–'}</td><td class="n">${m.actual === null ? '–' : fmt(m.actual)}</td><td class="n">${m.actual === null ? '–' : remain(m.remaining)}</td><td class="n">${pct(m.used)}</td><td>${d1Chips(m, ['budget'])}</td><td>${d1Chips(m, ['daily'])}</td><td>${d1Chips(m, ['data'])}${m.elapsedDays ? ` <small>${m.counts.final}/${m.elapsedDays} days final</small>` : ''}</td>${edit ? '<td></td>' : ''}</tr></tfoot>
       </table></div>
       <p class="wp-note">Weeks run Monday–Sunday inside the month, so a day is counted in one week of one month only. Plan = ${fmt(DAILY_TARGET_PCS)} × days unless an Admin sets a lower plan.</p>`;
   }
@@ -227,7 +227,7 @@
         ${LINES.map(l => `<td class="n">${d.state === 'FUTURE' || d.qty === null ? '—' : fmt(d.lineShift[l.code].total)}</td>`).join('')}
       </tr>`).join('');
     $('wpWeekDetail').innerHTML = `
-      <div class="wp-section-head"><h2>${w.key} · ${esc(w.label)}</h2>${chip(STATUS, statusKey(w))}</div>
+      <div class="wp-section-head"><h2>${w.key} · ${esc(w.label)}</h2><span class="wp-d1">${d1Chips(w)}</span></div>
       <p class="wp-data" id="wpWeekData">Plan ${fmt(w.plan)} pcs${w.override !== null ? ` (Admin override, base ${fmt(w.basePlan)})` : ` (${fmt(DAILY_TARGET_PCS)} × ${w.days} days)`} ${planTag(w.planSource)} · Actual ${w.actual === null ? '–' : (w.noLog ? 'no scrap log yet' : fmt(w.actual) + (w.soFar && w.elapsedDays ? ' so far' : ''))} · Remaining ${w.actual === null || !w.elapsedDays || w.noLog ? '–' : remain(w.remaining)} · Data: ${esc(w.elapsedDays ? dataLine(w.counts, m) : 'not started')}</p>
       <div class="wp-grid2">
         <div><div class="wp-scroll"><table class="wp-table" id="wpDaysTable"><caption>Days · daily limit ≤${fmt(m.dailyTarget)} pcs (Door A+B+C, Day + Night)</caption>
@@ -315,6 +315,38 @@
       <p class="wp-note">This reduction goal is separate from the daily operational limit (≤${fmt(DAILY_TARGET_PCS)} pcs/day) and from the weekly budget. It is confirmed only when every day of the previous month is final through Shift Close.</p>`;
   }
 
+  // ---- CSV export (D1: the same three results and wording as the page and the Dashboard card) ----
+  function csvRows() {
+    const m = state.month, cell = v => { const t = String(v == null ? '' : v); return /[",\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t; };
+    const row = a => a.map(cell).join(',');
+    const lim = m.dailyTarget, L = p => C().labels(p, lim);
+    const num = (p, v) => (p.actual === null || !p.elapsedDays ? '' : v);
+    const out = [
+      row(['Weekly Plan', m.monthLabel, 'as of ' + m.asOf, 'Door A+B+C · Day + Night', `daily limit <= ${lim} pcs`]),
+      row(['Values marked "so far" are NOT final (Shift Close not complete) and are not confirmed.']),
+      '',
+      row(['Period', 'Dates', 'Days', 'Plan', 'Plan source', 'Plan to date', 'Actual', 'Remaining', 'Used %', 'Budget status', 'Daily compliance', 'Days over limit', 'Data completeness', 'Final days / elapsed'])
+    ];
+    const line = (name, dates, days, p, source) => { const l = L(p); return row([name, dates, days, p.plan === undefined ? m.budget : p.plan, source, p.elapsedDays ? Math.round(p.planToDate) : '',
+      p.noLog ? 'No log' : num(p, p.actual), p.noLog ? '' : num(p, p.remaining), p.noLog ? '' : num(p, p.used === null ? '' : (p.used * 100).toFixed(1)),
+      l.budget.text, l.daily.text, p.elapsedDays ? p.counts.overDaily : '', l.data.text, p.elapsedDays ? `${p.counts.final}/${p.elapsedDays}` : '']); };
+    m.weeks.forEach(w => out.push(line(w.key, w.label, w.days, w, PLAN_SOURCE[w.planSource][0])));
+    out.push(line('Month', `${m.monthStart} to ${m.monthEnd}`, m.daysInMonth, Object.assign({}, m, { plan: m.budget }), m.budgetSource === 'CONFIRMED' ? 'Set by Admin' : PLAN_SOURCE[m.budgetSource === 'UNAVAILABLE' ? 'UNAVAILABLE' : 'DEFAULT'][0]));
+    out.push('', row(['Date', 'Week', 'Scrap (Door A+B+C)', `Within daily limit (<= ${lim})`, 'Data', 'Final']));
+    m.days.filter(d => d.elapsed).forEach(d => out.push(row([d.date, d.week, d.qty === null ? '' : d.qty, d.qty === null ? '' : (d.overDaily ? 'No' : 'Yes'),
+      d.state === 'FINAL' ? (FINAL_TEXT[d.evaluatorStatus] || 'Final') : (DAY_STATE[d.state] || [d.state])[0], d.final ? 'Yes' : 'No'])));
+    return out;
+  }
+  function exportCsv() {
+    if (!state.month) return;
+    const csv = '\ufeff' + csvRows().join('\n');   // BOM: Excel opens Thai text correctly
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+    a.download = `weekly-plan_${state.ym}.csv`;
+    document.body.appendChild(a); a.click(); a.remove();
+  }
+  window.__qdWeeklyPlanCsv = () => csvRows();   // for the tests
+
   // ---- plan editing (Admin, sign-in) ------------------------------------------------------
   async function openEditor(weekKey) {
     const w = state.month.weeks.find(x => x.key === weekKey), dlg = $('wpEditDialog');
@@ -363,6 +395,7 @@
     $('wpPrev').addEventListener('click', () => go(U().prevMonth(state.ym)));
     $('wpNext').addEventListener('click', () => go(U().nextMonth(state.ym)));
     $('wpReload').addEventListener('click', () => load(true));
+    $('wpCsv').addEventListener('click', exportCsv);
     $('wpWeeks').addEventListener('click', e => {
       const ed = e.target.closest('[data-edit]'); if (ed) { openEditor(ed.dataset.edit); return; }
       const tr = e.target.closest('tr[data-week]'); if (tr) { state.week = tr.dataset.week; renderWeeks(); renderWeek(); renderImprove(); renderReview(); writeUrl(); }

@@ -32,6 +32,12 @@
 .qd-v5 .wp-table thead th { font-size: 12px; color: #64748b; font-weight: 600; }
 .qd-v5 .wp-table tfoot th, .qd-v5 .wp-table tfoot td, .qd-v5 .wp-table tr.total th, .qd-v5 .wp-table tr.total td { font-weight: 700; border-top: 2px solid #cbd5e1; }
 .qd-v5 #wpWeeksTable tbody tr { cursor: pointer; }
+.qd-v5 #wpWeeksTable .wp-chip { white-space: normal; line-height: 1.3; }
+.qd-v5 #wpWeeksTable td, .qd-v5 #wpWeeksTable th { white-space: normal; }
+.qd-v5 #wpWeeksTable td.n { white-space: nowrap; }
+.qd-v5 #wpWeeksTable td:nth-child(2), .qd-v5 #wpWeeksTable .wp-plan-src .wp-chip, .qd-v5 #wpWeeksTable [data-dim="data"] { white-space: nowrap; }
+.qd-v5 #wpWeeksTable td small { display: block; font-size: 11px; color: #64748b; }
+.qd-v5 .wp-plan-src { margin-top: 2px; }
 .qd-v5 #wpWeeksTable tbody tr.selected { background: #f0fdfa; }
 .qd-v5 #wpWeeksTable tbody tr:focus-visible { outline: 2px solid #0f766e; outline-offset: -2px; }
 .qd-v5 .wp-ov { font-size: 11px; color: #92400e; }
@@ -77,12 +83,17 @@
 .qd-v5 .v5-budget-data { font-size: 12px; color: #64748b; margin-top: 4px; overflow-wrap: anywhere; }
 .qd-v5 .v5-budget-plan { font-size: 13px; color: #334155; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; }
 .qd-v5 .v5-budget-plan b { font-size: 15px; color: #0f172a; }
-.qd-v5 .v5-budget-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 6px 0 0; }
+.qd-v5 .v5-budget-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 6px 0 0; }
+.qd-v5 .v5-budget-stats dd .wp-sofar { font-size: 11px; font-weight: 600; vertical-align: baseline; margin-left: 2px; }
+.qd-v5 .v5-budget-stats dd { white-space: nowrap; }
 .qd-v5 .v5-budget-stats div { min-width: 0; }
 .qd-v5 .v5-budget-stats dt { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: #64748b; white-space: nowrap; }
 .qd-v5 .v5-budget-stats dt .wp-sofar { text-transform: none; letter-spacing: 0; vertical-align: baseline; }
 .qd-v5 .v5-budget-stats dd { margin: 0; font-size: 20px; font-weight: 700; color: #0f172a; font-variant-numeric: tabular-nums; }
 .qd-v5 .wp-src { font-weight: 600; font-size: 11px; padding: 1px 7px; }
+.qd-v5 .wp-d1, .qd-v5 .v5-budget-d1 { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+.qd-v5 .v5-budget-d1 { margin: 2px 0 4px; }
+.qd-v5 .v5-budget-d1 .wp-chip { font-size: 11px; padding: 1px 7px; }
 
 @media (max-width: 900px) {
   .qd-v5 .wp-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -93,4 +104,7 @@
   .qd-v5 .v5-budget-head .v5-budget-link { margin-left: 0; width: 100%; }
   .qd-v5 .wp-goal { grid-template-columns: minmax(0, 1fr); }
   .qd-v5 .wp-tile-value { font-size: 20px; }
+  .qd-v5 .v5-budget-stats { gap: 6px; }
+  .qd-v5 .v5-budget-stats dd { font-size: 17px; }
+  .qd-v5 .v5-budget-stats dd .wp-sofar { font-size: 10px; }
 }
