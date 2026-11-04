@@ -649,3 +649,106 @@ describe('6. Same tab, other tab, back / forward, stale hint', () => {
   });
 });
 
+describe('7. Final privacy and legend checks', () => {
+  // Everything the browser keeps for this site: localStorage, sessionStorage, Cache Storage and the
+  // IndexedDB databases (Firebase Auth keeps its session in "firebaseLocalStorageDb").
+  const storage = page => page.evaluate(async () => {
+    const idb = {};
+    const dbs = indexedDB.databases ? await indexedDB.databases() : [];
+    for (const d of dbs) {
+      idb[d.name] = await new Promise(res => {
+        const rq = indexedDB.open(d.name);
+        rq.onerror = () => res('(cannot open)');
+        rq.onsuccess = () => {
+          const db = rq.result, out = [];
+          const stores = [...db.objectStoreNames];
+          if (!stores.length) { db.close(); return res(out); }
+          const tx = db.transaction(stores, 'readonly'); let left = stores.length;
+          stores.forEach(n => { const g = tx.objectStore(n).getAll(); g.onsuccess = () => { out.push(...g.result); if (--left === 0) { db.close(); res(out); } }; g.onerror = () => { if (--left === 0) { db.close(); res(out); } }; });
+        };
+      });
+    }
+    return {
+      local: Object.fromEntries(Object.keys(localStorage).map(k => [k, localStorage.getItem(k)])),
+      session: Object.fromEntries(Object.keys(sessionStorage).map(k => [k, sessionStorage.getItem(k)])),
+      caches: typeof caches !== 'undefined' ? await caches.keys() : [],
+      idb
+    };
+  });
+  const PRIVATE = /jig check|Stricter target|Line B trial run|KP00\d\d|Planned stop/;
+
+  it('browser storage: no private data stored by the app; the auth session is gone after sign-out', async () => {
+    const { page, context } = await newPage();
+    await planOpen(page, M.ym, '&week=W2');
+    await signIn(page, 'ADMIN1');
+    await page.waitForFunction(() => /jig check/.test((document.getElementById('wpReviewText') || {}).value || ''), null, { timeout: 15000 });
+    await page.click('[data-edit="W2"]');
+    await page.waitForFunction(() => /Stricter target/.test(document.getElementById('wpEditHistory').textContent), null, { timeout: 15000 });
+    const signed = await storage(page);
+    const text = JSON.stringify(signed);
+    assert.doesNotMatch(text, PRIVATE, 'no review note / history / employee code in any browser storage');
+    assert.deepEqual(signed.caches, [], 'no Cache Storage');
+    assert.deepEqual(Object.keys(signed.session), [], 'no sessionStorage');
+    assert.ok(Object.keys(signed.local).every(k => !/qd|scrap|plan|review/i.test(k)), 'no app data in localStorage: ' + Object.keys(signed.local));
+    assert.match(JSON.stringify(signed.idb.firebaseLocalStorageDb || []), /admin1@prodv2\.local/, 'signed in: Firebase Auth keeps its session (expected)');
+    await page.evaluate(() => document.getElementById('wpEditDialog').close());
+    const nav = page.waitForNavigation({ timeout: 15000 });
+    await page.click('#qdAuthSignOut'); await nav;
+    await planSettled(page, M.ym);
+    const out = await storage(page);
+    assert.doesNotMatch(JSON.stringify(out), /admin1@prodv2\.local/, 'after sign-out: no auth session left');
+    assert.doesNotMatch(JSON.stringify(out), PRIVATE);
+    console.log('  storage after sign-out:', JSON.stringify({ local: Object.keys(out.local), session: Object.keys(out.session), caches: out.caches, idb: Object.fromEntries(Object.entries(out.idb).map(([k, v]) => [k, Array.isArray(v) ? v.length + ' entries' : v])) }));
+    await context.close();
+  });
+
+  it('Back / Forward after signing out on another page shows no private data from the previous session', async () => {
+    const { page, context } = await newPage();
+    await planOpen(page, M.ym, '&week=W2');
+    await signIn(page, 'ADMIN1');
+    await page.waitForFunction(() => /jig check/.test((document.getElementById('wpReviewText') || {}).value || ''), null, { timeout: 15000 });
+    await page.goto(`${BASE}/scrap-entry.html?${q()}`);
+    await page.waitForSelector('#qdAuthSignOut', { timeout: 15000 });
+    const nav = page.waitForNavigation({ timeout: 15000 });
+    await page.click('#qdAuthSignOut'); await nav;
+    await page.waitForSelector('#qdAuthOpen', { timeout: 15000 });
+    await page.goBack();
+    await page.waitForTimeout(800);
+    await planSettled(page, M.ym);
+    await page.waitForSelector('#qdAuthOpen', { timeout: 15000 });
+    assert.doesNotMatch(await page.evaluate(() => document.body.innerText), PRIVATE, 'Back: nothing from the signed-in session');
+    await page.goForward();
+    await page.waitForSelector('#qdAuthOpen', { timeout: 15000 });
+    assert.doesNotMatch(await page.evaluate(() => document.body.innerText), PRIVATE, 'Forward: still signed out');
+    await context.close();
+  });
+
+  it('trend legend always matches the data shown: dates, Line and Shift changes, No data', async () => {
+    const { page, context } = await newPage();
+    await dashOpen(page);
+    const legend = () => page.evaluate(() => [...document.querySelectorAll('#trendLegend .v5-trend-li')].map(e => e.textContent.trim()));
+    const within = Object.keys(M.dayKinds).find(k => M.dayKinds[k] === 'FINAL'), over = Object.keys(M.dayKinds).find(k => M.dayKinds[k] === 'OVER');
+    await dashRange(page, M.d(1), M.d(M.nDays));
+    let l = await legend();
+    assert.ok(l.includes('Within target') && l.includes('Over target'), JSON.stringify(l));
+    await dashRange(page, within, within);
+    l = await legend();
+    assert.ok(l.includes('Within target') && !l.includes('Over target'), 'a WITHIN day: ' + JSON.stringify(l));
+    await dashRange(page, over, over);
+    l = await legend();
+    assert.ok(l.includes('Over target') && !l.includes('Within target'), 'an OVER day: ' + JSON.stringify(l));
+    await page.click('#lineFilter [data-line="A"]'); await page.waitForTimeout(900);
+    l = await legend();
+    assert.ok(l.some(x => /Scrap Qty · Door A · Day\+Night/.test(x)) && !l.includes('Over target'), 'Line A: ' + JSON.stringify(l));
+    await page.click('#shiftFilter [data-shift="NIGHT"]'); await page.waitForTimeout(900);
+    l = await legend();
+    assert.ok(l.some(x => /Scrap Qty · Door A · Night/.test(x)), 'Line A, Night: ' + JSON.stringify(l));
+    await page.click('#lineFilter [data-line="all"]'); await page.click('#shiftFilter [data-shift="all"]'); await page.waitForTimeout(900);
+    l = await legend();
+    assert.ok(l.includes('Over target') && !l.some(x => /Scrap Qty ·/.test(x)), 'back to all: ' + JSON.stringify(l));
+    await dashRange(page, M.d(11), M.d(11));
+    assert.deepEqual(await legend(), [], 'No data: no legend');
+    await context.close();
+  });
+});
+
