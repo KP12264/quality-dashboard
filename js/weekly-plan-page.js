@@ -48,8 +48,8 @@
   }
   const chip = (map, k) => { const [t, c] = map[k] || [k, 'neutral']; return `<span class="wp-chip ${c}" data-status="${esc(k)}">${esc(t)}</span>`; };
 
-  // cache: per month, what was read (scrap, plans, closes, goal) — going back to a month reads
-  // nothing again; Reload reads that month fresh. Reopening the page starts empty.
+  // cache: per month, what was read (scrap, plans, closes, goal) — going back to a month within
+  // QD_VIEW_CACHE_MINUTES reads nothing again; older data, Reload and reopening the page read fresh.
   const state = { ym: null, week: null, asOf: null, data: null, month: null, improveScope: 'week', reviews: null, goal: null, loadSeq: 0, cache: new Map(), goals: new Map() };
   window.__qdWeeklyPlan = state;   // read by the tests
 
@@ -78,12 +78,13 @@
     const seq = ++state.loadSeq;
     const ym = state.ym, asOf = asOfFor(ym), db = window.qdDb;
     if (force) { state.cache.delete(ym); state.goals.delete(ym); }
-    state.asOf = asOf; state.goal = state.goals.get(ym) || null;
+    state.asOf = asOf; state.goal = state.goals.get(ym) || null;   // (age checked when the goal is opened)
     $('wpGoalBody').innerHTML = ''; if ($('wpGoal').open) $('wpGoal').open = false;   // reopening shows the kept goal
     $('wpMonth').innerHTML = '<div class="wp-loading">Loading…</div>';
     if (window.qdFirebaseError || !db) { banner('error', '⚠ ' + (window.qdFirebaseError || 'Not connected to Firestore.')); return; }
     const hit = state.cache.get(ym);
-    if (hit && hit.asOf === asOf) { state.data = hit.data; finishLoad(seq); return; }
+    const maxAge = (typeof QD_VIEW_CACHE_MINUTES === 'number' ? QD_VIEW_CACHE_MINUTES : 5) * 60000;
+    if (hit && hit.asOf === asOf && Date.now() - hit.at < maxAge) { state.data = hit.data; finishLoad(seq); return; }
     const from = U().monthStart(ym);
     const elapsed = asOf >= from;
     const [scrap, plans] = await Promise.all([
@@ -95,7 +96,7 @@
     const close = await WeeklyPlanData.closeStatus(db, dates, scrap.records, !!scrap.error, null);
     if (seq !== state.loadSeq) return;
     state.data = { scrap, plans, close };
-    if (!scrap.error && !close.failed && !plans.error) state.cache.set(ym, { asOf, data: state.data });   // never keep a failed read
+    if (!scrap.error && !close.failed && !plans.error) state.cache.set(ym, { asOf, at: Date.now(), data: state.data });   // never keep a failed read
     finishLoad(seq);
   }
   function finishLoad(seq) {
@@ -274,7 +275,8 @@
 
   // ---- reduction goal (previous month, loaded on demand) ---------------------------------
   async function loadGoal() {
-    if (state.goal && state.goal.forYm === state.ym) { renderGoal(); return; }
+    const maxAge = (typeof QD_VIEW_CACHE_MINUTES === 'number' ? QD_VIEW_CACHE_MINUTES : 5) * 60000;
+    if (state.goal && state.goal.forYm === state.ym && Date.now() - state.goal.at < maxAge) { renderGoal(); return; }
     if (!state.month) return;
     const seq = state.loadSeq, db = window.qdDb, pym = U().prevMonth(state.ym);
     $('wpGoalBody').innerHTML = '<div class="wp-loading">Loading the previous month…</div>';
@@ -283,7 +285,7 @@
     const close = await WeeklyPlanData.closeStatus(db, U().datesBetween(from, to), scrap.records, !!scrap.error, null);
     if (seq !== state.loadSeq) return;
     const prev = C().buildMonth({ ym: pym, asOf: to, records: scrap.records, scrapReadFailed: !!scrap.error, closeFrom: close.from, closeUnits: close.units, closeReadFailed: close.failed, overrides: {}, dailyTarget: DAILY_TARGET_PCS });
-    state.goal = Object.assign(C().reductionGoal({ prev, current: state.month, goal: QD_MONTHLY_REDUCTION_GOAL }), { forYm: state.ym });
+    state.goal = Object.assign(C().reductionGoal({ prev, current: state.month, goal: QD_MONTHLY_REDUCTION_GOAL }), { forYm: state.ym, at: Date.now() });
     if (!scrap.error && !close.failed) state.goals.set(state.ym, state.goal);
     renderGoal();
   }

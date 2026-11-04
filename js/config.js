@@ -100,6 +100,11 @@ const QD_WEEKLY_REVIEW_COLLECTION = "scrapWeeklyReviews";
 const QD_MONTHLY_REDUCTION_GOAL = 0.5;
 // "Improve" on weekly-plan.html: Top N defects, all lines together (one row per defect).
 const QD_IMPROVE_TOP_N = 5;
+// Read re-use (release readiness): a filter change on the Dashboard, the Scrap Budget card and
+// weekly-plan.html re-use data they read at most this many minutes ago; older data is read again.
+// Refresh / Reload (and opening a page) always read fresh, so a save or import made elsewhere
+// shows at the latest after this time, or at once with Refresh.
+const QD_VIEW_CACHE_MINUTES = 5;
 const QD_EMULATOR = {
   projectId: "demo-quality-dashboard",   // "demo-" projects exist only in the emulator
   firestoreHost: "127.0.0.1", firestorePort: 8080,

@@ -10,9 +10,9 @@
  *                 missing days (1st … From − 1) are read, in one query.
  * Shift Close: the close context the Dashboard loaded (only missing close-required dates are read).
  * Plans: one query (<= 6 documents). Details live on weekly-plan.html.
- * Cache: what the card reads ITSELF (plans, the missing days, missing close dates) is kept for the
- * page session, so changing the Line / Shift filter or going back to a date reads nothing again;
- * the Refresh button (PlanCard.invalidate) and reopening the page read it fresh.
+ * Cache: what the card reads ITSELF (plans, the missing days, missing close dates) is kept for at
+ * most QD_VIEW_CACHE_MINUTES, so changing the Line / Shift filter or going back to a date reads
+ * nothing again; the Refresh button (PlanCard.invalidate) and reopening the page read it fresh.
  * Exposed as window.PlanCard.
  * ------------------------------------------------------------------
  */
@@ -28,13 +28,16 @@
   const chip = k => { const [t, c] = STATUS[k] || [k, 'neutral']; return `<span class="wp-chip ${c}" data-status="${k}">${t}</span>`; };
   const todayBkk = () => new Date(Date.now() + 7 * 3600000).toISOString().slice(0, 10);
   let cache = new Map();
+  const cacheMs = () => (typeof QD_VIEW_CACHE_MINUTES === 'number' ? QD_VIEW_CACHE_MINUTES : 5) * 60000;
   const cached = (key, fn) => {
-    if (!cache.has(key)) {
+    const hit = cache.get(key);
+    if (!hit || Date.now() - hit.at >= cacheMs()) {   // older than QD_VIEW_CACHE_MINUTES: read again
       const p = Promise.resolve().then(fn);
-      cache.set(key, p);
-      p.then(v => { if (v && v.error) cache.delete(key); }, () => cache.delete(key));   // never keep a failure
+      const entry = { p, at: Date.now() };
+      cache.set(key, entry);
+      p.then(v => { if (v && v.error && cache.get(key) === entry) cache.delete(key); }, () => { if (cache.get(key) === entry) cache.delete(key); });   // never keep a failure
     }
-    return cache.get(key);
+    return cache.get(key).p;
   };
   function invalidate() { cache = new Map(); }
   const SRC = {

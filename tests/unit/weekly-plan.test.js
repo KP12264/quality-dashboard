@@ -200,6 +200,7 @@ test('config: weekly plan constants', () => {
   assert.equal(K('QD_WEEKLY_PLAN_HISTORY'), 'history');
   assert.equal(K('QD_WEEKLY_REVIEW_COLLECTION'), 'scrapWeeklyReviews');
   assert.equal(K('QD_IMPROVE_TOP_N'), 5);
+  assert.equal(K('QD_VIEW_CACHE_MINUTES'), 5, 're-used data is at most 5 minutes old');
   assert.equal(K('DAILY_TARGET_PCS'), 50);
   assert.equal(K('QD_AUTH_MODE'), 'off');
   assert.equal(K('QD_CLOSE_REQUIRED_FROM'), null);

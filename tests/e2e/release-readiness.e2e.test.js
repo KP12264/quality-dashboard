@@ -296,14 +296,16 @@ describe('2. weekly-plan.html — every important state', () => {
     await context.close();
   });
 
-  it('phone (390 px): full page, no horizontal scroll', async () => {
-    const { page, context } = await newPage(390);
-    await planOpen(page, M.ym, '&week=W5');
-    const w = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
-    assert.ok(w <= 1);
-    await shot(page, 'weekly-plan-full-390');
-    await context.close();
-  });
+  for (const width of [1024, 820, 390]) {
+    it(`${width} px (tablet / phone): full page, no horizontal scroll`, async () => {
+      const { page, context } = await newPage(width);
+      await planOpen(page, M.ym, '&week=W5');
+      const w = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      assert.ok(w <= 1);
+      await shot(page, `weekly-plan-full-${width}`);
+      await context.close();
+    });
+  }
 });
 
 describe('3. Default plan is never shown as a confirmed plan', () => {
@@ -465,6 +467,71 @@ describe('4. Firestore read cost', () => {
     const goal2 = await reads(page);
     record('Weekly Plan', 'open the goal again', goal2, 'kept: nothing read');
     assert.equal(sum(goal2).gets, 0);
+    await context.close();
+  });
+});
+
+describe('5. Freshness: re-used data never hides a save or an import for long', () => {
+  // A save / import made elsewhere (here: written straight into the emulator, as another tab or the
+  // Excel import would) must show with Refresh at once, and with any action after QD_VIEW_CACHE_MINUTES.
+  const addLog = (id, qty) => env.withSecurityRulesDisabled(async ctx => {
+    const { doc, setDoc } = require('firebase/firestore');
+    await setDoc(doc(ctx.firestore(), 'scrapLogs', id), { date: M.d(5), shift: 'DAY', line: 'A', model: 'M', defectType: 'Burr', rootCause: '', scrapQty: qty, remark: '', createdAt: 1 });
+  });
+  const total = page => page.evaluate(() => Number(document.getElementById('kpiScrap').textContent.replace(/[^\d]/g, '')));
+  const cardActual = page => page.evaluate(() => window.__qdPlanCard.month.actual);
+  const ageBy = (page, minutes) => page.evaluate(m => { const real = Date.now.bind(Date); const off = m * 60000 + (window.__qdClockOff || 0); window.__qdClockOff = off; Date.now = () => real() + off; }, minutes);
+
+  it('Dashboard: filter keeps the loaded data and its time; Refresh reads the new log; after 5 minutes a filter reads fresh', async () => {
+    const { page, context } = await newPage();
+    await dashOpen(page);
+    await dashRange(page, M.d(1), M.d(M.nDays));
+    const t0 = await total(page), c0 = await cardActual(page), stamp0 = await page.textContent('#lastUpdated');
+    await addLog('fresh1', 7);
+    // filter changes: same (loaded) numbers and the same "Last refreshed" — nothing claims to be newer than it is
+    await page.click('#lineFilter [data-line="A"]'); await page.waitForTimeout(800);
+    await page.click('#lineFilter [data-line="all"]'); await page.waitForTimeout(800);
+    assert.equal(await total(page), t0); assert.equal(await page.textContent('#lastUpdated'), stamp0);
+    // Refresh: really reads again — the new log is in the KPI and in the card; the time changes
+    await page.evaluate(() => { window.__qdPlanCard = null; });
+    await page.waitForTimeout(1100);
+    await page.click('#refreshBtn'); await dashSettled(page, M.ym);
+    assert.equal(await total(page), t0 + 7, 'Refresh shows the new log');
+    assert.equal(await cardActual(page), c0 + 7, 'the card too');
+    assert.notEqual(await page.textContent('#lastUpdated'), stamp0);
+    // older than QD_VIEW_CACHE_MINUTES: a plain filter change reads fresh
+    await addLog('fresh2', 3);
+    await ageBy(page, 6);
+    await resetReads(page);
+    await page.evaluate(() => { window.__qdPlanCard = null; });
+    await page.click('#shiftFilter [data-shift="DAY"]'); await dashSettled(page, M.ym);
+    await page.click('#shiftFilter [data-shift="all"]'); await page.waitForTimeout(800);
+    assert.ok((await reads(page)).scrapLogs.gets >= 1, 'read again after 5 minutes');
+    assert.equal(await total(page), t0 + 10);
+    await context.close();
+    // opening the page again (e.g. back from Scrap Entry after a save) always reads fresh
+    const again = await newPage();
+    await dashOpen(again.page); await dashRange(again.page, M.d(1), M.d(M.nDays));
+    assert.equal(await total(again.page), t0 + 10);
+    await again.context.close();
+  });
+
+  it('Weekly Plan: back to a month re-uses data (≤ 5 min); Reload and older data read the new log', async () => {
+    const { page, context } = await newPage();
+    await planOpen(page, M.ym);
+    const a0 = await page.evaluate(() => window.__qdWeeklyPlan.month.actual);
+    await addLog('fresh3', 4);
+    await page.click('#wpNext'); await planSettled(page, M.curYm);
+    await page.click('#wpPrev'); await planSettled(page, M.ym);
+    assert.equal(await page.evaluate(() => window.__qdWeeklyPlan.month.actual), a0, 're-used (within 5 minutes)');
+    await page.evaluate(() => { window.__qdWeeklyPlan.month = null; });
+    await page.click('#wpReload'); await planSettled(page, M.ym);
+    assert.equal(await page.evaluate(() => window.__qdWeeklyPlan.month.actual), a0 + 4, 'Reload reads the new log');
+    await addLog('fresh4', 2);
+    await ageBy(page, 6);
+    await page.click('#wpNext'); await planSettled(page, M.curYm);
+    await page.click('#wpPrev'); await planSettled(page, M.ym);
+    assert.equal(await page.evaluate(() => window.__qdWeeklyPlan.month.actual), a0 + 6, 'older than 5 minutes: read again');
     await context.close();
   });
 });

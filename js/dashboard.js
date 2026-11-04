@@ -55,6 +55,7 @@
   // the same shifts) and that load had no error. Dates changes and Refresh always read fresh.
   let loaded = null;        // { key, ok, productionResult, scrapResult, shiftTargets, closeContext, lookback, imp }
   let reuseNextLoad = false;
+  const cacheMs = () => (typeof QD_VIEW_CACHE_MINUTES === 'number' ? QD_VIEW_CACHE_MINUTES : 5) * 60000;
   let scrapLoadFailed = false;   // a failed scrap read must never look like "scrap = 0" or WITHIN
 
   let trendChart = null;
@@ -159,7 +160,7 @@
     // for those dates (documented); legacy dates read only the active shifts.
     const fetchPlan = TargetEvaluator.productionFetchPlan(dates, activeShifts());
     const loadKey = JSON.stringify([state.dateFrom, state.dateTo, fetchPlan, dates.some(d => TargetEvaluator.ruleFor(d) === 'SHIFT') ? activeShifts() : null]);
-    const reuse = reuseNextLoad && !!loaded && loaded.ok && loaded.key === loadKey;
+    const reuse = reuseNextLoad && !!loaded && loaded.ok && loaded.key === loadKey && Date.now() - loaded.at < cacheMs();
     reuseNextLoad = false;
     let productionResult, scrapResult;
     if (reuse) { productionResult = loaded.productionResult; scrapResult = loaded.scrapResult; }
@@ -208,7 +209,7 @@
     ]);
     if (seq !== renderSeq) return;
     if (!reuse) {
-      loaded = { key: loadKey, productionResult, scrapResult, shiftTargets, closeContext, lookback: null, imp: null,
+      loaded = { key: loadKey, at: Date.now(), productionResult, scrapResult, shiftTargets, closeContext, lookback: null, imp: null,
         ok: !scrapResult.error && productionResult.errors.length === 0 && !closeContext.failed && !(shiftTargets.failedShifts || []).length };
     }
     if (closeContext.failed && !scrapLoadFailed && productionResult.errors.length === 0) {
