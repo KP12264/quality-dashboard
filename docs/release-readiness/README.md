@@ -40,7 +40,7 @@ UI changes made in this review:
 | **Provisional** reduction goal | `weekly-plan-goal-provisional.png` | status PROVISIONAL, never "Confirmed" |
 | **No data** month | `weekly-plan-no-data-month.png` | "No log", never 0 |
 | Future month (Not started) | `weekly-plan-future-not-started.png` | NOT_STARTED |
-| Full page desktop / phone | `weekly-plan-full-1440.png`, `weekly-plan-full-390.png` | no horizontal scroll |
+| Full page desktop / tablet / phone | `weekly-plan-full-1440.png`, `weekly-plan-full-1024.png`, `weekly-plan-full-820.png`, `weekly-plan-full-390.png` | no horizontal scroll |
 
 A CONFIRMED goal (every previous-month day final) is covered by the unit tests. The seeded month is deliberately not fully closed.
 
@@ -73,6 +73,38 @@ Full table: [generated/read-cost.md](generated/read-cost.md). Each cell is queri
   - back to a month already seen: 0; Reload: reads again;
   - previous-month goal: +1 scrap query and 1 close summary, only when it is opened; opening it again: 0.
 - **Reopening the Dashboard** reads again. The SDK has no offline cache enabled, so this is unchanged.
+- **Before / after** (same data and clicks; `f6e2ba9` vs now): [generated/read-cost-before-after.md](generated/read-cost-before-after.md).
+  - filter change on a 31-day range: 190 / 332 → **0 / 0**;
+  - back to a month on Weekly Plan: 3 / 146 → **0 / 0**;
+  - 7 / 30 / 31 days: −1 query (plans not re-read);
+  - everything else is unchanged.
+
+### Freshness (no stale data after a save or an import)
+
+Re-used data is never older than `QD_VIEW_CACHE_MINUTES` = **5 minutes**.
+
+- **Refresh** (Dashboard) and **Reload** (Weekly Plan) always read fresh, card included.
+- **Opening a page** always reads fresh. For example, coming back from Scrap Entry after a save, or after an Excel import.
+- **A date change** reads fresh (the card's own plans / missing days follow the same 5-minute rule).
+- **A filter click** shows the data loaded at the time in "Last refreshed", which it does not change. Up to 5 minutes it re-uses that data; after 5 minutes it reads again.
+- Tested (release-readiness §5): a log written elsewhere stays out on filter clicks; Refresh shows it in the KPI and the card; after 5 minutes a filter click shows the next one; a reopened page shows both. Weekly Plan: Reload, and a month older than 5 minutes, show the new log.
+
+### Weekly status when a day is over 50
+
+Two separate checks:
+
+- **The daily limit (≤ 50 pcs/day).** Any day over 50 is flagged:
+  - on the day ("Final · over 50", or ">50" while not final);
+  - in the weeks table ("N day >50");
+  - on the card ("N days over 50");
+  - on the Dashboard (Target Performance OVER TARGET for that day).
+- **The weekly status** compares the week's scrap with its **budget**. It is OVER when the actual exceeds the plan to date.
+
+Seeded examples:
+- W4: 7/7 days final, one day at 55 pcs, 129 of 350 → **Within plan** + "1 day >50" (`weekly-plan-days-W4-final-over50.png`).
+- W2: one day at 62 pcs, 148 of an Admin plan of 120 → **Over plan** + "1 day >50".
+
+A day over 50 therefore never hides; it does not by itself turn a week that is within its budget into "Over plan". If the rule should be "any day over 50 ⇒ week Over", that is a one-line change. **Decision needed (D1).**
 
 ## 5. Issues found in this review
 
@@ -90,6 +122,9 @@ Full table: [generated/read-cost.md](generated/read-cost.md). Each cell is queri
 | 10 | A completed, fully final week said "On track" | UI | "Within plan" | e2e §2 |
 | 11 | Mobile card was tall | UI | 3-column stat row | e2e §1 height |
 | 12 | `target-close` read test counted before the card had finished loading (race) | test | waits until the page has settled | e2e |
+| 13 | Re-used data had no age limit (a save / import elsewhere could stay hidden until Refresh) | logic | 5-minute cap (`QD_VIEW_CACHE_MINUTES`) | e2e §5 |
+| 14 | `rules-transition` expected the old banner wording | test | expects the new "access denied … NOT a confirmed plan" | e2e |
+| 15 | Changed JS / CSS kept old `?v=` cache keys | release | bumped on index.html / weekly-plan.html | — |
 
 Open (not fixed; decisions):
 
@@ -115,7 +150,8 @@ Open (not fixed; decisions):
 | Rollback | ✅ rehearsed: bridge → production snapshot → forward, no data lost. Weekly Plan: remove the card section / scripts (the card is optional); old pages: remove one script tag | `rehearsal.e2e` (R), `docs/phase7/generated/rehearsal-report.md` |
 | Production V2 compatibility | ✅ PV2 block identical to production in candidate and bridge; PV2 users get nothing in QD | `pv2-compat.test.js`, `docs/phase6/generated/compatibility-matrix.md` |
 | B1 / B2 close date, first admin + roles | ⛔ decision | — |
-| C1 / C2 cost acceptance | ⛔ decision (see §4) | `generated/read-cost.md` |
+| C1 / C2 cost acceptance | ⛔ decision (see §4) | `generated/read-cost.md`, `generated/read-cost-before-after.md` |
+| D1 weekly status rule with a day over 50 | ⛔ decision (see §4) | — |
 
 ## 7. Test results
 
