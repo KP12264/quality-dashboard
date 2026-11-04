@@ -10,6 +10,18 @@ Legend:
 - **(RO)** — read-only check, may be done before approval.
 - **(ACT)** — changes Production: needs its own approval.
 
+### Read-only checks vs. steps that write to Production
+
+| May be done before any approval — **read-only (RO)** | Need written approval first — **writes Production (ACT)** |
+|---|---|
+| 1.2 list databases · 1.3 copy published rules + SHA-256 · 1.4 rules history · 1.5 confirm backup bucket / IAM | 1.5 / 4.2 `gcloud firestore export` (creates an export) |
+| 8.2 Console → Usage, last 14 days | 2.5 every publish (bridge, candidate), site deploys, config releases |
+| 3.4 confirm what old fields are public today | 7.3 creating `qdUsers` (first Admin, roles) |
+| 7.2 / 6.2 / 8.1 decisions and estimates (no system access needed) | 4.1 baseline apply + gate · 5.2–5.5 privacy apply · 6.3 Shift Close date |
+| | **9.x PV2 smoke — saving one test entry is a Production write** (and removing it again) |
+| | **7.4 role smoke — a Leader saving a record is a Production write** |
+| *Read-only but only possible after an ACT step:* 2.6 bridge audits (after 3–4), 3.2 public-page check, 3.3 / 5.1 privacy dry run and 5.4 Exception Report (need the `enforce` site + Admin), 4.4 totals check, 7.5 sign-out check | 2.7 any rollback publish / redeploy |
+
 Roles referenced: Release owner (GO / NO-GO) · Firebase owner (backup, rules publish) · PV2 owner (PV2 smoke) · QD admin (Operations tab).
 Order and rollback follow `docs/phase8/runbook.md`, which supersedes Phase 7 §1. This checklist adds Weekly Plan V5 and D1.
 
@@ -31,7 +43,7 @@ Order and rollback follow `docs/phase8/runbook.md`, which supersedes Phase 7 §1
 |---|---|---|---|---|
 | 2.1 | Candidate rules (incl. Weekly Plan) | EMU ✅ `emulator/firestore.rules` sha256 `6fa05b5a12ffb6cfe752d312ba8cdef65328b863635b7670a6965b46d2e45668` · Rules suite 144/144 | — | — |
 | 2.2 | Bridge = candidate + production public QD blocks | EMU ✅ `firestore.rules.bridge` sha256 `d94383fa53726b55ed80c958456a57dd7a1f57775460af8d2c1aebdbb5e198e1`; `build-bridge.js --check` passes | — | rebuild + `--check` on the release commit |
-| 2.3 | PV2 unaffected in all rule sets | EMU ✅ `pv2-compat.test.js` 4/4 (PV2 + legacy paths identical in production / candidate / bridge / repo PV2) | PROD ☐ PV2 smoke (§9) after **each** publish | 0 PV2 failures |
+| 2.3 | PV2 unaffected in all rule sets | EMU ✅ `pv2-compat.test.js` 4/4 (PV2 + legacy paths identical in production / candidate / bridge / repo PV2) | PROD ☐ (ACT) PV2 smoke (§9) after **each** publish | 0 PV2 failures |
 | 2.4 | Rehearsed order | EMU ✅ `rehearsal.e2e` (29 steps): production → bridge → admin → sign-in site → audit → candidate → reconcile → baseline → Shift Close → rollback | — | — |
 | 2.5 | Publish order (each step (ACT)) | runbook | 0b pre-cutover release (`off`) → 1 backup → 2 first Admin → 3 **bridge** → 4 site `enforce` → 5 bridge audit ×2 (≥1 production day apart) → 6 **candidate** → 7 reconcile → 8 baseline (M1) → 9 lock ops writes → 10 smoke QD → later 11 `QD_CLOSE_REQUIRED_FROM` (B1) | each step's check passes before the next |
 | 2.6 | Bridge exit condition | EMU ✅ `migration-gate.test`, `bridge-risk.md` §4 | PROD ☐ two bridge audits ≥1 production day apart, no new problem slot | condition met |
@@ -43,7 +55,7 @@ Order and rollback follow `docs/phase8/runbook.md`, which supersedes Phase 7 §1
 | # | Item | Emulator / repo | Production | Pass criterion |
 |---|---|---|---|---|
 | 3.1 | Policy implemented | EMU ✅ public: scrap numbers, plan numbers, close summary (no e-mail); signed-in only: `scrapLogPrivate`, `improvementOwners`, plan history, review notes, `scrapSlots`; `qdNoNewPersonal` forbids new personal fields on public docs | — | owner approves the list in `docs/phase7/public-data.md` + Weekly Plan rows |
-| 3.2 | Nothing private on public pages / CSV | EMU ✅ privacy e2e, target-close e2e (no e-mail / reason), weekly-plan e2e (history / notes hidden), release-readiness §6–7 (sign-out clears, storage empty) | PROD ☐ (RO) after step 10: public Dashboard, Executive Report CSV, Weekly Plan contain no names / codes | none found |
+| 3.2 | Nothing private on public pages / CSV | EMU ✅ privacy e2e, target-close e2e (no e-mail / reason), weekly-plan e2e (history / notes hidden), release-readiness §6–7 (sign-out clears, storage empty), Weekly Plan CSV (no names, codes or notes; formula-safe) | PROD ☐ (RO) after step 10: public Dashboard, Executive Report CSV, Weekly Plan + its CSV contain no names / codes | none found |
 | 3.3 | Old documents still holding personal data | EMU ✅ scan finds them (`privacy-migration.test.js`) | PROD ☐ (RO) count old `scrapLogs.recordedBy` and `improvements.actions[].owner` with the **dry run** (Operations tab, scan only; needs the `enforce` site + Admin after step 4), or offline from the day-0 export | counts recorded in the change |
 | 3.4 | Which old fields are public today | repo: production rules allow public read of QD collections | PROD ☐ (RO) confirm that **until M-P1**, old `recordedBy` / owners remain publicly readable | accepted risk, or M-P1 scheduled |
 
@@ -81,7 +93,7 @@ Order and rollback follow `docs/phase8/runbook.md`, which supersedes Phase 7 §1
 | 7.1 | Role matrix | EMU ✅ rules + auth e2e: Admin all; Leader own Line × Shift only, 7-day window; Viewer read-only; PV2 user without QD role read-only; Weekly Plan: Admin edits with reason + history, Leader / Viewer read-only | — | — |
 | 7.2 | Account list | — | owner decision: who is Admin (≥ 2), each Leader's slots, Viewers | list approved |
 | 7.3 | Create roles | EMU ✅ Admin page (`users.manage`) | (ACT) step 2: first Admin via Console, the rest via the Admin page | — |
-| 7.4 | Verify | — | PROD ☐ (RO) list `qdUsers`; sign in as one of each role on the live site: Leader saves own slot ✓, other slot ✗; Viewer ✗; Admin opens Daily Confirmation | all as expected |
+| 7.4 | Verify | — | PROD ☐ (RO) list `qdUsers`; sign in as one of each role: Viewer cannot save, Admin opens Daily Confirmation. PROD ☐ **(ACT)** Leader saves one test record on the own slot ✓ (then deletes it), other slot refused ✗ | all as expected |
 | 7.5 | Sign-out / account switch clears private data | EMU ✅ §6–7 (same tab, other tab, Back / Forward, storage empty) | PROD ☐ (RO) quick check on a shared PC | no private value after sign-out |
 
 ## 8. C1 / C2 — Firestore reads, monitoring and cost
@@ -105,6 +117,8 @@ Measured in the emulator. Est. reads = documents returned (≥ 1 per query); **n
 | 8.4 | Known big readers (unchanged design) | Dashboard production docs per date / line / shift (186 for 31 days); look-back 30 days for a 1-day view |
 
 ## 9. Production V2 smoke test — before and after every rules change
+
+All rows in this section are **(ACT)**: a PV2 smoke saves one real test entry (agree beforehand which entry, and whether it is deleted afterwards).
 
 | # | When | Check (PV2 owner, real authorised account) | Pass | On failure |
 |---|---|---|---|---|
