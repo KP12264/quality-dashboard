@@ -1,6 +1,8 @@
 # G1 Verification Report — Production database and published rules (READ-ONLY)
 
-**Result: G1 = UNVERIFIED** (updated 2026-11-07 with Console screenshots — see §Update; no contradiction found, but the full rules file / SHA-256 and the live site configs are still missing).
+**Result (update 2, 2026-11-07):**
+- **Published rules = tested snapshot: PASS.** The owner's rules file is byte-identical to the snapshot (SHA-256 `0967944b…2e2f`).
+- **G1 overall: UNVERIFIED.** Still open: the database list (R2), the live PV2 config (R3) and the live QD config (R4). See the sections at the end.
 
 This session has **no access to the real Firebase project or its Console**, so no item could be checked on Production. Everything below is evidence from the repository or from the owner's earlier upload, which by itself is **not** enough for PASS.
 
@@ -134,3 +136,53 @@ The Console proves where PV2's **data** is (`prodV2_*` in `(default)` of `daily-
 
 - **C1 / C2:** the project is on the **Spark (no-cost) plan**. Spark has fixed daily Firestore quotas, and requests over a quota fail until it resets instead of being billed. The read estimates in `generated/read-cost.md` should be compared with the current Spark limits (check the Firebase pricing page) before the C1 decision.
 - **G4 / M-P1:** a public `improvements` document visible in screenshot 2 has `actions[0].owner: "MT"`. Old public documents do contain owner values, which is in scope of the privacy migration (dry-run count still needed).
+
+---
+
+## Update 2, 2026-11-07: published rules file received
+
+Received: `production-firestore-rules.txt`, uploaded by the owner as the current published Firestore rules of `(default)`. It is stored only in this session's upload folder; it was not added to the repository. Compared read-only with `emulator/production.firestore.rules.snapshot`:
+
+| Check | Owner's file | Snapshot | Result |
+|---|---|---|---|
+| SHA-256 | `0967944bcf8bbe6f2051004424bd5819fd656018165b1aaca9982f13e3a22e2f` | `0967944bcf8bbe6f2051004424bd5819fd656018165b1aaca9982f13e3a22e2f` | **identical** |
+| Size / lines | 3,908 bytes · 85 lines | 3,908 bytes · 85 lines | identical |
+| Encoding | UTF-8, LF, no CR, no BOM, ends with `}` + LF | same | identical |
+| `cmp` (byte by byte) | — | — | **no difference** |
+| `diff` (text), and normalised diff (CRLF / trailing spaces / trailing newlines) | — | — | **no difference** |
+| Lines 1–30 vs the Console screenshot | — | — | identical (update 1) |
+
+The comparison was mechanical: `sha256sum`, `cmp`, `diff`.
+
+What the rules contain (the version that is published), all as tested in the emulator:
+- the **legacy** `productionLogs` collection: public read / write;
+- **Production V2**: `prodV2_*` publicly readable; writes need sign-in plus a document in `prodV2_authorizedUsers`; `prodV2_authorizedUsers` itself is never writable from an app;
+- **Quality Dashboard**: `scrapLogs`, `targetMaster`, `improvements`, `scrapModelMappings` public read / write;
+- **everything else** denied, which includes `qdUsers`, `scrapSlots`, `scrapCloseSummary`, `scrapWeeklyPlans` and the private sidecars.
+
+### Status per G1 item
+
+| # | Item | Evidence | Status |
+|---|---|---|---|
+| 1 | Project ID `daily-production-report-46b60` | Console screenshots | **PASS** |
+| 1 | Database `(default)`, location `asia-southeast1` | Console screenshots | **PASS** for `(default)` |
+| 1 | No other database in the project | not shown | **UNVERIFIED** (R2) |
+| 2 | Published rules = tested snapshot | owner's file: byte-identical, SHA-256 equal | **PASS** |
+| 3 | SHA-256 and rules diff | equal; no diff | **PASS** |
+| 4 | Last publish time | Console history: **Sep 29, 2026 · 9:47 PM** (browser local time), before the snapshot was received (2026-11-03); nothing newer on 2026-11-07 | **PASS** as of 2026-11-07. Re-check right before cutover day (R5) |
+| 5 | Production V2 consistency: **rules** | the published rules carry the PV2 block. `pv2-compat.test.js` (4/4) shows PV2 and legacy permissions identical in production (= this file), candidate, bridge and the PV2 repository rules | **PASS** |
+| 5 | Production V2 consistency: **data location** | `prodV2_*` and the QD collections in the same `(default)` database | **PASS** |
+| 5 | Production V2 consistency: **live web config** | not provided (project / database the live PV2 app connects to) | **UNVERIFIED** (R3) |
+| — | Quality Dashboard live web config | not provided | **UNVERIFIED** (R4) |
+| 6 | **G1 overall** | — | **UNVERIFIED** (R2, R3, R4 open) |
+
+Provenance note: the file is the owner's copy. This session confirms that it is identical to the snapshot and that its first 30 lines match the Console screenshot of the Sep 29 version. It cannot independently prove that the file was copied from that published version: that is the owner's statement.
+
+### Still needed for G1 = PASS (read-only)
+
+| # | Evidence | Pass condition |
+|---|---|---|
+| R2 | Firestore database list (Console → Firestore → databases) | only `(default)`, or every other database documented with what uses it |
+| R3 | Live **PV2** web app: Firebase config (`projectId`, `authDomain`); whether its code passes a database id; the live URL / deploy source | `daily-production-report-46b60`, no database id (= `(default)`) |
+| R4 | Live **Quality Dashboard**: the live site's `js/config.js` + `js/firebase-init.js` (View source) and the GitHub Pages source branch | same project, `(default)` |
+| R5 | Right before cutover day step 1: the Rules history still has Sep 29, 2026 · 9:47 PM on top (or the SHA-256 of a fresh copy is still `0967944b…`) | unchanged |
