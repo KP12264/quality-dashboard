@@ -2,7 +2,8 @@
 
 **Result (update 2, 2026-11-07):**
 - **Published rules = tested snapshot: PASS.** The owner's rules file is byte-identical to the snapshot (SHA-256 `0967944b…2e2f`).
-- **G1 overall: UNVERIFIED.** Still open: the database list (R2), the live PV2 config (R3) and the live QD config (R4). See the sections at the end.
+- **G1 overall: UNVERIFIED.** Still open: the database list (R2) and the live PV2 config (R3).
+- Update 3: the live Quality Dashboard config (R4) has been checked on the live site: project and database confirmed. See the sections at the end.
 
 This session has **no access to the real Firebase project or its Console**, so no item could be checked on Production. Everything below is evidence from the repository or from the owner's earlier upload, which by itself is **not** enough for PASS.
 
@@ -186,3 +187,57 @@ Provenance note: the file is the owner's copy. This session confirms that it is 
 | R3 | Live **PV2** web app: Firebase config (`projectId`, `authDomain`); whether its code passes a database id; the live URL / deploy source | `daily-production-report-46b60`, no database id (= `(default)`) |
 | R4 | Live **Quality Dashboard**: the live site's `js/config.js` + `js/firebase-init.js` (View source) and the GitHub Pages source branch | same project, `(default)` |
 | R5 | Right before cutover day step 1: the Rules history still has Sep 29, 2026 · 9:47 PM on top (or the SHA-256 of a fresh copy is still `0967944b…`) | unchanged |
+
+---
+
+## Update 3, 2026-11-07: live Quality Dashboard config (R4)
+
+Checked by the owner in the browser, on the **live** site (not the repository):
+
+| Item | Value |
+|---|---|
+| URL checked | `https://kp12264.github.io/quality-dashboard/index.html` |
+| Method | Chrome DevTools → Console, reading the Firestore instance the page actually created (`window.qdDb`) |
+| Project ID | `daily-production-report-46b60` |
+| Database ID | `(default)` |
+| Firebase app name | `qualityDashboardReadOnly` |
+
+Consistency with the repository: `js/config.js` on `origin/main` and on the development branch both set `FIREBASE_APP_NAME = "qualityDashboardReadOnly"` and `projectId: "daily-production-report-46b60"`; `js/firebase-init.js` creates Firestore with no database id. This only shows that the live values agree with the code; the live check is the evidence.
+
+### R4: confirmed vs not checked
+
+| Item | Status |
+|---|---|
+| Live QD site uses project `daily-production-report-46b60` | **CONFIRMED** (live, `window.qdDb`) |
+| Live QD site uses database `(default)` | **CONFIRMED** (live, `window.qdDb`) |
+| Firebase app name on the live site = `qualityDashboardReadOnly` | **CONFIRMED** |
+| GitHub Pages deployment source (branch / folder) | not checked. Not needed for G1 (the database question is answered by the live check); needed later to know which commit a site deploy replaces |
+| Which commit the live site was built from | not checked (same note) |
+| Other pages of the live site (e.g. `scrap-entry.html`) | not checked individually. All pages load the same `js/config.js` / `js/firebase-init.js` in the repository; the live check covered `index.html` |
+
+**R4 = PASS** for G1 (project + database of the live Quality Dashboard).
+
+### G1 status after update 3
+
+| # | Item | Status |
+|---|---|---|
+| 1 | Project ID `daily-production-report-46b60` | **PASS** |
+| 1 | Database `(default)`, `asia-southeast1` | **PASS** |
+| 1 | No other database in the project (R2) | **UNVERIFIED** |
+| 2–3 | Published rules = snapshot; SHA-256 equal; no diff | **PASS** |
+| 4 | Last publish Sep 29, 2026 · 9:47 PM (re-check before cutover, R5) | **PASS** as of 2026-11-07 |
+| 5 | PV2: rules and data location | **PASS** |
+| 5 | PV2: live web config (R3) | **UNVERIFIED** |
+| R4 | QD: live web config | **PASS** |
+| | **G1 overall** | **UNVERIFIED** (R2, R3 open) |
+
+### Evidence still needed (already confirmed items are not requested again)
+
+| # | Evidence | Pass condition |
+|---|---|---|
+| R2 | Firestore database list (Console → Firestore → databases) | only `(default)`, or every other database documented with what uses it |
+| R3 | Live **Production V2** app: project ID and database ID it actually uses. The same DevTools check as R4, on the live PV2 page, reading its Firestore instance (`app.options.projectId`, database id) and noting the app name and the URL checked | `daily-production-report-46b60`, `(default)` |
+| R5 | Right before cutover day step 1: the Rules history still shows Sep 29, 2026 · 9:47 PM on top, or a fresh copy still has SHA-256 `0967944b…` | unchanged |
+| (later, not G1) | GitHub Pages deployment source / deployed commit of the Quality Dashboard | recorded in the cutover change |
+
+**Production remains NO-GO** until G1 and the other gates in `approval-package.md` are approved.
