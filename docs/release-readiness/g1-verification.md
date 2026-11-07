@@ -4,6 +4,7 @@
 - **Published rules = tested snapshot: PASS.** The owner's rules file is byte-identical to the snapshot (SHA-256 `0967944b…2e2f`).
 - **G1 overall: UNVERIFIED.** Still open: the database list (R2) and the live PV2 config (R3).
 - Update 3: the live Quality Dashboard config (R4) has been checked on the live site: project and database confirmed. See the sections at the end.
+- Update 4: R3 (live Production V2 config) **PASS**. R2 (database list) is reported by the owner, but the screenshot did not reach this session: the same image needs to be attached again (no new check). **G1 overall: UNVERIFIED** until R2 is evidenced.
 
 This session has **no access to the real Firebase project or its Console**, so no item could be checked on Production. Everything below is evidence from the repository or from the owner's earlier upload, which by itself is **not** enough for PASS.
 
@@ -239,5 +240,73 @@ Consistency with the repository: `js/config.js` on `origin/main` and on the deve
 | R3 | Live **Production V2** app: project ID and database ID it actually uses. The same DevTools check as R4, on the live PV2 page, reading its Firestore instance (`app.options.projectId`, database id) and noting the app name and the URL checked | `daily-production-report-46b60`, `(default)` |
 | R5 | Right before cutover day step 1: the Rules history still shows Sep 29, 2026 · 9:47 PM on top, or a fresh copy still has SHA-256 `0967944b…` | unchanged |
 | (later, not G1) | GitHub Pages deployment source / deployed commit of the Quality Dashboard | recorded in the cutover change |
+
+**Production remains NO-GO** until G1 and the other gates in `approval-package.md` are approved.
+
+---
+
+## Update 4, 2026-11-07: R2 (database list) and R3 (live Production V2 config)
+
+### R2: Firestore databases
+
+The owner reports a screenshot of Google Cloud Console → Firestore → **All databases** showing:
+
+| Field | Value (owner's report) |
+|---|---|
+| Project | `daily-production-report-46b60` |
+| Database ID | `(default)` |
+| Edition | Standard |
+| Mode | Firestore Native |
+| Region | `asia-southeast1` |
+| Rows in the table | **1** (only `(default)`) |
+
+**The screenshot itself was not received in this session.** Only the two earlier screenshots (Rules tab, Data tab) and the two rules files are present, so the values above could not be seen here.
+- Consistent with what was confirmed: the project, `(default)` and `asia-southeast1` are the same as in update 1.
+- New and not yet evidenced: that the table lists only one database, plus the edition and mode.
+
+**R2 = UNVERIFIED (owner-reported).** Needed: **attach the same "All databases" screenshot again**. The check does not need to be repeated. Pass condition: the table shows one row, `(default)`, in project `daily-production-report-46b60`.
+
+### R3: live Production V2 config
+
+Checked by the owner in Chrome DevTools on the **live** page `https://kp12264.github.io/daily-production-report/production-v2/index.html`. The file `firebase-v2.js` was inspected as served by that page:
+
+| Item | Value |
+|---|---|
+| `projectId` | `daily-production-report-46b60` |
+| `authDomain` | `daily-production-report-46b60.firebaseapp.com` |
+| Firestore | `firebase.firestore()`, no database id → `(default)` |
+
+Assessment: **sufficient for R3**.
+- It is the code the live page actually loads, not a repository copy.
+- It names the same project.
+- It opens Firestore without a database id, which by definition is `(default)`. That is the only database the Console shows holding the `prodV2_*` data (update 1), and the published rules cover it (update 2).
+- A runtime read of the Firestore instance, as done for R4, would add nothing needed for G1.
+
+**R3 = PASS.**
+
+Not part of G1 and not checked: the deployment source / commit of the live PV2 site, and other PV2 pages. All of them load the same `firebase-v2.js` per the owner's check of the app's entry page.
+
+### G1 status after update 4
+
+| # | Item | Evidence | Status |
+|---|---|---|---|
+| 1 | Project ID `daily-production-report-46b60` | Console screenshots; live QD; live PV2 | **PASS** |
+| 1 | Database `(default)`, `asia-southeast1` | Console screenshots | **PASS** |
+| R2 | Only one database in the project | owner's report; screenshot not received | **UNVERIFIED** |
+| 2–3 | Published rules = snapshot; SHA-256 equal; no diff | owner's rules file (byte-identical) | **PASS** |
+| 4 | Last publish Sep 29, 2026 · 9:47 PM | Console history | **PASS** as of 2026-11-07 |
+| 5 | PV2: rules and data location | published rules; `prodV2_*` in `(default)`; `pv2-compat` 4/4 | **PASS** |
+| R3 | PV2: live web config → `daily-production-report-46b60` / `(default)` | live `firebase-v2.js` (DevTools) | **PASS** |
+| R4 | QD: live web config → `daily-production-report-46b60` / `(default)`, app `qualityDashboardReadOnly` | live `window.qdDb` (DevTools) | **PASS** |
+| | **G1 overall** | | **UNVERIFIED**: only R2's screenshot is missing |
+
+### What is still needed
+
+| # | Evidence | When |
+|---|---|---|
+| R2 | Re-attach the existing "All databases" screenshot (no new check) | now, for G1 |
+| R5 | The Rules history still shows Sep 29, 2026 · 9:47 PM on top, or a fresh copy still has SHA-256 `0967944b…` | **pre-cutover check**, right before cutover day step 1 (not needed for the G1 decision now) |
+
+If the R2 screenshot shows one database, `(default)`, G1 can be recorded as **PASS**, with R5 as the pre-cutover re-check.
 
 **Production remains NO-GO** until G1 and the other gates in `approval-package.md` are approved.
