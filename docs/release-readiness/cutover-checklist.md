@@ -71,9 +71,9 @@ Order and rollback follow `docs/phase8/runbook.md`, which supersedes Phase 7 §1
 | # | Item | Emulator / repo | Production | Pass criterion |
 |---|---|---|---|---|
 | 1.1 | Snapshot stored byte-exact with metadata | EMU ✅ `emulator/production.firestore.rules.snapshot` sha256 `0967944bcf8bbe6f2051004424bd5819fd656018165b1aaca9982f13e3a22e2f` (unchanged since Phase 6) | — | — |
-| 1.2 | Which database the site uses | repo: `js/config.js` (project `daily-production-report-46b60`) sets no database id, so the SDK uses `(default)` | PROD ☐ (RO) Firebase Console → Firestore: list databases; confirm the site and Production V2 both use `(default)` | only `(default)` in use, or the extra one is documented |
-| 1.3 | Published rules = snapshot | — | PROD ☐ (RO) Console → Firestore → Rules: copy the **published** text and note the publish time; compute SHA-256 | hash equals `0967944b…2e2f`; otherwise **NO-GO** (re-copy, re-run the rules suites on the new snapshot) |
-| 1.4 | Nobody published since | — | PROD ☐ (RO) Rules history in the Console: no publish after the noted time | no newer version |
+| 1.2 | Which database the site uses | repo: `js/config.js` (project `daily-production-report-46b60`) sets no database id, so the SDK uses `(default)` | **✅ PASS 2026-11-07**: one database `(default)` (gcloud output, `evidence/r2-databases.json`); live QD + PV2 use it. Was: PROD ☐ (RO) Firebase Console → Firestore: list databases; confirm the site and Production V2 both use `(default)` | only `(default)` in use, or the extra one is documented |
+| 1.3 | Published rules = snapshot | — | **✅ PASS 2026-11-07**: owner's file byte-identical, SHA-256 equal. Was: PROD ☐ (RO) Console → Firestore → Rules: copy the **published** text and note the publish time; compute SHA-256 | hash equals `0967944b…2e2f`; otherwise **NO-GO** (re-copy, re-run the rules suites on the new snapshot) |
+| 1.4 | Nobody published since | — | **✅ PASS as of 2026-11-07** (latest Sep 29, 2026 · 9:47 PM); **repeat as R5 right before cutover**. Check: (RO) Rules history in the Console: no publish after the noted time | no newer version |
 | 1.5 | Backup possible | — | **1.5a** PROD ☐ (RO) confirm the bucket / IAM for `gcloud firestore export` exists. The export itself is **(ACT, B-1)** | owner + bucket named |
 
 ## 2. G2 — Bridge / Candidate rules: publish order and rollback
@@ -194,7 +194,7 @@ All rows in this section are **(ACT)**: a PV2 smoke saves one real test entry (a
 
 | Gate | Emulator | Production |
 |---|---|---|
-| G1 | ✅ snapshot stored | ⛔ not checked |
+| G1 | ✅ snapshot stored | ✅ **PASS** 2026-11-07 (`g1-verification.md`); R5 re-check before cutover |
 | G2 | ✅ rules + bridge + rehearsal | ⛔ not approved |
 | G4 | ✅ policy implemented and tested | ⛔ decision + old-data count |
 | M1 | ✅ tool + gate tested | ⛔ not run |

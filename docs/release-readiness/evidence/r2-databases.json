@@ -1,0 +1,21 @@
+[
+  {
+    "appEngineIntegrationMode": "DISABLED",
+    "concurrencyMode": "PESSIMISTIC",
+    "createTime": "2026-08-15T11:58:36.662471Z",
+    "databaseEdition": "STANDARD",
+    "deleteProtectionState": "DELETE_PROTECTION_DISABLED",
+    "earliestVersionTime": "2026-11-07T05:33:10.685187Z",
+    "etag": "IPqNirie9ZcDMOTRw//pi5cD",
+    "freeTier": true,
+    "keyPrefix": "zas",
+    "locationId": "asia-southeast1",
+    "name": "projects/daily-production-report-46b60/databases/(default)",
+    "pointInTimeRecoveryEnablement": "POINT_IN_TIME_RECOVERY_DISABLED",
+    "realtimeUpdatesMode": "REALTIME_UPDATES_MODE_ENABLED",
+    "type": "FIRESTORE_NATIVE",
+    "uid": "f807504d-4dab-43cb-a7c4-7a50e28430ea",
+    "updateTime": "2026-08-15T11:58:36.662471Z",
+    "versionRetentionPeriod": "3600s"
+  }
+]

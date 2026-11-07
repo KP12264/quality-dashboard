@@ -1,10 +1,12 @@
 # G1 Verification Report — Production database and published rules (READ-ONLY)
 
-**Result (update 2, 2026-11-07):**
-- **Published rules = tested snapshot: PASS.** The owner's rules file is byte-identical to the snapshot (SHA-256 `0967944b…2e2f`).
-- **G1 overall: UNVERIFIED.** Still open: the database list (R2) and the live PV2 config (R3).
-- Update 3: the live Quality Dashboard config (R4) has been checked on the live site: project and database confirmed. See the sections at the end.
-- Update 4: R3 (live Production V2 config) **PASS**. R2 (database list) is reported by the owner, but the screenshot did not reach this session: the same image needs to be attached again (no new check). **G1 overall: UNVERIFIED** until R2 is evidenced.
+**Result (update 6, 2026-11-07): G1 = PASS.**
+- R1 published rules = tested snapshot (byte-identical, SHA-256 `0967944b…2e2f`).
+- R2 one database only, `(default)` (gcloud output, `evidence/r2-databases.json`).
+- R3 live Production V2 and R4 live Quality Dashboard both use `daily-production-report-46b60` / `(default)`.
+- Last publish Sep 29, 2026 · 9:47 PM.
+- **R5 remains a pre-cutover re-check.** G1 = PASS is verification only: it approves no deploy and no rules publish.
+- History of the decision: updates 1–6 below.
 
 This session has **no access to the real Firebase project or its Console**, so no item could be checked on Production. Everything below is evidence from the repository or from the owner's earlier upload, which by itself is **not** enough for PASS.
 
@@ -326,3 +328,50 @@ Ways to deliver the same evidence (no new check needed):
 R5 stays a **pre-cutover re-check** (Rules history still Sep 29, 2026 · 9:47 PM on top, or SHA-256 still `0967944b…`). It is a condition before the cutover, not a deploy approval.
 
 **Production remains NO-GO.**
+
+---
+
+## Update 6, 2026-11-07: R2 verified from `gcloud` output, G1 = PASS
+
+Received: `r2-databases.json`, the output of `gcloud firestore databases list --project=daily-production-report-46b60 --format=json`, run read-only by the owner in Google Cloud Shell.
+- Stored unchanged as **`docs/release-readiness/evidence/r2-databases.json`**: 794 bytes, SHA-256 `d8d0765f1ab7a85e5bee7a1a51482d8cccddf4eca3bfaff70a124d3834eafce9`.
+- It contains no token or secret; the `etag` / `uid` are resource identifiers.
+- It was parsed here as JSON (a list).
+
+| Check | Value in the file | Result |
+|---|---|---|
+| Number of databases in the project | **1** (the list has one entry) | ✅ |
+| Database name | `projects/daily-production-report-46b60/databases/(default)` | ✅ project `daily-production-report-46b60`, id `(default)` |
+| `locationId` | `asia-southeast1` | ✅ (same as the Console, update 1) |
+| `type` | `FIRESTORE_NATIVE` | ✅ |
+| `databaseEdition` | `STANDARD` | ✅ |
+| `createTime` | 2026-08-15T11:58:36Z | — |
+
+**R2 = PASS.**
+
+### G1, final
+
+| # | Item | Evidence | Status |
+|---|---|---|---|
+| 1 | Project ID `daily-production-report-46b60` | Console screenshots; gcloud output; live QD; live PV2 | **PASS** |
+| R2 | Only one database, `(default)`, `asia-southeast1`, Native, Standard | gcloud output (`evidence/r2-databases.json`) | **PASS** |
+| R1 / 2–3 | Published rules = snapshot; SHA-256 equal; no diff | owner's rules file, byte-identical; Console lines 1–30 identical | **PASS** |
+| 4 | Last publish Sep 29, 2026 · 9:47 PM, before the snapshot (2026-11-03) | Console history | **PASS** as of 2026-11-07 |
+| 5 | PV2: rules (`pv2-compat` 4/4) and data in the same `(default)` | published rules; Console data list | **PASS** |
+| R3 | PV2 live web config → `daily-production-report-46b60` / `(default)` | live `firebase-v2.js` (DevTools) | **PASS** |
+| R4 | QD live web config → `daily-production-report-46b60` / `(default)`, app `qualityDashboardReadOnly` | live `window.qdDb` (DevTools) | **PASS** |
+| | **G1** | no contradiction between any of the sources | **PASS** |
+
+**R5, pre-cutover re-check** (a condition before cutover day step 1, not an approval):
+- the Rules history still shows Sep 29, 2026 · 9:47 PM on top, or a fresh copy still has SHA-256 `0967944bcf8bbe6f2051004424bd5819fd656018165b1aaca9982f13e3a22e2f`;
+- any newer publish → G1 is re-opened (new snapshot, rules suites re-run) before anything else.
+
+G1 = PASS approves no Production change: no deploy, no rules publish, no data change. Production remains **NO-GO** until the other gates in `approval-package.md` are decided.
+
+### Observations from the same output (for other gates; no action taken)
+
+| Field | Value | Relevant to |
+|---|---|---|
+| `deleteProtectionState` | `DELETE_PROTECTION_DISABLED` | backup / rollback (B-1). Enabling delete protection would be a Production change **[ACT]**, so it needs the Firebase owner's decision |
+| `pointInTimeRecoveryEnablement` | `POINT_IN_TIME_RECOVERY_DISABLED` (`versionRetentionPeriod` 3600s) | the day-0 export (B-1) is the only restore point for M1 / M-P1. PITR would be an **[ACT]** setting, and may not be available on the current plan; the owner decides |
+| `freeTier` | `true` | C1 / C2: free-tier daily quotas apply (see update 1) |
