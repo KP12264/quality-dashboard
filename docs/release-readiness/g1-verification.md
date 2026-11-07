@@ -310,3 +310,19 @@ Not part of G1 and not checked: the deployment source / commit of the live PV2 s
 If the R2 screenshot shows one database, `(default)`, G1 can be recorded as **PASS**, with R5 as the pre-cutover re-check.
 
 **Production remains NO-GO** until G1 and the other gates in `approval-package.md` are approved.
+
+---
+
+## Update 5, 2026-11-07: R2 screenshot again not received
+
+The owner reported attaching the "All databases" screenshot (Google Cloud Console → Firestore → All databases). It did **not** reach this session. No new image or file was present: the session still holds only the two earlier screenshots (Rules tab, Data tab) and the two rules files. Items 1–6 of R2 (project, number of databases, database id, region, edition, mode) therefore could not be checked from the image.
+
+**R2 = UNVERIFIED (owner-reported) · G1 overall = UNVERIFIED.** No contradiction is known, and R1 / R3 / R4 remain as recorded. G1 changes to PASS only once the R2 image (or an equivalent file) is seen here.
+
+Ways to deliver the same evidence (no new check needed):
+- upload the screenshot **as a file** (the way the rules file reached this session), rather than inline in the message; or
+- upload a text file with the output of `gcloud firestore databases list --project=daily-production-report-46b60`. It is read-only and shows name, location, type (`FIRESTORE_NATIVE`) and edition for every database.
+
+R5 stays a **pre-cutover re-check** (Rules history still Sep 29, 2026 · 9:47 PM on top, or SHA-256 still `0967944b…`). It is a condition before the cutover, not a deploy approval.
+
+**Production remains NO-GO.**
