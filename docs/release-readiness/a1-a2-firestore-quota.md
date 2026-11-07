@@ -180,3 +180,105 @@ During the bridge and the first 2 weeks:
 | A1 headroom on the shared Spark quota | **PENDING DATA**: U1–U6 from the Firebase owner |
 | Plan choice (Spark / Blaze) | **PENDING APPROVAL** (cost owner + PV2 owner) using §9 |
 | G2 | **not approved**; A1 decision first |
+
+---
+
+## Update 1, 2026-11-07: U1 real usage received
+
+Received: `u1-reads.json`, Cloud Monitoring `firestore.googleapis.com/document/read_count`, project `daily-production-report-46b60`, daily sums, collected read-only by the owner. Stored unchanged as `evidence/u1-reads.json` (SHA-256 `5231d15a…cebbd9`; no token).
+
+### Data check
+
+| Check | Result |
+|---|---|
+| Series | 1 (`firestore_instance`, whole project / database; QD and PV2 together) |
+| Points | **14**, each exactly 24 h, **UTC days** 2026-10-24 00:00Z … 2026-11-07 00:00Z |
+| Gaps / overlaps / duplicates | **none** |
+| Total / mean | 130,057 reads; 9,290 per day |
+
+### Daily reads (UTC day = 07:00 → 07:00 Thailand time)
+
+| UTC day | Reads | % of 50,000 |
+|---|---|---|
+| Sat 24 Oct | 323 | 0.6 % |
+| Sun 25 Oct | 323 | 0.6 % |
+| Mon 26 Oct | 5,088 | 10.2 % |
+| **Tue 27 Oct** | **49,720** | **99.4 %** |
+| Wed 28 Oct | 5,424 | 10.8 % |
+| Thu 29 Oct | 21,375 | 42.8 % |
+| Fri 30 Oct | 6,437 | 12.9 % |
+| Sat 31 Oct | 335 | 0.7 % |
+| Sun 1 Nov | 335 | 0.7 % |
+| Mon 2 Nov | 7,509 | 15.0 % |
+| Tue 3 Nov | 5,958 | 11.9 % |
+| Wed 4 Nov | 12,595 | 25.2 % |
+| Thu 5 Nov | 6,161 | 12.3 % |
+| Fri 6 Nov | 8,474 | 16.9 % |
+
+Pattern: weekends about 330 reads a day; ordinary weekdays 5,000–12,600 (10–25 %); two spikes, 27 Oct (99.4 %) and 29 Oct (42.8 %).
+
+### Quota days (Pacific time) vs these UTC days
+
+The quota resets at midnight Pacific time (to be confirmed on the pricing page):
+- until 1 Nov (PDT): 07:00 UTC = 14:00 Thailand time;
+- from 1 Nov (PST): 08:00 UTC = 15:00 Thailand time.
+
+Each quota day therefore covers 17 h of one UTC day and 7 h of the next, and **daily buckets cannot be converted exactly**. Bounds:
+
+| Quota day (PT) | Window (UTC) | Lower bound | Upper bound |
+|---|---|---|---|
+| 26 Oct | 26 Oct 07:00 → 27 Oct 07:00 | — | 5,088 + 49,720 = 54,808 |
+| 27 Oct | 27 Oct 07:00 → 28 Oct 07:00 | — | 49,720 + 5,424 = 55,144 |
+
+- The 49,720 reads of UTC 27 Oct fall into quota days 26 and 27 Oct, so at least one of them had **≥ 24,860** reads.
+- Whether either **passed 50,000** cannot be decided from daily data.
+- All other quota days stay **below 50,000** even at their upper bound. The highest is 21,375 + 6,437 = 27,812 for 29 Oct.
+
+**Hourly data is needed** (read-only, see "Still needed" below).
+
+### The 27 Oct spike: verifiable facts only (no cause assumed)
+
+- The live Quality Dashboard (`main`) was deployed on 30 Oct 02:25–03:25 Thailand time (29 Oct 19:25–20:25 UTC; `git log origin/main`). That is **after** 27 Oct: no QD deploy happened that day.
+- `main` has no listeners, no polling and no offline persistence (code check), so an idle open tab does not read.
+- This development work never connected to Production (emulator only; no credentials).
+- The metric counts the **whole project**: it cannot say whether the reads came from QD, PV2 or the legacy site.
+- Possible sources, **each to be checked, none assumed**: heavy QD use (e.g. 31-day views and filter clicks, about 188 queries / 330 reads each), an Excel import or bulk work, PV2 use, a script or tool reading the database.
+
+### A1 re-assessment (G2 **not** approved)
+
+| Criterion (§9) | Value | Result |
+|---|---|---|
+| P = highest daily reads, last 14 days | **49,720** (UTC day; the quota day is unknown, up to 55,144) | **> 40,000** |
+| Quota error in the last 14 days (U2) | not yet known; 27 Oct came within 0.6 % of the quota | **U2 needed** |
+| Ordinary weekday | 5,000–12,600 (10–25 %) | low |
+
+**A1 = HIGH risk, confirmed by real data.** The project **already** came within 0.6 % of the Spark quota on one day, without V5. On such a day a small extra load from any app, QD or PV2, could block **all** apps including PV2 until 14:00 / 15:00 Thailand time.
+
+Per §9 (> 40,000): **Spark is not safe for PV2 as things are**. Before the bridge, either:
+- **explain and prevent** the 27 Oct spike and keep usage below 40,000 a day; or
+- move to **Blaze with a budget alert** [ACT, owner decision].
+
+V5 itself makes the Dashboard cheaper per filter click. Its daily Δ still needs U3–U5.
+
+### Still needed (read-only)
+
+| # | Data | How |
+|---|---|---|
+| U1h | **Hourly** reads for 26 Oct 00:00Z – 29 Oct 00:00Z (and 29–30 Oct for the second spike) | same request as U1, with `aggregation.alignmentPeriod=3600s`, `interval.startTime=2026-10-26T00:00:00Z`, `interval.endTime=2026-10-31T00:00:00Z`; this gives exact quota-day totals and the hour of the spike |
+| U2 | Quota errors | `firestore.googleapis.com/api/request_count` grouped by `metric.label.response_code` (and by `metric.label.method` for queries vs gets), same days: any `RESOURCE_EXHAUSTED`? |
+| U2m | **Queries vs document reads** at the spike | `api/request_count` by `metric.label.method` (e.g. RunQuery, BatchGetDocuments) hourly over the same window: many requests with few documents each vs few requests with many documents |
+| U3–U5 | scrap logs / day, number of improvements, users and views per day | as in §5 |
+| — | What happened on 27 Oct (07:00 Thailand time 27 Oct → 07:00 28 Oct): imports, PV2 work, testing, a tool or script | Production manager / PV2 owner |
+
+### Ways to reduce reads and protect PV2 (proposals; each is a separate decision)
+
+| # | Measure | Protects PV2 how | Type |
+|---|---|---|---|
+| P1 | Find the source of the 27 Oct spike (U1h, U2m, owners' records) and stop it from recurring | removes the known near-quota event | read-only analysis |
+| P2 | Cloud Monitoring **alert** on `document/read_count` > 35,000 per day (notification only) | early warning before the cap | **[ACT]** monitoring config, owner decision |
+| P3 | Blaze + budget alert | the cap no longer blocks PV2; cost risk instead | **[ACT]** billing, owner decision |
+| P4 | QD read reductions R2 (lazy / re-used look-back), R1 (`improvements` server-side limit), R3 (re-use past production days) | lowers QD's share; filter re-use already done in V5 | code, later approved phase |
+| P5 | Keep the QD cutover **off** heavy days; bridge starts on an ordinary weekday; watch hourly reads during the bridge | avoids stacking QD changes on a spike | operational |
+| P6 | Long term: daily aggregate documents for production / scrap (one read instead of up to 186 per month view) | largest structural reduction | design change, involves PV2 data, separate phase |
+
+**Status: A1 = HIGH (confirmed by U1). G2 = not approved.** Next: U1h, U2 / U2m and an explanation of 27 Oct.
