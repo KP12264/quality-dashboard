@@ -1,0 +1,4 @@
+unit: # tests 59 # pass 59 # fail 0 # cancelled 0 # skipped 0 
+regr: # tests 15 # pass 15 # fail 0 # cancelled 0 # skipped 0 
+rules: # tests 144 # pass 144 # fail 0 # cancelled 0 # skipped 0 
+e2e: # tests 39 # pass 39 # fail 0 # cancelled 0 # skipped 0 

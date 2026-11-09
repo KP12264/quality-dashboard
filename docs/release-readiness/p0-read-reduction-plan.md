@@ -1,5 +1,7 @@
 # P0 read-reduction plan: Q1 (migration gate), Q2a / Q2b (`improvements`)
 
+> **Revision 2, 2026-11-09:** Q1 (redesigned gate) is implemented and committed (`8959c3f`, branch only; old path kept as fallback; emulator gate reads 364 → 184). See the A1/A2 report, Update 6.
+>
 > **Revision 1, 2026-11-09:** Q2b is implemented and committed (`f6f83fd`, branch only; not merged or deployed). Q2a is **on hold for redesign**: the tried approach added reads. Q1 is **redesigned** without `count()` (the compat SDK 10.13.0 used by QD has no aggregate `count()`; checked in the bundle). See "Revision 1" at the end. The sections below are kept as written for the record.
 
 **Status: PLAN ONLY. No code has been changed.** Each item needs its own approval before any code change, and none of it is a Production change. A1 = HIGH, G2 = NOT APPROVED.

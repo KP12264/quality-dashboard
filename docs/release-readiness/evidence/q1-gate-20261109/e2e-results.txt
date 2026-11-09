@@ -1,0 +1,43 @@
+    ok 1 - clean after the baseline
+    ok 2 - log added around the ledger into a planned slot
+    ok 3 - log added into a brand-new slot (no ledger)
+    ok 4 - log without createdAt / updatedAt into a planned slot
+    ok 5 - log without timestamps into a new slot
+    ok 6 - log moved between two planned slots
+    ok 7 - swap: two logs exchanged between planned slots, same qty (counts and totals unchanged)
+    ok 8 - model / defect edited around the ledger (count and qty unchanged)
+    ok 9 - quantity edited around the ledger
+    ok 10 - log deleted around the ledger
+    ok 11 - excluded log edited into a planned slot
+    ok 12 - excluded log edited into a new slot
+    ok 13 - planned slot document deleted
+    ok 14 - import marker left on a planned slot (CONFLICT)
+    ok 15 - ledger save after the baseline (logVersion 1: plan is history)
+    ok 16 - log with date / line of another type in a planned slot (never matches)
+    ok 17 - apply failed half-way (one planned slot missing)
+ok 1 - Q1 gate: new path equals old path (problems), extra checks only where expected
+    ok 1 - hidden with sign-in off, and for a Leader
+    ok 2 - read only by default: audit, post-candidate audit and dry runs write nothing; writes are locked
+    ok 3 - unlocked (emulator only): wrong confirmation refused; correct one reconciles and is logged
+    ok 4 - baseline: dry run, apply, gate → baselineComplete; each write step logged
+    ok 5 - privacy migration: dry run, apply refused until the backup is downloaded, then apply + verify
+    ok 6 - the operations log cannot be written by a Leader or changed by anyone
+ok 2 - Operations tab
+    ok 1 - Excel import with an "Emp. Ld" column: the public record has no employee code; the private doc has it
+    ok 2 - Scrap Detail: signed-in user sees "Recorded By"; the public sees "–" and never reads the private doc
+    ok 3 - Scrap Detail: after sign-out the shown "Recorded By" is gone (the page reloads; nothing private kept on screen)
+    ok 4 - Improvement with an action owner: the public document has no name; signed-in edit shows it again
+    ok 5 - free-text fields carry the hint while sign-in is on, and not with sign-in off
+    ok 6 - anonymous query of every public collection: no employee code, owner name or e-mail
+ok 3 - privacy policy in the pages (sign-in on)
+    ok 1 - S0 production rules: today's site saves; an old tab stays open for the whole rehearsal
+    ok 2 - S1 publish BRIDGE: old site keeps saving, PV2 unaffected
+    ok 3 - S2 create first admin and roles (Console)
+    ok 4 - S3 sign-in site live (bridge): saves, closes, imports, concurrency, network failure, old tab interference
+    ok 5 - S4 bridge audit lists every problem (measurable exit condition)
+    ok 6 - S5 publish CANDIDATE while both pages are open (rules change during use)
+    ok 7 - S6 reconcile the bridge problems, clear the failed import, reconfirm
+    ok 8 - S7 baseline migration while a Leader is saving; gate then opens
+    ok 9 - S8 Shift Close drives the target; public pages and CSV carry no personal data
+    ok 10 - R rollback: bridge, production snapshot, then forward again — no data lost
+ok 4 - final rehearsal: the whole rollout in order

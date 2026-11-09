@@ -1,0 +1,523 @@
+[
+ {
+  "scenario": "clean after the baseline",
+  "plannedSlots": 60,
+  "logs": 123,
+  "old": {
+   "complete": true,
+   "problems": [],
+   "reads": {
+    "GET": 60,
+    "LIST": 62,
+    "billed": 364
+   }
+  },
+  "new": {
+   "complete": true,
+   "problems": [],
+   "extra": [],
+   "reads": {
+    "GET": 0,
+    "LIST": 2,
+    "billed": 184
+   }
+  },
+  "sameProblems": true
+ },
+ {
+  "scenario": "log added around the ledger into a planned slot",
+  "plannedSlots": 60,
+  "logs": 124,
+  "old": {
+   "complete": false,
+   "problems": [
+    "2026-09-01_A_DAY: liveLogCount 3 != stored logs 4",
+    "2026-09-01_A_DAY: scrap qty 11 / 4 logs != planned 9 / 3",
+    "2026-09-01_A_DAY: status CONFLICT: ledger-count-mismatch"
+   ],
+   "reads": {
+    "GET": 60,
+    "LIST": 62,
+    "billed": 366
+   }
+  },
+  "new": {
+   "complete": false,
+   "problems": [
+    "2026-09-01_A_DAY: liveLogCount 3 != stored logs 4",
+    "2026-09-01_A_DAY: scrap qty 11 / 4 logs != planned 9 / 3",
+    "2026-09-01_A_DAY: status CONFLICT: ledger-count-mismatch"
+   ],
+   "extra": [
+    "2026-09-01_A_DAY: stored log ids differ from the plan (records added, removed or moved around the ledger)"
+   ],
+   "reads": {
+    "GET": 0,
+    "LIST": 2,
+    "billed": 185
+   }
+  },
+  "sameProblems": true
+ },
+ {
+  "scenario": "log added into a brand-new slot (no ledger)",
+  "plannedSlots": 60,
+  "logs": 124,
+  "old": {
+   "complete": false,
+   "problems": [
+    "2026-09-20_B_NIGHT: 1 logs without a ledger slot (saved after the plan)"
+   ],
+   "reads": {
+    "GET": 60,
+    "LIST": 62,
+    "billed": 365
+   }
+  },
+  "new": {
+   "complete": false,
+   "problems": [
+    "2026-09-20_B_NIGHT: 1 logs without a ledger slot (saved after the plan)"
+   ],
+   "extra": [],
+   "reads": {
+    "GET": 0,
+    "LIST": 2,
+    "billed": 185
+   }
+  },
+  "sameProblems": true
+ },
+ {
+  "scenario": "log without createdAt / updatedAt into a planned slot",
+  "plannedSlots": 60,
+  "logs": 124,
+  "old": {
+   "complete": false,
+   "problems": [
+    "2026-09-01_B_NIGHT: liveLogCount 2 != stored logs 3",
+    "2026-09-01_B_NIGHT: scrap qty 6 / 3 logs != planned 5 / 2",
+    "2026-09-01_B_NIGHT: status CONFLICT: ledger-count-mismatch"
+   ],
+   "reads": {
+    "GET": 60,
+    "LIST": 62,
+    "billed": 366
+   }
+  },
+  "new": {
+   "complete": false,
+   "problems": [
+    "2026-09-01_B_NIGHT: liveLogCount 2 != stored logs 3",
+    "2026-09-01_B_NIGHT: scrap qty 6 / 3 logs != planned 5 / 2",
+    "2026-09-01_B_NIGHT: status CONFLICT: ledger-count-mismatch"
+   ],
+   "extra": [
+    "2026-09-01_B_NIGHT: stored log ids differ from the plan (records added, removed or moved around the ledger)"
+   ],
+   "reads": {
+    "GET": 0,
+    "LIST": 2,
+    "billed": 185
+   }
+  },
+  "sameProblems": true
+ },
+ {
+  "scenario": "log without timestamps into a new slot",
+  "plannedSlots": 60,
+  "logs": 124,
+  "old": {
+   "complete": false,
+   "problems": [
+    "2026-09-21_C_DAY: 1 logs without a ledger slot (saved after the plan)"
+   ],
+   "reads": {
+    "GET": 60,
+    "LIST": 62,
+    "billed": 365
+   }
+  },
+  "new": {
+   "complete": false,
+   "problems": [
+    "2026-09-21_C_DAY: 1 logs without a ledger slot (saved after the plan)"
+   ],
+   "extra": [],
+   "reads": {
+    "GET": 0,
+    "LIST": 2,
+    "billed": 185
+   }
+  },
+  "sameProblems": true
+ },
+ {
+  "scenario": "log moved between two planned slots",
+  "plannedSlots": 60,
+  "logs": 123,
+  "old": {
+   "complete": false,
+   "problems": [
+    "2026-09-01_A_DAY: liveLogCount 3 != stored logs 2",
+    "2026-09-01_A_DAY: scrap qty 7 / 2 logs != planned 9 / 3",
+    "2026-09-01_A_DAY: status CONFLICT: ledger-count-mismatch",
+    "2026-09-01_A_NIGHT: liveLogCount 3 != stored logs 4",
+    "2026-09-01_A_NIGHT: scrap qty 8 / 4 logs != planned 6 / 3",
+    "2026-09-01_A_NIGHT: status CONFLICT: ledger-count-mismatch"
+   ],
+   "reads": {
+    "GET": 60,
+    "LIST": 62,
+    "billed": 364
+   }
+  },
+  "new": {
+   "complete": false,
+   "problems": [
+    "2026-09-01_A_DAY: liveLogCount 3 != stored logs 2",
+    "2026-09-01_A_DAY: scrap qty 7 / 2 logs != planned 9 / 3",
+    "2026-09-01_A_DAY: status CONFLICT: ledger-count-mismatch",
+    "2026-09-01_A_NIGHT: liveLogCount 3 != stored logs 4",
+    "2026-09-01_A_NIGHT: scrap qty 8 / 4 logs != planned 6 / 3",
+    "2026-09-01_A_NIGHT: status CONFLICT: ledger-count-mismatch"
+   ],
+   "extra": [
+    "2026-09-01_A_DAY: stored log ids differ from the plan (records added, removed or moved around the ledger)",
+    "2026-09-01_A_NIGHT: stored log ids differ from the plan (records added, removed or moved around the ledger)"
+   ],
+   "reads": {
+    "GET": 0,
+    "LIST": 2,
+    "billed": 184
+   }
+  },
+  "sameProblems": true
+ },
+ {
+  "scenario": "swap: two logs exchanged between planned slots, same qty (counts and totals unchanged)",
+  "plannedSlots": 60,
+  "logs": 123,
+  "old": {
+   "complete": true,
+   "problems": [],
+   "reads": {
+    "GET": 60,
+    "LIST": 62,
+    "billed": 364
+   }
+  },
+  "new": {
+   "complete": false,
+   "problems": [],
+   "extra": [
+    "2026-09-01_A_DAY: stored log ids differ from the plan (records added, removed or moved around the ledger)",
+    "2026-09-01_A_NIGHT: stored log ids differ from the plan (records added, removed or moved around the ledger)"
+   ],
+   "reads": {
+    "GET": 0,
+    "LIST": 2,
+    "billed": 184
+   }
+  },
+  "sameProblems": true
+ },
+ {
+  "scenario": "model / defect edited around the ledger (count and qty unchanged)",
+  "plannedSlots": 60,
+  "logs": 123,
+  "old": {
+   "complete": true,
+   "problems": [],
+   "reads": {
+    "GET": 60,
+    "LIST": 62,
+    "billed": 364
+   }
+  },
+  "new": {
+   "complete": false,
+   "problems": [],
+   "extra": [
+    "2026-09-01_B_DAY: records changed since the plan (fingerprint; e.g. model, defect or quantity edited around the ledger)"
+   ],
+   "reads": {
+    "GET": 0,
+    "LIST": 2,
+    "billed": 184
+   }
+  },
+  "sameProblems": true
+ },
+ {
+  "scenario": "quantity edited around the ledger",
+  "plannedSlots": 60,
+  "logs": 123,
+  "old": {
+   "complete": false,
+   "problems": [
+    "2026-09-01_C_DAY: scrap qty 99 / 1 logs != planned 4 / 1"
+   ],
+   "reads": {
+    "GET": 60,
+    "LIST": 62,
+    "billed": 364
+   }
+  },
+  "new": {
+   "complete": false,
+   "problems": [
+    "2026-09-01_C_DAY: scrap qty 99 / 1 logs != planned 4 / 1"
+   ],
+   "extra": [
+    "2026-09-01_C_DAY: records changed since the plan (fingerprint; e.g. model, defect or quantity edited around the ledger)"
+   ],
+   "reads": {
+    "GET": 0,
+    "LIST": 2,
+    "billed": 184
+   }
+  },
+  "sameProblems": true
+ },
+ {
+  "scenario": "log deleted around the ledger",
+  "plannedSlots": 60,
+  "logs": 122,
+  "old": {
+   "complete": false,
+   "problems": [
+    "2026-09-01_C_NIGHT: liveLogCount 1 != stored logs 0",
+    "2026-09-01_C_NIGHT: scrap qty 0 / 0 logs != planned 1 / 1",
+    "2026-09-01_C_NIGHT: status CONFLICT: ledger-count-mismatch"
+   ],
+   "reads": {
+    "GET": 60,
+    "LIST": 62,
+    "billed": 363
+   }
+  },
+  "new": {
+   "complete": false,
+   "problems": [
+    "2026-09-01_C_NIGHT: liveLogCount 1 != stored logs 0",
+    "2026-09-01_C_NIGHT: scrap qty 0 / 0 logs != planned 1 / 1",
+    "2026-09-01_C_NIGHT: status CONFLICT: ledger-count-mismatch"
+   ],
+   "extra": [
+    "2026-09-01_C_NIGHT: stored log ids differ from the plan (records added, removed or moved around the ledger)"
+   ],
+   "reads": {
+    "GET": 0,
+    "LIST": 2,
+    "billed": 183
+   }
+  },
+  "sameProblems": true
+ },
+ {
+  "scenario": "excluded log edited into a planned slot",
+  "plannedSlots": 60,
+  "logs": 123,
+  "old": {
+   "complete": false,
+   "problems": [
+    "2026-09-02_A_DAY: liveLogCount 2 != stored logs 3",
+    "2026-09-02_A_DAY: scrap qty 7 / 3 logs != planned 5 / 2",
+    "2026-09-02_A_DAY: status CONFLICT: ledger-count-mismatch"
+   ],
+   "reads": {
+    "GET": 60,
+    "LIST": 62,
+    "billed": 365
+   }
+  },
+  "new": {
+   "complete": false,
+   "problems": [
+    "2026-09-02_A_DAY: liveLogCount 2 != stored logs 3",
+    "2026-09-02_A_DAY: scrap qty 7 / 3 logs != planned 5 / 2",
+    "2026-09-02_A_DAY: status CONFLICT: ledger-count-mismatch"
+   ],
+   "extra": [
+    "2026-09-02_A_DAY: stored log ids differ from the plan (records added, removed or moved around the ledger)"
+   ],
+   "reads": {
+    "GET": 0,
+    "LIST": 2,
+    "billed": 184
+   }
+  },
+  "sameProblems": true
+ },
+ {
+  "scenario": "excluded log edited into a new slot",
+  "plannedSlots": 60,
+  "logs": 123,
+  "old": {
+   "complete": false,
+   "problems": [
+    "2026-09-22_A_DAY: 1 logs without a ledger slot (saved after the plan)"
+   ],
+   "reads": {
+    "GET": 60,
+    "LIST": 62,
+    "billed": 364
+   }
+  },
+  "new": {
+   "complete": false,
+   "problems": [
+    "2026-09-22_A_DAY: 1 logs without a ledger slot (saved after the plan)"
+   ],
+   "extra": [],
+   "reads": {
+    "GET": 0,
+    "LIST": 2,
+    "billed": 184
+   }
+  },
+  "sameProblems": true
+ },
+ {
+  "scenario": "planned slot document deleted",
+  "plannedSlots": 60,
+  "logs": 123,
+  "old": {
+   "complete": false,
+   "problems": [
+    "2026-09-02_A_NIGHT: slot missing",
+    "2026-09-02_A_NIGHT: 2 logs without a ledger slot (saved after the plan)"
+   ],
+   "reads": {
+    "GET": 60,
+    "LIST": 62,
+    "billed": 363
+   }
+  },
+  "new": {
+   "complete": false,
+   "problems": [
+    "2026-09-02_A_NIGHT: slot missing",
+    "2026-09-02_A_NIGHT: 2 logs without a ledger slot (saved after the plan)"
+   ],
+   "extra": [],
+   "reads": {
+    "GET": 0,
+    "LIST": 2,
+    "billed": 183
+   }
+  },
+  "sameProblems": true
+ },
+ {
+  "scenario": "import marker left on a planned slot (CONFLICT)",
+  "plannedSlots": 60,
+  "logs": 123,
+  "old": {
+   "complete": false,
+   "problems": [
+    "2026-09-02_B_DAY: status CONFLICT: import-incomplete"
+   ],
+   "reads": {
+    "GET": 60,
+    "LIST": 62,
+    "billed": 364
+   }
+  },
+  "new": {
+   "complete": false,
+   "problems": [
+    "2026-09-02_B_DAY: status CONFLICT: import-incomplete"
+   ],
+   "extra": [],
+   "reads": {
+    "GET": 0,
+    "LIST": 2,
+    "billed": 184
+   }
+  },
+  "sameProblems": true
+ },
+ {
+  "scenario": "ledger save after the baseline (logVersion 1: plan is history)",
+  "plannedSlots": 60,
+  "logs": 124,
+  "old": {
+   "complete": true,
+   "problems": [],
+   "reads": {
+    "GET": 60,
+    "LIST": 62,
+    "billed": 366
+   }
+  },
+  "new": {
+   "complete": true,
+   "problems": [],
+   "extra": [],
+   "reads": {
+    "GET": 0,
+    "LIST": 2,
+    "billed": 185
+   }
+  },
+  "sameProblems": true
+ },
+ {
+  "scenario": "log with date / line of another type in a planned slot (never matches)",
+  "plannedSlots": 60,
+  "logs": 124,
+  "old": {
+   "complete": true,
+   "problems": [],
+   "reads": {
+    "GET": 60,
+    "LIST": 62,
+    "billed": 365
+   }
+  },
+  "new": {
+   "complete": true,
+   "problems": [],
+   "extra": [],
+   "reads": {
+    "GET": 0,
+    "LIST": 2,
+    "billed": 185
+   }
+  },
+  "sameProblems": true
+ },
+ {
+  "scenario": "apply failed half-way (one planned slot missing)",
+  "plannedSlots": 60,
+  "logs": 123,
+  "old": {
+   "complete": false,
+   "problems": [
+    "2026-09-01_A_DAY: slot missing",
+    "2026-09-01_A_DAY: 3 logs without a ledger slot (saved after the plan)"
+   ],
+   "reads": {
+    "GET": 60,
+    "LIST": 62,
+    "billed": 363
+   }
+  },
+  "new": {
+   "complete": false,
+   "problems": [
+    "2026-09-01_A_DAY: slot missing",
+    "2026-09-01_A_DAY: 3 logs without a ledger slot (saved after the plan)"
+   ],
+   "extra": [],
+   "reads": {
+    "GET": 0,
+    "LIST": 2,
+    "billed": 183
+   }
+  },
+  "sameProblems": true
+ }
+]

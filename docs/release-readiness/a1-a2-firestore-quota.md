@@ -566,3 +566,38 @@ Run procedure (for when it is approved):
 4. `cloudshell download "$(ls -t ~/a1-querystat-*.tar.gz | head -1)"` and send the package and its `.sha256` value (exit 1: `collect-log.txt` only; exit 9: send nothing).
 
 **Status: A1 = HIGH. G2 = NOT APPROVED.**
+
+---
+
+## Update 6, 2026-11-09: Q1 migration gate implemented (code commit `8959c3f`)
+
+Evidence: [`evidence/q1-gate-20261109/`](evidence/q1-gate-20261109/README.md). Firebase Emulator and synthetic data only; working branch only (not merged, not deployed, no migration run).
+
+### What changed
+
+- `tools/migration/ledger-baseline.js`: new pure `gateProblems(plan, logs, slotDocs)`. It reproduces `verifyApplied` and the "saved after the plan" check from **one** read of `scrapLogs` and **one** read of `scrapSlots` (logs matched to a slot like the `==` queries: string fields, strict equality). It adds, at no extra read, log-id and fingerprint checks for planned slots still at `logVersion` 0. `completeIfClean(..., currentLogs, currentSlots)` uses it; **without `currentSlots` the old path runs unchanged (fallback, still used by existing tests).**
+- `js/ops-console.js`: the gate reads `scrapSlots` once and passes it in.
+- `admin.html`: `?v=20261109-q1` for both files.
+- No `count()` and no timestamps are used (the compat SDK has no aggregate `count()`; timestamps are not reliable for this check).
+
+### Results (emulator, 123 synthetic logs, 60 planned slots)
+
+| | Calls | Reads (est.) |
+|---|---|---|
+| Old gate | 60 GET + 62 LIST | 364 |
+| New gate | 2 LIST | **184 (−49 %)** |
+
+- **Problems identical to the old gate in all 17 scenarios** (same text, same order): clean; log added around the ledger; log in a new slot; logs without timestamps (planned and new slot); move between planned slots; quantity edit; delete; excluded log edited into a planned / new slot; slot document deleted; import marker (CONFLICT); ledger save after the baseline; field of another type; apply failed half-way.
+- **Caught only by the new gate** (gate stays closed; stricter): two logs swapped between planned slots with the same quantity (log ids differ), and a model / defect edit with count and quantity unchanged (fingerprint differs).
+- Tests (one run): unit **59/59**, regression **15/15**, rules **144/144**, e2e + Q1 equivalence **39/39** (incl. ops-console "baseline: dry run, apply, gate → baselineComplete" on the new path, and rehearsal S7 on the old path). Generated docs rewritten by the tests were restored.
+- At Production size the saving is about N_L + P per gate run (all logs + planned slots); the real numbers need U3 (not approved).
+
+### R3 / R6 checklist
+
+Saved as [`r3-r6-owner-checklist.md`](r3-r6-owner-checklist.md): the 7 time windows (Thailand, UTC, Pacific quota day), the Console pages to **view only**, and the questions for the system owners. No personal data; no audit logs; no setting changes. Time-sensitive (Monitoring data until about 7 Dec 2026).
+
+### Open (each needs approval)
+
+R2 run by the owner (approved; result pending), U3 (not approved), Q2a redesign (on hold).
+
+**Status: A1 = HIGH. G2 = NOT APPROVED.**
