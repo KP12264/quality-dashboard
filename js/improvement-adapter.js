@@ -86,6 +86,23 @@
   }
 
   /**
+   * getImprovementById(db, id) → { record } | { record: null, error? }
+   * One document read instead of the whole collection (edit page). An id containing "/" is
+   * not a document of this collection: answered "not found" without reading.
+   */
+  async function getImprovementById(db, id) {
+    if (!db) throw new Error("No Firestore connection available (db is null).");
+    if (typeof id !== "string" || !id || id.includes("/")) return { record: null };
+    try {
+      const doc = await db.collection(IMPROVEMENT_COLLECTION).doc(id).get();
+      return { record: doc.exists ? normalizeImprovement(doc.id, doc.data()) : null };
+    } catch (e) {
+      console.error("Quality Dashboard: failed to read improvement", e);
+      return { record: null, error: e };
+    }
+  }
+
+  /**
    * addImprovement(db, payload)
    * Creates a new improvement record. Only `problem` and `defectType`
    * are required at creation — everything else (root cause, actions,
@@ -183,6 +200,7 @@
     withOwners,
     normalizeImprovement,
     getImprovements,
+    getImprovementById,
     addImprovement,
     updateImprovement
   };

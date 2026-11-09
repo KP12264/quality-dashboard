@@ -117,8 +117,8 @@
   async function loadForEdit(id) {
     if (window.qdFirebaseError) return;
     try {
-      const { records } = await ImprovementAdapter.getImprovements(window.qdDb, {});
-      const rec = await ImprovementAdapter.withOwners(window.qdDb, records.find(r => r.id === id));   // owners: signed-in only
+      const { record } = await ImprovementAdapter.getImprovementById(window.qdDb, id);   // one document, not the whole collection
+      const rec = await ImprovementAdapter.withOwners(window.qdDb, record || undefined);   // owners: signed-in only
       if (!rec) { showBanner('warn', '⚠ Improvement record not found.'); return; }
       $('formTitle').textContent = 'Edit Improvement — ' + rec.improvementId;
       $('fProblem').value = rec.problem;
