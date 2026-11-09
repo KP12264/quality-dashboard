@@ -1,0 +1,83 @@
+{
+  "timeSeries": [
+    {
+      "metric": {
+        "type": "firestore.googleapis.com/api/request_count"
+      },
+      "resource": {
+        "type": "datastore_request",
+        "labels": {
+          "project_id": "daily-production-report-46b60"
+        }
+      },
+      "metricKind": "DELTA",
+      "valueType": "INT64",
+      "points": [
+        {
+          "interval": {
+            "startTime": "2026-11-01T18:00:00Z",
+            "endTime": "2026-11-01T19:00:00Z"
+          },
+          "value": {
+            "int64Value": "2"
+          }
+        },
+        {
+          "interval": {
+            "startTime": "2026-10-31T18:00:00Z",
+            "endTime": "2026-10-31T19:00:00Z"
+          },
+          "value": {
+            "int64Value": "2"
+          }
+        },
+        {
+          "interval": {
+            "startTime": "2026-10-30T18:00:00Z",
+            "endTime": "2026-10-30T19:00:00Z"
+          },
+          "value": {
+            "int64Value": "2"
+          }
+        },
+        {
+          "interval": {
+            "startTime": "2026-10-29T18:00:00Z",
+            "endTime": "2026-10-29T19:00:00Z"
+          },
+          "value": {
+            "int64Value": "2"
+          }
+        },
+        {
+          "interval": {
+            "startTime": "2026-10-28T18:00:00Z",
+            "endTime": "2026-10-28T19:00:00Z"
+          },
+          "value": {
+            "int64Value": "2"
+          }
+        },
+        {
+          "interval": {
+            "startTime": "2026-10-27T18:00:00Z",
+            "endTime": "2026-10-27T19:00:00Z"
+          },
+          "value": {
+            "int64Value": "2"
+          }
+        },
+        {
+          "interval": {
+            "startTime": "2026-10-26T18:00:00Z",
+            "endTime": "2026-10-26T19:00:00Z"
+          },
+          "value": {
+            "int64Value": "2"
+          }
+        }
+      ]
+    }
+  ],
+  "unit": "1"
+}

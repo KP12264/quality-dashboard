@@ -1,0 +1,91 @@
+window 2026-10-26T00:00:00Z .. 2026-11-02T00:00:00Z = 168 hourly buckets
+read_count resource types   : ['firestore_instance']
+request_count resource types: ['datastore_request', 'firestore.googleapis.com/Database']
+RULE: totals are kept per resource type and are never added across resource types.
+## 1. Same-dataset checks and hour-by-hour totals (within one resource type)
+  U1h vs U1t [firestore_instance]: same metric/resource/window/aggregation; hours differing = 0 (none)
+  U2 vs U2t [datastore_request]: same metric/resource/window/aggregation; hours differing = 0 (none)
+  U2m vs U2t [datastore_request]: same metric/resource/window/aggregation; hours differing = 0 (none)
+  U2 vs U2t [firestore.googleapis.com/Database]: same metric/resource/window/aggregation; hours differing = 0 (none)
+  U2m vs U2t [firestore.googleapis.com/Database]: same metric/resource/window/aggregation; hours differing = 0 (none)
+## 2. U1 reference (u1-reads.json, resource.type firestore_instance) vs hourly sums, reference intervals as written
+  2026-10-24T00:00:00Z..2026-10-25T00:00:00Z: outside collected window -> not compared
+  2026-10-25T00:00:00Z..2026-10-26T00:00:00Z: outside collected window -> not compared
+  2026-10-26T00:00:00Z..2026-10-27T00:00:00Z: hourly-sum=5088 u1=5088 MATCH
+  2026-10-27T00:00:00Z..2026-10-28T00:00:00Z: hourly-sum=49720 u1=49720 MATCH
+  2026-10-28T00:00:00Z..2026-10-29T00:00:00Z: hourly-sum=5424 u1=5424 MATCH
+  2026-10-29T00:00:00Z..2026-10-30T00:00:00Z: hourly-sum=21375 u1=21375 MATCH
+  2026-10-30T00:00:00Z..2026-10-31T00:00:00Z: hourly-sum=6437 u1=6437 MATCH
+  2026-10-31T00:00:00Z..2026-11-01T00:00:00Z: hourly-sum=335 u1=335 MATCH
+  2026-11-01T00:00:00Z..2026-11-02T00:00:00Z: hourly-sum=335 u1=335 MATCH
+  2026-11-02T00:00:00Z..2026-11-03T00:00:00Z: outside collected window -> not compared
+  2026-11-03T00:00:00Z..2026-11-04T00:00:00Z: outside collected window -> not compared
+  2026-11-04T00:00:00Z..2026-11-05T00:00:00Z: outside collected window -> not compared
+  2026-11-05T00:00:00Z..2026-11-06T00:00:00Z: outside collected window -> not compared
+  2026-11-06T00:00:00Z..2026-11-07T00:00:00Z: outside collected window -> not compared
+## 3. Hours with no data point (API omits empty buckets; absence is not proof of zero)
+  read_count [firestore_instance]: no-point hours=98; inside a MATCHED U1 interval (consistent with zero)=98; unverified=0 (none)
+  request_count [datastore_request]: hours with a point=7/168 (information only)
+  request_count [firestore.googleapis.com/Database]: hours with a point=7/168 (information only)
+  hours with reads>0 but no request point in ANY request resource type (unverified)=63 (2026-10-26T01:00:00Z..2026-10-26T02:00:00Z, 2026-10-26T03:00:00Z..2026-10-26T12:00:00Z, 2026-10-27T01:00:00Z..2026-10-27T13:00:00Z, 2026-10-27T17:00:00Z..2026-10-27T18:00:00Z, 2026-10-27T19:00:00Z..2026-10-27T21:00:00Z, 2026-10-28T00:00:00Z..2026-10-28T10:00:00Z, 2026-10-28T11:00:00Z..2026-10-28T14:00:00Z, 2026-10-28T15:00:00Z..2026-10-28T16:00:00Z, 2026-10-29T00:00:00Z..2026-10-29T12:00:00Z, 2026-10-29T13:00:00Z..2026-10-29T14:00:00Z, 2026-10-29T17:00:00Z..2026-10-29T18:00:00Z, 2026-10-29T19:00:00Z..2026-10-30T02:00:00Z, 2026-10-30T10:00:00Z..2026-10-30T11:00:00Z, 2026-10-30T13:00:00Z..2026-10-30T15:00:00Z)
+  note: 'consistent with zero' means an independent query of the same backend agrees; it cannot rule out a gap present in both queries.
+## 4. request_count resource types side by side (NOT added together)
+  datastore_request total=14 vs firestore.googleapis.com/Database total=14; hours with both=7; hours with identical values=7
+  note: whether the types overlap (same requests reported twice) cannot be decided from these numbers alone.
+  [datastore_request] by metric.label.response_code:
+     {'response_code': 'OK'} {'project_id': 'daily-production-report-46b60'}: total=14 hours=7
+  [datastore_request] by metric.label.api_method:
+     {'api_method': 'ListDocuments'} {'project_id': 'daily-production-report-46b60'}: total=14 hours=7
+  [firestore.googleapis.com/Database] by metric.label.response_code:
+     {'response_code': 'OK'} {'database_id': '(default)', 'project_id': 'daily-production-report-46b60'}: total=14 hours=7
+  [firestore.googleapis.com/Database] by metric.label.api_method:
+     {'api_method': 'ListDocuments'} {'database_id': '(default)', 'project_id': 'daily-production-report-46b60'}: total=14 hours=7
+## 5. Pacific-time quota days for read_count [firestore_instance] (America/Los_Angeles, DST-aware)
+  PT 2026-10-25 [2026-10-25T07:00:00Z .. 2026-10-26T07:00:00Z] 24h: reads=3545  PARTIAL DAY (not a full quota day)
+  PT 2026-10-26 [2026-10-26T07:00:00Z .. 2026-10-27T07:00:00Z] 24h: reads=27812  EXACT  >50,000=False
+  PT 2026-10-27 [2026-10-27T07:00:00Z .. 2026-10-28T07:00:00Z] 24h: reads=26401  EXACT  >50,000=False
+  PT 2026-10-28 [2026-10-28T07:00:00Z .. 2026-10-29T07:00:00Z] 24h: reads=12801  EXACT  >50,000=False
+  PT 2026-10-29 [2026-10-29T07:00:00Z .. 2026-10-30T07:00:00Z] 24h: reads=15240  EXACT  >50,000=False
+  PT 2026-10-30 [2026-10-30T07:00:00Z .. 2026-10-31T07:00:00Z] 24h: reads=2245  EXACT  >50,000=False
+  PT 2026-10-31 [2026-10-31T07:00:00Z .. 2026-11-01T07:00:00Z] 24h: reads=335  EXACT  >50,000=False
+  PT 2026-11-01 [2026-11-01T07:00:00Z .. 2026-11-02T08:00:00Z] 25h: reads=335  PARTIAL DAY (not a full quota day)
+## 6. Hourly read_count [firestore_instance] (UTC rows; columns = hour ending 01..24 UTC; '.' = no point)
+  2026-10-26 . 496 . 489 1450 488 622 19 135 118 946 0 . . . . . . 325 . . . . .
+  2026-10-27 . 1308 1131 366 22636 715 113 109 6 127 6 6 125 . . . . 9316 13701 0 55 . . .
+  2026-10-28 2 1439 896 233 261 112 7 320 1091 319 . 8 339 0 . 62 . . 335 . . . . .
+  2026-10-29 34 1546 7408 990 118 107 124 187 199 124 128 7 . 120 . . . 329 497 359 2764 1878 3187 1269
+  2026-10-30 23 4169 . . . . . . . . 349 . . 425 1136 . . . 335 . . . . .
+  2026-10-31 . . . . . . . . . . . . . . . . . . 335 . . . . .
+  2026-11-01 . . . . . . . . . . . . . . . . . . 335 . . . . .
+  top 15 hours by reads (UTC | ICT):
+     2026-10-27T04:00:00Z..05:00Z | ICT 27 Oct 11:00-12:00: reads=22636 requests={'datastore_request': 0, 'firestore.googleapis.com/Database': 0}
+     2026-10-27T18:00:00Z..19:00Z | ICT 28 Oct 01:00-02:00: reads=13701 requests={'datastore_request': 2, 'firestore.googleapis.com/Database': 2}
+     2026-10-27T17:00:00Z..18:00Z | ICT 28 Oct 00:00-01:00: reads=9316 requests={'datastore_request': 0, 'firestore.googleapis.com/Database': 0}
+     2026-10-29T02:00:00Z..03:00Z | ICT 29 Oct 09:00-10:00: reads=7408 requests={'datastore_request': 0, 'firestore.googleapis.com/Database': 0}
+     2026-10-30T01:00:00Z..02:00Z | ICT 30 Oct 08:00-09:00: reads=4169 requests={'datastore_request': 0, 'firestore.googleapis.com/Database': 0}
+     2026-10-29T22:00:00Z..23:00Z | ICT 30 Oct 05:00-06:00: reads=3187 requests={'datastore_request': 0, 'firestore.googleapis.com/Database': 0}
+     2026-10-29T20:00:00Z..21:00Z | ICT 30 Oct 03:00-04:00: reads=2764 requests={'datastore_request': 0, 'firestore.googleapis.com/Database': 0}
+     2026-10-29T21:00:00Z..22:00Z | ICT 30 Oct 04:00-05:00: reads=1878 requests={'datastore_request': 0, 'firestore.googleapis.com/Database': 0}
+     2026-10-29T01:00:00Z..02:00Z | ICT 29 Oct 08:00-09:00: reads=1546 requests={'datastore_request': 0, 'firestore.googleapis.com/Database': 0}
+     2026-10-26T04:00:00Z..05:00Z | ICT 26 Oct 11:00-12:00: reads=1450 requests={'datastore_request': 0, 'firestore.googleapis.com/Database': 0}
+     2026-10-28T01:00:00Z..02:00Z | ICT 28 Oct 08:00-09:00: reads=1439 requests={'datastore_request': 0, 'firestore.googleapis.com/Database': 0}
+     2026-10-27T01:00:00Z..02:00Z | ICT 27 Oct 08:00-09:00: reads=1308 requests={'datastore_request': 0, 'firestore.googleapis.com/Database': 0}
+     2026-10-29T23:00:00Z..00:00Z | ICT 30 Oct 06:00-07:00: reads=1269 requests={'datastore_request': 0, 'firestore.googleapis.com/Database': 0}
+     2026-10-30T14:00:00Z..15:00Z | ICT 30 Oct 21:00-22:00: reads=1136 requests={'datastore_request': 0, 'firestore.googleapis.com/Database': 0}
+     2026-10-27T02:00:00Z..03:00Z | ICT 27 Oct 09:00-10:00: reads=1131 requests={'datastore_request': 0, 'firestore.googleapis.com/Database': 0}
+## 7. Interpretation limits (read before drawing conclusions)
+  - These are Cloud Monitoring metric values (document/read_count, api/request_count). They are NOT the Spark quota
+    ledger. Whether the free-tier quota was exceeded must be confirmed separately (Console usage/quota page or
+    RESOURCE_EXHAUSTED responses); RESOURCE_EXHAUSTED can also come from limits other than the daily quota.
+  - request_count is reported under more than one resource type; the types may overlap, so they are not added.
+  - Separation by app: only the labels listed in Step 1/2 of collect-log.txt exist. Unless one of them identifies
+    the app, client, user or collection, QD, PV2 and legacy tools on this project cannot be separated from these
+    files alone; any attribution needs timing correlation plus owner records.
+
+WARNINGS:
+  none
+INCOMPLETE-EVIDENCE NOTES:
+  - 63 hours have reads but no request point in any request resource type
+FAILURES:
+  none
+VERIFY STATUS: INCOMPLETE

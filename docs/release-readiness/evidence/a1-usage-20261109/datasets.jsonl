@@ -1,0 +1,8 @@
+{"name":"U1h-read_count-hourly__firestore_instance","kind":"U1h","metric":"firestore.googleapis.com/document/read_count","resourceType":"firestore_instance"}
+{"name":"U1t-read_count-total__firestore_instance","kind":"U1t","metric":"firestore.googleapis.com/document/read_count","resourceType":"firestore_instance"}
+{"name":"U2-request_count-by-code__datastore_request","kind":"U2","metric":"firestore.googleapis.com/api/request_count","resourceType":"datastore_request"}
+{"name":"U2m-request_count-by-method__datastore_request","kind":"U2m","metric":"firestore.googleapis.com/api/request_count","resourceType":"datastore_request"}
+{"name":"U2t-request_count-total__datastore_request","kind":"U2t","metric":"firestore.googleapis.com/api/request_count","resourceType":"datastore_request"}
+{"name":"U2-request_count-by-code__firestore.googleapis.com_Database","kind":"U2","metric":"firestore.googleapis.com/api/request_count","resourceType":"firestore.googleapis.com/Database"}
+{"name":"U2m-request_count-by-method__firestore.googleapis.com_Database","kind":"U2m","metric":"firestore.googleapis.com/api/request_count","resourceType":"firestore.googleapis.com/Database"}
+{"name":"U2t-request_count-total__firestore.googleapis.com_Database","kind":"U2t","metric":"firestore.googleapis.com/api/request_count","resourceType":"firestore.googleapis.com/Database"}

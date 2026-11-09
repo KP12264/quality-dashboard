@@ -1,0 +1,32 @@
+{
+  "name": "projects/daily-production-report-46b60/metricDescriptors/firestore.googleapis.com/api/request_count",
+  "labels": [
+    {
+      "key": "api_method",
+      "description": "The API method called (for example: BeginTransaction or Commit)."
+    },
+    {
+      "key": "response_code",
+      "description": "Operation response code string, derived as a string representation of a HTTP status code (e.g. success, not_found, unavailable)."
+    }
+  ],
+  "metricKind": "DELTA",
+  "valueType": "INT64",
+  "unit": "1",
+  "description": "Count of Firestore API calls.",
+  "displayName": "Requests",
+  "type": "firestore.googleapis.com/api/request_count",
+  "metadata": {
+    "launchStage": "GA",
+    "samplePeriod": "60s",
+    "ingestDelay": "240s",
+    "timeSeriesResourceHierarchyLevel": [
+      "PROJECT"
+    ]
+  },
+  "launchStage": "GA",
+  "monitoredResourceTypes": [
+    "datastore_request",
+    "firestore.googleapis.com/Database"
+  ]
+}

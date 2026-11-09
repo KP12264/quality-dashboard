@@ -282,3 +282,119 @@ V5 itself makes the Dashboard cheaper per filter click. Its daily Δ still needs
 | P6 | Long term: daily aggregate documents for production / scrap (one read instead of up to 186 per month view) | largest structural reduction | design change, involves PV2 data, separate phase |
 
 **Status: A1 = HIGH (confirmed by U1). G2 = not approved.** Next: U1h, U2 / U2m and an explanation of 27 Oct.
+
+---
+
+## Update 2, 2026-11-09: hourly reads (U1h), requests (U2 / U2m) received
+
+Collected read-only by the Firebase owner in Cloud Shell with `a1-collect.sh` v4 (only GET calls to the Cloud Monitoring API). Evidence, hashes and the redaction note: [`evidence/a1-usage-20261109/`](evidence/a1-usage-20261109/README.md). Package SHA-256 `540be6c0…72fe8` (matches the owner's Cloud Shell output).
+
+### Data check
+
+- Collector exit 3 = **INCOMPLETE**; failures: none; warnings: none. `verify.py` was re-run here on a copy of the data: identical report, byte for byte.
+- Window: 2026-10-26T00:00Z → 2026-11-02T00:00Z, 168 hourly buckets, one query per (metric, resource type).
+- `read_count` exists only on `firestore_instance` (resource label `project_id` only). `request_count` exists on **two** resource types: `datastore_request` and `firestore.googleapis.com/Database`. They are kept separate and never added.
+- U1h = U1t in every hour; U2 and U2m = U2t in every hour, for both request types.
+- **U1 reference: all 7 UTC days match exactly** (26 Oct 5,088 … 27 Oct 49,720 … 1 Nov 335).
+- The 98 hours without a read point all lie inside matched days → consistent with zero reads.
+- Why INCOMPLETE: 63 hours have reads but **no** request point in either request type (see "Requests" below).
+
+### Hourly reads (UTC; Thailand = UTC+7; columns = hour ending 01…24 UTC; `.` = no point, consistent with 0)
+
+All reads are `type=QUERY`; `type=LOOKUP` is 0 for the whole window; `module` / `version` are `__unknown__`.
+
+```
+26 Oct  .  496    .  489  1450  488  622   19  135  118  946    0 .  .  .  .  .  .  325   .    .    .    .    .
+27 Oct  . 1308 1131  366 22636  715  113  109    6  127    6    6 125 .  .  .  .  9316 13701  0   55    .    .    .
+28 Oct  2 1439  896  233   261  112    7  320 1091  319    .    8 339 0  . 62  .    .  335   .    .    .    .    .
+29 Oct 34 1546 7408  990   118  107  124  187  199  124  128    7   . 120 .  .  .  329  497  359 2764 1878 3187 1269
+30 Oct 23 4169    .    .     .    .    .    .    .    .  349    .   . 425 1136 . .  .  335   .    .    .    .    .
+31 Oct  .    .    .    .     .    .    .    .    .    .    .    .   .  .  .  .  .  .  335   .    .    .    .    .
+1 Nov   .    .    .    .     .    .    .    .    .    .    .    .   .  .  .  .  .  .  335   .    .    .    .    .
+```
+
+### Reads per Pacific quota day (exact; DST handled)
+
+| PT quota day | UTC window | Reads | % of 50,000 | Data |
+|---|---|---|---|---|
+| 25 Oct | 07Z 25 → 07Z 26 | ≥ 3,545 | – | partial (window starts 00Z 26) |
+| **26 Oct** | 07Z 26 → 07Z 27 | **27,812** | **55.6 %** | exact |
+| **27 Oct** | 07Z 27 → 07Z 28 | **26,401** | **52.8 %** | exact |
+| 28 Oct | 07Z 28 → 07Z 29 | 12,801 | 25.6 % | exact |
+| 29 Oct | 07Z 29 → 07Z 30 | 15,240 | 30.5 % | exact |
+| 30 Oct | 07Z 30 → 07Z 31 | 2,245 | 4.5 % | exact |
+| 31 Oct | 07Z 31 → 07Z 1 Nov | 335 | 0.7 % | exact |
+| 1 Nov | 07Z 1 → 08Z 2 Nov (25 h) | ≥ 335 | – | partial |
+
+The 49,720 of Update 1 was a **UTC-day** total. It straddles the quota reset (14:00 Thailand time) and splits into 27,812 + 26,401. **No quota day passed 50,000 by this metric.** This is a metric value, not the Spark quota ledger.
+
+### Hours with unusual reads
+
+| UTC | Thailand | Reads | Facts |
+|---|---|---|---|
+| 27 Oct 04–05 | **27 Oct 11:00–12:00** | **22,636** | 45 % of the daily quota in one hour; QUERY; no request point |
+| 27 Oct 17–18 | **28 Oct 00:00–01:00** | 9,316 | after midnight; no request point |
+| 27 Oct 18–19 | **28 Oct 01:00–02:00** | 13,701 | same hour as the daily 2 × ListDocuments |
+| 29 Oct 02–03 | 29 Oct 09:00–10:00 | 7,408 | |
+| 29 Oct 20 – 30 Oct 00 | **30 Oct 03:00–07:00** | 9,098 (2,764 / 1,878 / 3,187 / 1,269) | four night hours in a row |
+| 30 Oct 01–02 | 30 Oct 08:00–09:00 | 4,169 | |
+
+Recurring: **every day at 01:00–02:00 Thailand time** there are exactly **2 ListDocuments** requests; on ordinary days that hour has 325–335 reads, which is the whole weekend total (335 per day).
+
+### Requests (U2 by response code, U2m by method)
+
+| Resource type | response_code | api_method | Total | Hours |
+|---|---|---|---|---|
+| `datastore_request` | OK 14 | ListDocuments 14 | 14 | 7 (01:00–02:00 Thailand, daily) |
+| `firestore.googleapis.com/Database` | OK 14 | ListDocuments 14 | 14 | the same 7 hours, identical values |
+
+Facts:
+- The whole week has **14 requests** (all ListDocuments, all OK) against **88,714 reads**.
+- **`api/request_count` does not reflect the applications' traffic.** The two resource types match in 7 of 7 hours: consistent with the same requests being reported twice.
+- **No `RESOURCE_EXHAUSTED`** appears, but because the apps' traffic is not in this metric, this **does not show** that the apps never hit the quota.
+- Consequence for §9: the first row ("any `RESOURCE_EXHAUSTED` in U2") **cannot be evaluated with `api/request_count`**. It needs another source: the Console Usage / Quotas pages, or the apps' own error reports.
+
+Possible reasons why requests are missing (hypotheses, not verified):
+1. The web SDK used by QD and PV2 sends queries over a streaming channel (Listen / WebChannel) that this metric does not count; only unary calls such as ListDocuments appear.
+2. The metric covers only some API surfaces or clients.
+
+### 27 Oct: facts and hypotheses
+
+Facts:
+- UTC 27 Oct = 49,720 reads, mostly in two blocks:
+  - 22,636 reads at 11:00–12:00 Thailand on 27 Oct;
+  - 23,017 reads at 00:00–02:00 Thailand on 28 Oct.
+- All reads are QUERY. No request point exists for either block, apart from the 2 routine ListDocuments.
+- The QD `main` deploy was 30 Oct 02:25–03:25 Thailand (Update 1), after 27 Oct. QD code has no listeners and no polling. This work never connected to Production.
+
+Correlation only, cause not shown:
+- The 30 Oct 03:00–07:00 reads (9,098) start right after the QD deploy window; post-deploy checking is possible.
+
+Hypotheses (each to be checked; none assumed):
+- 22,636 reads in one hour equal about 120 QD 31-day views (about 189 reads each), or one query or script reading a large collection.
+- The midnight block suggests a script, a scheduled job, an import or night work rather than ordinary daytime use.
+- The daily 01:00 ListDocuments looks like a scheduled job (e.g. a backup script); its owner is unknown.
+
+### Limits on attributing reads to QD, PV2 or legacy
+
+- `read_count` labels are `module`, `version` (both `__unknown__`) and `type`; the resource has only `project_id`. **No label identifies the app, user or collection.**
+- `request_count` does not cover the apps' traffic, so the API method cannot separate them either.
+- Attribution needs timing correlation plus records from the owners. GitHub Pages has no access log here, and Data Access audit logs are off (they are **not** to be turned on without a separate decision).
+
+### A1 status after Update 2 (G2 **not** approved)
+
+| Criterion (§9) | Value | Result |
+|---|---|---|
+| P = highest **quota-day** reads | **27,812** (55.6 %) | 25–40k band: Spark only with mitigation |
+| Highest single hour | 22,636 (45 % of the quota) | a repeat inside a busy quota day could pass 50,000 |
+| Quota errors | not measurable with `request_count` | open |
+| Source of the spikes | unknown | open |
+
+**A1 stays HIGH.** The measured peak is lower than Update 1 suggested (55.6 %, not 99.4 %). But the source of the spikes is unknown, a single hour reached 45 % of the quota, and there is no request-side evidence. Lowering A1 is a separate owner decision once the sources are known. **G2 remains NOT APPROVED.**
+
+### Next (read-only; each step approved separately before it runs)
+
+1. List the Firestore metrics that really exist (`metricDescriptors.list`, filter `starts_with("firestore.googleapis.com/")`).
+2. Hourly reads vs writes vs deletes for 26–30 Oct; listener / connection and rules-evaluation metrics if they exist.
+3. Read existing **Admin Activity** audit logs (always on; reading changes nothing) for import, export, index or database changes.
+4. Owners: who or what runs at 01:00 Thailand daily, and what happened at the hours in the table above.

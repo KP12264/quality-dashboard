@@ -1,0 +1,41 @@
+{
+  "timeSeries": [
+    {
+      "metric": {
+        "labels": {
+          "type": "LOOKUP",
+          "module": "__unknown__",
+          "version": "__unknown__"
+        },
+        "type": "firestore.googleapis.com/document/read_count"
+      },
+      "resource": {
+        "type": "firestore_instance",
+        "labels": {
+          "project_id": "daily-production-report-46b60"
+        }
+      },
+      "metricKind": "DELTA",
+      "valueType": "INT64"
+    },
+    {
+      "metric": {
+        "labels": {
+          "module": "__unknown__",
+          "version": "__unknown__",
+          "type": "QUERY"
+        },
+        "type": "firestore.googleapis.com/document/read_count"
+      },
+      "resource": {
+        "type": "firestore_instance",
+        "labels": {
+          "project_id": "daily-production-report-46b60"
+        }
+      },
+      "metricKind": "DELTA",
+      "valueType": "INT64"
+    }
+  ],
+  "unit": "1"
+}
