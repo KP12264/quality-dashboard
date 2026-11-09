@@ -116,7 +116,58 @@
    * ledger since the plan was made). Otherwise nothing is written and the problems are returned.
    * → { complete: true } | { complete: false, problems: [...] }
    */
-  async function completeIfClean(db, plan, migrationId, opts, currentLogs) {
+  /**
+   * gateProblems(plan, logs, slotDocs) → { problems, extra }   (pure: no reads)
+   * The gate checks computed in memory from ONE read of scrapLogs (`logs`: [{ id, ...data }]) and ONE
+   * read of scrapSlots (`slotDocs`: [{ id, ...data }]), instead of one slot read + one log query per
+   * planned slot plus a second full read of the logs.
+   *  problems: exactly what verifyApplied + the "saved after the plan" check report (same text, same order).
+   *            Logs are matched to a slot like the `==` queries of ShiftClose.loadSlot: date, line and
+   *            shift must be strings equal to the slot's (a value of another type never matches).
+   *  extra:    stricter checks the old gate does not make, at no extra read — for planned slots still at
+   *            logVersion 0, the stored log ids and the fingerprint (id, date, line, shift, model, defect,
+   *            qty) must equal the plan, so an edit that keeps the count and quantity is caught too.
+   */
+  function gateProblems(plan, logs, slotDocs) {
+    const SC = dep("ShiftClose");
+    const key = (d, l, s) => d + "\u0000" + l + "\u0000" + s;
+    const byKey = new Map();
+    (logs || []).forEach(x => {
+      if (typeof x.date !== "string" || typeof x.line !== "string" || typeof x.shift !== "string") return;
+      const k = key(x.date, x.line, x.shift);
+      if (!byKey.has(k)) byKey.set(k, []);
+      byKey.get(k).push(x);
+    });
+    const slots = new Map((slotDocs || []).map(d => { const { id, ...data } = d; return [id, data]; }));
+    const problems = [], extra = [];
+    for (const s of plan.slots) {
+      const slot = slots.has(s.slotId) ? slots.get(s.slotId) : null;
+      const stored = byKey.get(key(s.date, s.line, s.shift)) || [];
+      if (!slot) { problems.push(`${s.slotId}: slot missing`); continue; }
+      const info = SC.deriveStatus({ slot, logs: stored });
+      if (slot.liveLogCount !== stored.length) problems.push(`${s.slotId}: liveLogCount ${slot.liveLogCount} != stored logs ${stored.length}`);
+      if (slot.logVersion === 0 && (info.qty !== s.qty || stored.length !== s.count)) problems.push(`${s.slotId}: scrap qty ${info.qty} / ${stored.length} logs != planned ${s.qty} / ${s.count}`);
+      if (info.status === "CONFLICT") problems.push(`${s.slotId}: status CONFLICT: ` + info.reasons.join(","));
+      if (slot.logVersion === 0) {
+        const ids = stored.map(x => x.id).sort();
+        if (ids.join("\n") !== (s.logIds || []).join("\n")) extra.push(`${s.slotId}: stored log ids differ from the plan (records added, removed or moved around the ledger)`);
+        else if (SC.fingerprint(stored) !== s.fingerprint) extra.push(`${s.slotId}: records changed since the plan (fingerprint; e.g. model, defect or quantity edited around the ledger)`);
+      }
+    }
+    const again = planBaseline(logs, [...slots.keys()]);
+    again.slots.forEach(s => problems.push(`${s.slotId}: ${s.count} logs without a ledger slot (saved after the plan)`));
+    return { problems, extra };
+  }
+
+  async function completeIfClean(db, plan, migrationId, opts, currentLogs, currentSlots) {
+    if (currentLogs && currentSlots) {
+      // One read of each collection (done by the caller); same checks, plus the log-id / fingerprint checks.
+      const g = gateProblems(plan, currentLogs, currentSlots);
+      const all = g.problems.concat(g.extra);
+      if (all.length) return { complete: false, problems: all };
+      await markComplete(db, migrationId, opts);
+      return { complete: true };
+    }
     const problems = (await verifyApplied(db, plan)).map(m => `${m.slotId}: ${m.problem}`);
     if (currentLogs) {
       const existing = [];
@@ -133,7 +184,7 @@
     await db.collection("qdConfig").doc("ledger").set({ baselineComplete: true, migrationId, opId: opts.opId || "", at: opts.serverTimestamp(), by: opts.email });
   }
 
-  const api = { planBaseline, verifyPlan, applyBaseline, verifyApplied, completeIfClean, markComplete };
+  const api = { planBaseline, verifyPlan, applyBaseline, verifyApplied, gateProblems, completeIfClean, markComplete };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   if (typeof window !== "undefined") window.LedgerBaseline = api;
 })(this);

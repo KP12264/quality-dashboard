@@ -113,8 +113,10 @@
   });
   const baselineGate = () => guarded('opsBaselineOut', 'BASELINE_GATE', async o => {
     if (!lastPlan) throw new Error('Run the baseline dry run first.');
+    // One read of each collection; every check is made from these in memory (Q1).
     const logs = []; (await window.qdDb.collection('scrapLogs').get()).forEach(d => logs.push(Object.assign({ id: d.id }, d.data())));
-    const g = await LedgerBaseline.completeIfClean(window.qdDb, lastPlan, $('opsApproval').value.trim(), o, logs);
+    const slots = []; (await window.qdDb.collection('scrapSlots').get()).forEach(d => slots.push(Object.assign({ id: d.id }, d.data())));
+    const g = await LedgerBaseline.completeIfClean(window.qdDb, lastPlan, $('opsApproval').value.trim(), o, logs, slots);
     if (!g.complete) throw new Error('Gate closed: ' + g.problems.slice(0, 10).join('; '));
     return g;
   });
