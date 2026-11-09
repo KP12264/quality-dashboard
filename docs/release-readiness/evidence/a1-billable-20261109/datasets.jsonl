@@ -1,0 +1,3 @@
+{"name":"ts__document_read_count__firestore_instance","metric":"firestore.googleapis.com/document/read_count","resourceType":"firestore_instance","role":"anchor","metricKind":"DELTA","valueType":"INT64","aligner":"ALIGN_SUM","noData":false}
+{"metric":"firestore.googleapis.com/api/billable_read_units","role":"billable","resourceType":null,"name":null,"noData":true}
+{"metric":"firestore.googleapis.com/api/billable_realtime_read_units","role":"billable","resourceType":null,"name":null,"noData":true}

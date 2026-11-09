@@ -1,0 +1,102 @@
+script  : a1-billable.sh v1 (read-only)
+project : daily-production-report-46b60
+window  : 2026-10-26T00:00:00Z -> 2026-10-31T00:00:00Z
+curl    : 8.5.0
+
+== Step 1: metricDescriptors.list (filter: metric.type starts_with firestore.googleapis.com/) ==
+Firestore metrics found: 31 (pages=1) -> metric-list.txt
+  firestore.googleapis.com/api/billable_read_units	DELTA	INT64	1	labels=[service,api_method]	resources=[firestore.googleapis.com/Database]
+  firestore.googleapis.com/api/billable_realtime_read_units	DELTA	INT64	1	labels=[service,api_method]	resources=[firestore.googleapis.com/Database]
+  firestore.googleapis.com/api/billable_write_units	DELTA	INT64	1	labels=[service,api_method]	resources=[firestore.googleapis.com/Database]
+  firestore.googleapis.com/api/request_count	DELTA	INT64	1	labels=[api_method,response_code]	resources=[datastore_request,firestore.googleapis.com/Database]
+  firestore.googleapis.com/api/request_latencies	DELTA	DISTRIBUTION	s	labels=[service,api_method,response_code]	resources=[firestore.googleapis.com/Database]
+  firestore.googleapis.com/composite_indexes_per_database	GAUGE	INT64	1	labels=[]	resources=[firestore.googleapis.com/Database]
+  firestore.googleapis.com/document/billable_managed_delete_write_units	DELTA	INT64	1	labels=[]	resources=[firestore.googleapis.com/Database]
+  firestore.googleapis.com/document/delete_count	DELTA	INT64	1	labels=[module,version]	resources=[firestore_instance]
+  firestore.googleapis.com/document/delete_ops_count	DELTA	INT64	1	labels=[]	resources=[firestore.googleapis.com/Database]
+  firestore.googleapis.com/document/read_count	DELTA	INT64	1	labels=[module,version,type]	resources=[firestore_instance]
+  firestore.googleapis.com/document/read_ops_count	DELTA	INT64	1	labels=[type]	resources=[firestore.googleapis.com/Database]
+  firestore.googleapis.com/document/ttl_deletion_count	DELTA	INT64	1	labels=[]	resources=[firestore.googleapis.com/Database,firestore_instance]
+  firestore.googleapis.com/document/ttl_expiration_to_deletion_delays	DELTA	DISTRIBUTION	s	labels=[]	resources=[firestore.googleapis.com/Database,firestore_instance]
+  firestore.googleapis.com/document/write_count	DELTA	INT64	1	labels=[module,version,op]	resources=[firestore_instance]
+  firestore.googleapis.com/document/write_ops_count	DELTA	INT64	1	labels=[op]	resources=[firestore.googleapis.com/Database]
+  firestore.googleapis.com/field_configurations_per_database	GAUGE	INT64	1	labels=[]	resources=[firestore.googleapis.com/Database]
+  firestore.googleapis.com/mcp/request_count	DELTA	INT64	1	labels=[tool_name,response_code]	resources=[firestore.googleapis.com/Database]
+  firestore.googleapis.com/mcp/request_latencies	DELTA	DISTRIBUTION	s	labels=[tool_name,response_code]	resources=[firestore.googleapis.com/Database]
+  firestore.googleapis.com/network/active_connections	GAUGE	INT64	1	labels=[module,version]	resources=[firestore.googleapis.com/Database,firestore_instance]
+  firestore.googleapis.com/network/active_ignite_connections	GAUGE	INT64	1	labels=[module,version]	resources=[firestore.googleapis.com/Database]
+  firestore.googleapis.com/network/snapshot_listeners	GAUGE	INT64	1	labels=[module,version]	resources=[firestore.googleapis.com/Database,firestore_instance]
+  firestore.googleapis.com/query_stat/per_query/result_counts	DELTA	DISTRIBUTION	{result}	labels=[service,method]	resources=[firestore.googleapis.com/Database]
+  firestore.googleapis.com/query_stat/per_query/scanned_documents_counts	DELTA	DISTRIBUTION	{document}	labels=[service,method]	resources=[firestore.googleapis.com/Database]
+  firestore.googleapis.com/query_stat/per_query/scanned_index_entries_counts	DELTA	DISTRIBUTION	{index entry}	labels=[service,method]	resources=[firestore.googleapis.com/Database]
+  firestore.googleapis.com/quota/composite_indexes_per_database/exceeded	DELTA	INT64	1	labels=[limit_name]	resources=[firestore.googleapis.com/Database]
+  firestore.googleapis.com/quota/composite_indexes_per_database/limit	GAUGE	INT64	1	labels=[limit_name]	resources=[firestore.googleapis.com/Database]
+  firestore.googleapis.com/quota/composite_indexes_per_database/usage	GAUGE	INT64	1	labels=[limit_name]	resources=[firestore.googleapis.com/Database]
+  firestore.googleapis.com/rules/evaluation_count	DELTA	INT64	1	labels=[request_method,ruleset_label,version,module,result]	resources=[firestore.googleapis.com/Database,firestore_instance]
+  firestore.googleapis.com/storage/backups_storage_bytes	GAUGE	INT64	By	labels=[]	resources=[firestore.googleapis.com/Database]
+  firestore.googleapis.com/storage/data_and_index_storage_bytes	GAUGE	INT64	By	labels=[]	resources=[firestore.googleapis.com/Database]
+  firestore.googleapis.com/storage/pitr_storage_bytes	GAUGE	INT64	By	labels=[]	resources=[firestore.googleapis.com/Database]
+selected:
+  anchor	firestore.googleapis.com/document/read_count
+  billable	firestore.googleapis.com/api/billable_read_units
+  billable	firestore.googleapis.com/api/billable_realtime_read_units
+
+== Step 2: hourly data per metric and resource type (alignmentPeriod=3600s) ==
+headers__document_read_count: pages=1 rawSeries=2 executionErrors=0 unreachable=0 units=["1"]
+firestore.googleapis.com/document/read_count [firestore_instance] kind=DELTA value=INT64 aligner=ALIGN_SUM groupBy: resource.type metric.label.module metric.label.type metric.label.version
+ts__document_read_count__firestore_instance: pages=1 rawSeries=2 executionErrors=0 unreachable=0 units=["1"]
+headers__api_billable_read_units: pages=1 rawSeries=0 executionErrors=0 unreachable=0 units=["1"]
+note: firestore.googleapis.com/api/billable_read_units has no series in the window (no data); not queried
+headers__api_billable_realtime_read_units: pages=1 rawSeries=0 executionErrors=0 unreachable=0 units=["1"]
+note: firestore.googleapis.com/api/billable_realtime_read_units has no series in the window (no data); not queried
+
+== Step 3: verification and fact table ==
+metric with no series in window: firestore.googleapis.com/api/billable_read_units (billable)
+metric with no series in window: firestore.googleapis.com/api/billable_realtime_read_units (billable)
+window 2026-10-26T00:00:00Z .. 2026-10-31T00:00:00Z = 120 hourly buckets; datasets = 1
+RULE: values are kept per metric and per resource type; nothing is added across them.
+## 1. read_count consistency with earlier evidence
+  hourly vs Update 2 evidence: hours differing = 0
+  2026-10-26: hourly-sum=5088 u1=5088 MATCH
+  2026-10-27: hourly-sum=49720 u1=49720 MATCH
+  2026-10-28: hourly-sum=5424 u1=5424 MATCH
+  2026-10-29: hourly-sum=21375 u1=21375 MATCH
+  2026-10-30: hourly-sum=6437 u1=6437 MATCH
+## 2. Per UTC day, per metric, resource type and label (nothing added across resource types)
+## 3. Billable units vs read_count per hour (information; the metrics are not expected to be equal)
+## 4. Fact table: flagged hours (Update 2/3 list + reads >= 1000); per api_method; UTC bucket end and Thailand time
+  legend: values per api_method; '0?' = no point (treated as 0, NOT verified)
+  2026-10-26T05:00:00Z | 26 Oct 11:00-12:00 | reads=1450 | billable: 0? | realtime: 0?
+  2026-10-27T02:00:00Z | 27 Oct 08:00-09:00 | reads=1308 | billable: 0? | realtime: 0?
+  2026-10-27T03:00:00Z | 27 Oct 09:00-10:00 | reads=1131 | billable: 0? | realtime: 0?
+  2026-10-27T05:00:00Z | 27 Oct 11:00-12:00 | reads=22636 | billable: 0? | realtime: 0?
+  2026-10-27T18:00:00Z | 28 Oct 00:00-01:00 | reads=9316 | billable: 0? | realtime: 0?
+  2026-10-27T19:00:00Z | 28 Oct 01:00-02:00 | reads=13701 | billable: 0? | realtime: 0?
+  2026-10-28T02:00:00Z | 28 Oct 08:00-09:00 | reads=1439 | billable: 0? | realtime: 0?
+  2026-10-28T09:00:00Z | 28 Oct 15:00-16:00 | reads=1091 | billable: 0? | realtime: 0?
+  2026-10-29T02:00:00Z | 29 Oct 08:00-09:00 | reads=1546 | billable: 0? | realtime: 0?
+  2026-10-29T03:00:00Z | 29 Oct 09:00-10:00 | reads=7408 | billable: 0? | realtime: 0?
+  2026-10-29T21:00:00Z | 30 Oct 03:00-04:00 | reads=2764 | billable: 0? | realtime: 0?
+  2026-10-29T22:00:00Z | 30 Oct 04:00-05:00 | reads=1878 | billable: 0? | realtime: 0?
+  2026-10-29T23:00:00Z | 30 Oct 05:00-06:00 | reads=3187 | billable: 0? | realtime: 0?
+  2026-10-30T00:00:00Z | 30 Oct 06:00-07:00 | reads=1269 | billable: 0? | realtime: 0?
+  2026-10-30T02:00:00Z | 30 Oct 08:00-09:00 | reads=4169 | billable: 0? | realtime: 0?
+  2026-10-30T15:00:00Z | 30 Oct 21:00-22:00 | reads=1136 | billable: 0? | realtime: 0?
+## 5. Hypotheses each pattern would support (NOT conclusions)
+  - billable units mostly RunQuery / RunAggregationQuery: queries returning many documents (Pattern A in Update 3).
+  - mostly BatchGetDocuments / GetDocument / Lookup: single-document reads (Pattern B; QD reads production documents this way).
+  - realtime read units high: snapshot listeners (QD has no onSnapshot in code).
+  - 'service' label: which API surface was used (e.g. Firestore vs Datastore API); it does not identify the app.
+## 6. Interpretation limits
+  - Cloud Monitoring values, not the Spark quota ledger. api_method / service do not identify the app, user or collection.
+  - '0?' cells are hours with no point: Cloud Monitoring omits empty buckets, so they are most likely 0 but not verified.
+
+WARNINGS:
+  - firestore.googleapis.com/api/billable_read_units has no series in the window (no data at all)
+  - firestore.googleapis.com/api/billable_realtime_read_units has no series in the window (no data at all)
+INCOMPLETE-EVIDENCE NOTES:
+  none
+FAILURES:
+  none
+VERIFY STATUS: PASS
+token check: no token or token-like string in output

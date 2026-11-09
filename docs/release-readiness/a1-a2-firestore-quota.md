@@ -475,3 +475,40 @@ Every hour with reads also has rules evaluations.
 - Code plan for P0: Q1 (bridge Gate reads) and Q2a/b (`improvements`); no code change without approval.
 
 **Status: A1 = HIGH. G2 = NOT APPROVED.**
+
+---
+
+## Update 4, 2026-11-09: billable read metrics have no data
+
+Collected read-only by the Firebase owner in Cloud Shell with `a1-billable.sh` v1 (only GET calls to the Cloud Monitoring API). Evidence and hashes: [`evidence/a1-billable-20261109/`](evidence/a1-billable-20261109/README.md). Package SHA-256 `b16a0526ff7ecd4fa0f7c555997ce18ba2a9542c97cae691fa311d61c9f6caff`, **confirmed by the owner from Cloud Shell**.
+
+### Result
+
+- `api/billable_read_units` and `api/billable_realtime_read_units` are in the metric list (DELTA, INT64, labels `service`, `api_method`, resource `firestore.googleapis.com/Database`), but **returned no time series** for 26-30 Oct (HEADERS response `{"unit": "1"}`, no executionErrors, no unreachable).
+- Over the same window `document/read_count` = **88,044** and equals the Update 2 evidence in all 120 hours. **No data is therefore not zero:** these two metrics do not record this database's reads in this window. Why (e.g. edition- or feature-specific metrics; the database is STANDARD edition) is a hypothesis, not checked.
+- **`VERIFY STATUS: PASS` only means the data that exists is consistent** (read_count matches earlier evidence; no API errors). **It does not confirm or reject any hypothesis.** The `0?` cells for these metrics in the evidence report mean "no data", not zero. (Script weakness noted: a main metric without data should give INCOMPLETE; future scripts will do so.)
+
+### Effect on the hypotheses (Updates 2-3)
+
+| Hypothesis | Result |
+|---|---|
+| Web SDK reads go over a streaming channel (Listen) | not confirmed, not rejected (no data) |
+| Pattern A = queries returning many documents | not confirmed, not rejected |
+| Pattern B = many single-document reads | not confirmed, not rejected |
+| A listener-using client caused the 27 Oct spike | not confirmed, not rejected |
+
+Correction to Update 3: QD can produce **both** patterns. A 1-day Dashboard open runs a 31-day look-back range query (one LIST returning many documents, Pattern A-like); a 31-day view reads production documents one by one (Pattern B-like). Update 3 attributed nothing, so its conclusions stand; QD is not excluded as a contributor.
+
+### Risk (unchanged)
+
+Highest quota day 27,812 (55.6 %); highest hour 22,636 (45 %); sources not attributed; a quota error blocks PV2 too. QD V5 daily use should not add load beyond `main`; the main risk remains cutover day (migration gate Q1, post-deploy checking). **A1 = HIGH. G2 = NOT APPROVED.**
+
+### Read-only options still open (each approved separately)
+
+- R1: measure QD's own GET / LIST / reads signature per action in the **emulator** (no Production).
+- R2: `document/read_ops_count` and `query_stat/per_query/*` (exist in the metric list; may also be empty; a metric without data will give INCOMPLETE).
+- R3: owner views the Console (Usage; Key Visualizer / Query insights if this edition offers them) for 27 Oct 11:00-12:00 and 28 Oct 00:00-02:00 Thailand time; time-sensitive (retention).
+- R4: read-only review of PV2 code for `onSnapshot` and query sizes (needs the PV2 owner's access).
+- R5: existing Admin Activity audit logs (read only; contains personal data, so redaction).
+- R6: owners' records for the hours above.
+Monitoring data for this window is kept about 6 weeks (until about 7 Dec 2026).

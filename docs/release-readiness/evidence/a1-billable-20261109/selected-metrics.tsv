@@ -1,0 +1,3 @@
+anchor	firestore.googleapis.com/document/read_count
+billable	firestore.googleapis.com/api/billable_read_units
+billable	firestore.googleapis.com/api/billable_realtime_read_units

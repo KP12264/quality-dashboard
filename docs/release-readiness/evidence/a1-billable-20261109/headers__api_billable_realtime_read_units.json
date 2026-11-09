@@ -1,0 +1,20 @@
+{
+  "name": "headers__api_billable_realtime_read_units",
+  "metric": "firestore.googleapis.com/api/billable_realtime_read_units",
+  "resourceType": "",
+  "filter": "metric.type=\"firestore.googleapis.com/api/billable_realtime_read_units\"",
+  "view": "HEADERS",
+  "startTime": "2026-10-26T00:00:00Z",
+  "endTime": "2026-10-31T00:00:00Z",
+  "alignmentPeriod": "",
+  "perSeriesAligner": "",
+  "crossSeriesReducer": "",
+  "groupByFields": [],
+  "pages": 1,
+  "units": [
+    "1"
+  ],
+  "executionErrors": [],
+  "unreachable": [],
+  "timeSeries": []
+}
