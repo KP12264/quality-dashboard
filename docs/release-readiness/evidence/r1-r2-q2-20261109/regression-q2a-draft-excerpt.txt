@@ -1,0 +1,40 @@
+TAP version 13
+# Subtest: Dashboard V5 vs oracle (sign-in off)
+    # Subtest: sign-in is off and adds nothing to the page
+    ok 1 - sign-in is off and adds nothing to the page
+      ---
+      duration_ms: 14.301118
+      type: 'test'
+      ...
+    # Subtest: range 1d-today (2026-10-29 → 2026-10-29)
+    not ok 2 - range 1d-today (2026-10-29 → 2026-10-29)
+      ---
+      duration_ms: 30629.75515
+      type: 'test'
+      location: '/home/user/quality-dashboard/tests/regression/dashboard.regression.test.js:102:5'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly deep-equal:
+        + actual - expected
+        
+        + [
+        +   'all/all: reads: {"prodV2_actualLogs":6,"scrapLogs":2,"improvements":2,"scrapWeeklyPlans":1} vs {"prod":6,"scrap":2,"target":0,"imp":1}',
+        +   'all/A: reads: {"prodV2_actualLogs":6,"scrapLogs":2,"improvements":2,"scrapWeeklyPlans":1} vs {"prod":6,"scrap":2,"target":0,"imp":1}',
+        +   'all/B: reads: {"prodV2_actualLogs":6,"scrapLogs":2,"improvements":2,"scrapWeeklyPlans":1} vs {"prod":6,"scrap":2,"target":0,"imp":1}',
+        +   'all/C: reads: {"prodV2_actualLogs":6,"scrapLogs":2,"improvements":2,"scrapWeeklyPlans":1} vs {"prod":6,"scrap":2,"target":0,"imp":1}',
+        +   'DAY/all: reads: {"prodV2_actualLogs":6,"scrapLogs":2,"improvements":2,"scrapWeeklyPlans":1} vs {"prod":6,"scrap":2,"target":0,"imp":1}',
+        +   'DAY/A: reads: {"prodV2_actualLogs":6,"scrapLogs":2,"improvements":2,"scrapWeeklyPlans":1} vs {"prod":6,"scrap":2,"target":0,"imp":1}',
+        +   'DAY/B: reads: {"prodV2_actualLogs":6,"scrapLogs":2,"improvements":2,"scrapWeeklyPlans":1} vs {"prod":6,"scrap":2,"target":0,"imp":1}',
+        +   'DAY/C: reads: {"prodV2_actualLogs":6,"scrapLogs":2,"improvements":2,"scrapWeeklyPlans":1} vs {"prod":6,"scrap":2,"target":0,"imp":1}',
+        +   'NIGHT/all: reads: {"prodV2_actualLogs":6,"scrapLogs":2,"improvements":2,"scrapWeeklyPlans":1} vs {"prod":6,"scrap":2,"target":0,"imp":1}',
+        +   'NIGHT/A: reads: {"prodV2_actualLogs":6,"scrapLogs":2,"improvements":2,"scrapWeeklyPlans":1} vs {"prod":6,"scrap":2,"target":0,"imp":1}',
+        +   'NIGHT/B: reads: {"prodV2_actualLogs":6,"scrapLogs":2,"improvements":2,"scrapWeeklyPlans":1} vs {"prod":6,"scrap":2,"target":0,"imp":1}',
+        +   'NIGHT/C: reads: {"prodV2_actualLogs":6,"scrapLogs":2,"improvements":2,"scrapWeeklyPlans":1} vs {"prod":6,"scrap":2,"target":0,"imp":1}'
+        + ]
+        - []
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual:
+        0: 'all/all: reads: {"prodV2_actualLogs":6,"scrapLogs":2,"improvements":2,"scrapWeeklyPlans":1} vs {"prod":6,"scrap":2,"target":0,"imp":1}'

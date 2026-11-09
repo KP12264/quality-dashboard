@@ -1,5 +1,7 @@
 # P0 read-reduction plan: Q1 (migration gate), Q2a / Q2b (`improvements`)
 
+> **Revision 1, 2026-11-09:** Q2b is implemented and committed (`f6f83fd`, branch only; not merged or deployed). Q2a is **on hold for redesign**: the tried approach added reads. Q1 is **redesigned** without `count()` (the compat SDK 10.13.0 used by QD has no aggregate `count()`; checked in the bundle). See "Revision 1" at the end. The sections below are kept as written for the record.
+
 **Status: PLAN ONLY. No code has been changed.** Each item needs its own approval before any code change, and none of it is a Production change. A1 = HIGH, G2 = NOT APPROVED.
 
 Context: [A1/A2 report](a1-a2-firestore-quota.md), Updates 2-3. All read figures below are **estimates** from code reading. Production document counts are not known yet (U3); the U3 count script is prepared but **not run** (§4).
@@ -33,7 +35,7 @@ The earlier idea (only re-read logs with `createdAt` / `updatedAt` after the dry
 - An edit that changes a log's date / line / shift but not the number of documents is invisible to a count and, without `updatedAt`, to a timestamp query.
 - `createdAt` is the client's clock (`Date.now()`), not the server's.
 
-### Proposed gate: count reconciliation, no timestamps, full re-read as fallback
+### Proposed gate: count reconciliation, no timestamps, full re-read as fallback (SUPERSEDED by Revision 1: `count()` is not available in the compat SDK)
 
 Every log is in exactly one of: a planned slot, a slot that has a ledger (skipped at plan time or created by the ledger since), the plan's excluded list, or **anywhere else** (the case the gate must catch). The gate counts the first three exactly; the fourth is whatever is left of the total.
 
@@ -61,7 +63,7 @@ Operational (no code): run the migration once, right after the quota reset (14:0
 
 ---
 
-## Q2a. Dashboard improvement status counts (`js/dashboard.js:1292`)
+## Q2a. Dashboard improvement status counts (`js/dashboard.js:1292`) (ON HOLD, see Revision 1)
 
 Facts: `getImprovements(db, { limit: 200 })` reads the **whole** collection (`improvement-adapter.js:74`), sorts by `createdAt` in the browser, keeps the newest 200 and counts their statuses.
 
@@ -75,7 +77,7 @@ Proposal: query `orderBy('createdAt', 'desc').limit(200)` on the server; same no
 | Effect | read only; `improvements` is `allow read: if true` in Production and candidate rules; single-field index is automatic; no effect on PV2 |
 | Tests | I = 0, 1, 200, 201, 500; equal `createdAt` values; a record without `createdAt` (must be detected by the precondition check, not silently dropped) |
 
-## Q2b. Improvement edit page (`js/improvement-page.js:120`)
+## Q2b. Improvement edit page (`js/improvement-page.js:120`) (DONE in `f6f83fd`)
 
 Facts: opening `improvement.html?id=…` reads the whole collection to find one id.
 
@@ -107,3 +109,42 @@ Estimated cost (documented rule: 1 read per up to 1,000 index entries, minimum 1
 4. Read budget tests (Q5) alongside.
 
 Nothing here changes Production, Rules, Billing or PV2.
+
+---
+
+## Revision 1, 2026-11-09
+
+### Q2b: done (commit `f6f83fd`, working branch only)
+
+`ImprovementAdapter.getImprovementById` (`doc(id).get()`; an id containing "/" is answered "not found" without reading) used by `loadForEdit`. Emulator: edit page 2 LIST / 500 documents → 1 LIST + 1 GET / 251 (250 improvements; the list tab on the same page still reads the collection once). Same record and form values for existing, unknown and malformed ids. Tests: unit 59/59, regression 15/15, rules + privacy / ops-console e2e 156/156, Q2 equivalence + read signature 19/19. Evidence: [`evidence/r1-r2-q2-20261109/`](evidence/r1-r2-q2-20261109/README.md).
+
+### Q2a: on hold, to be redesigned
+
+The tried approach (server `orderBy('createdAt','desc').limit(201)`, full read as fallback) **was rejected**: whenever 200 or fewer records have `createdAt` (likely today) it read the collection **twice** (I = 200: 400 reads instead of 200); the regression test caught it (improvements read twice). It must not be reused. Constraints for a redesign:
+- never more reads than today in any case;
+- same records as the full read (the 13 equivalence cases in the evidence must stay identical);
+- no `count()` in the compat SDK.
+Candidate to evaluate after U3 (only worth it if I > 200): choose the path from the size seen by the previous full read in the same browser (a hint only; the correctness checks stay). Not started.
+
+### Q1: redesigned without `count()` and without timestamps
+
+Fact: `ShiftClose.loadSlot` = one slot `get` + one log query `date == / line == / shift ==`, then the pure `deriveStatus({ slot, logs })`. `ShiftClose.loadDay` already reads the logs once and filters in memory. So the gate can work from **one** read of each collection:
+
+1. Read the whole `scrapLogs` once (N_L) and the whole `scrapSlots` once (S): the gate already reads both today.
+2. Group logs in memory by the exact `date`, `line`, `shift` values (strict equality, same as the `==` query; values of another type do not match, as in Firestore).
+3. For every planned slot: slot from step 1, logs from step 2, `deriveStatus` as today → the same problems `verifyApplied` reports today (missing slot, `liveLogCount` ≠ stored, plan quantity / count at `logVersion` 0, CONFLICT).
+4. Plus, at no extra reads: for planned slots still at `logVersion` 0, the stored log ids and `fingerprint` must equal the plan (catches count-neutral edits that today's gate does not).
+5. Unknown-slot check as today (`planBaseline(currentLogs, existing)` on the same data).
+
+| Topic | Assessment (estimates) |
+|---|---|
+| Gate reads today | P (slot gets) + about N_L (per-slot log queries) + N_L (full logs) + S (full slots) |
+| Gate reads after | N_L + S |
+| Saved per gate | about N_L + P |
+| Whole cycle (dry run + apply + gate) | about 3 N_L + 3 P + 2 S → about 2 N_L + 2 P + 2 S |
+| Correctness | same checks on the same data, plus id / fingerprint checks; no timestamps, no counts; nothing can be missed that today's gate catches |
+| Consistency | like today, the reads are not one snapshot; a write during the gate shows as a mismatch (same behaviour as today) |
+| Effect | Admin tool only; not on `main`; no Rules change; no new index; PV2 unaffected |
+| Tests (emulator) | `tests/rules/migration-gate.test.js`, e2e rehearsal S7 unchanged; new: same problems as the old gate on (a) log added around the ledger, (b) log in a new slot, (c) log without timestamps, (d) move between planned slots, (e) swap, (f) model / defect edit (newly caught), (g) excluded log edited into a slot, (h) write during the gate; read counts measured |
+
+Alternatives considered and not recommended: Firestore REST `runAggregationQuery` from the browser with the user's ID token (works only if the browser call path is proven, e.g. CORS, and adds a second API surface); loading the modular SDK next to compat for `getCountFromServer` (two SDK copies, cross-bundle objects; fragile). Both need extra proof and save no more than the redesign above.

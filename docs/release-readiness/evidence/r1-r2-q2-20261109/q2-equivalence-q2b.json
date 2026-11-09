@@ -1,0 +1,213 @@
+[
+ {
+  "test": "Q2a",
+  "scenario": "I = 0",
+  "equal": true,
+  "total": 0,
+  "reads": {
+   "LIST": 2,
+   "GET": 0,
+   "billed": 2
+  },
+  "path": "tried newest, fell back to full read"
+ },
+ {
+  "test": "Q2a",
+  "scenario": "I = 1",
+  "equal": true,
+  "total": 1,
+  "reads": {
+   "LIST": 1,
+   "GET": 0,
+   "billed": 1
+  },
+  "path": "full read"
+ },
+ {
+  "test": "Q2a",
+  "scenario": "I = 200, all with createdAt",
+  "equal": true,
+  "total": 200,
+  "reads": {
+   "LIST": 1,
+   "GET": 0,
+   "billed": 200
+  },
+  "path": "full read"
+ },
+ {
+  "test": "Q2a",
+  "scenario": "I = 201, all with createdAt",
+  "equal": true,
+  "total": 201,
+  "reads": {
+   "LIST": 1,
+   "GET": 0,
+   "billed": 201
+  },
+  "path": "full read"
+ },
+ {
+  "test": "Q2a",
+  "scenario": "I = 500, all with createdAt",
+  "equal": true,
+  "total": 500,
+  "reads": {
+   "LIST": 1,
+   "GET": 0,
+   "billed": 500
+  },
+  "path": "full read"
+ },
+ {
+  "test": "Q2a",
+  "scenario": "I = 250, 5 without createdAt",
+  "equal": true,
+  "total": 250,
+  "reads": {
+   "LIST": 1,
+   "GET": 0,
+   "billed": 250
+  },
+  "path": "full read"
+ },
+ {
+  "test": "Q2a",
+  "scenario": "I = 205, 10 without createdAt (only 195 have it)",
+  "equal": true,
+  "total": 205,
+  "reads": {
+   "LIST": 1,
+   "GET": 0,
+   "billed": 205
+  },
+  "path": "full read"
+ },
+ {
+  "test": "Q2a",
+  "scenario": "I = 260, tie at the cut (#200 and #201 equal)",
+  "equal": true,
+  "total": 260,
+  "reads": {
+   "LIST": 1,
+   "GET": 0,
+   "billed": 260
+  },
+  "path": "full read"
+ },
+ {
+  "test": "Q2a",
+  "scenario": "I = 260, ties inside the top 200 only",
+  "equal": true,
+  "total": 260,
+  "reads": {
+   "LIST": 1,
+   "GET": 0,
+   "billed": 260
+  },
+  "path": "full read"
+ },
+ {
+  "test": "Q2a",
+  "scenario": "I = 260, some createdAt are Timestamps",
+  "equal": true,
+  "total": 260,
+  "reads": {
+   "LIST": 1,
+   "GET": 0,
+   "billed": 260
+  },
+  "path": "full read"
+ },
+ {
+  "test": "Q2a",
+  "scenario": "I = 260, some createdAt are strings",
+  "equal": true,
+  "total": 260,
+  "reads": {
+   "LIST": 1,
+   "GET": 0,
+   "billed": 260
+  },
+  "path": "full read"
+ },
+ {
+  "test": "Q2a",
+  "scenario": "I = 260, some createdAt null / 0 / negative",
+  "equal": true,
+  "total": 260,
+  "reads": {
+   "LIST": 1,
+   "GET": 0,
+   "billed": 260
+  },
+  "path": "full read"
+ },
+ {
+  "test": "Q2a",
+  "scenario": "I = 260, all createdAt tiny numbers (<= 1)",
+  "equal": true,
+  "total": 260,
+  "reads": {
+   "LIST": 1,
+   "GET": 0,
+   "billed": 260
+  },
+  "path": "full read"
+ },
+ {
+  "test": "Q2b",
+  "id": "imp0120",
+  "same": true,
+  "found": true,
+  "reads": {
+   "LIST": 0,
+   "GET": 1,
+   "billed": 1
+  }
+ },
+ {
+  "test": "Q2b",
+  "id": "imp0000",
+  "same": true,
+  "found": true,
+  "reads": {
+   "LIST": 0,
+   "GET": 1,
+   "billed": 1
+  }
+ },
+ {
+  "test": "Q2b",
+  "id": "does-not-exist",
+  "same": true,
+  "found": false,
+  "reads": {
+   "LIST": 0,
+   "GET": 1,
+   "billed": 1
+  }
+ },
+ {
+  "test": "Q2b",
+  "id": "a/b",
+  "same": true,
+  "found": false,
+  "reads": {
+   "LIST": 0,
+   "GET": 0,
+   "billed": 0
+  }
+ },
+ {
+  "test": "Q2b",
+  "id": "imp0001/x/y",
+  "same": true,
+  "found": false,
+  "reads": {
+   "LIST": 0,
+   "GET": 0,
+   "billed": 0
+  }
+ }
+]

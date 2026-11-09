@@ -512,3 +512,57 @@ Highest quota day 27,812 (55.6 %); highest hour 22,636 (45 %); sources not attri
 - R5: existing Admin Activity audit logs (read only; contains personal data, so redaction).
 - R6: owners' records for the hours above.
 Monitoring data for this window is kept about 6 weeks (until about 7 Dec 2026).
+
+---
+
+## Update 5, 2026-11-09: R1 (QD read signature, emulator), R2 script, Q2a / Q2b
+
+Evidence: [`evidence/r1-r2-q2-20261109/`](evidence/r1-r2-q2-20261109/README.md). All of it was produced **locally** in the Firebase Emulator (`demo-quality-dashboard`) with synthetic data; nothing touched Production.
+
+### R1: QD read signature per action (emulator, synthetic data)
+
+Synthetic data: about 4 scrap logs per day, 250 improvements. LIST = query `get()`, GET = document `get()`; reads = documents returned (at least 1 per query).
+
+| Action | LIST | GET | Reads (est.) | GET / LIST | Reads / (GET + LIST) |
+|---|---|---|---|---|---|
+| Dashboard open (today) | 6 | 6 | 344 | 1.0 | 28.7 |
+| Dashboard 1 day | 6 | 6 | 405 | 1.0 | 33.8 |
+| Dashboard 31 days | 3 | 186 | 580 | 62 | 3.1 |
+| Dashboard Refresh (31 days) | 4 | 186 | 582 | 46.5 | 3.1 |
+| Dashboard filters Shift + Line | 0 | 0 | 0 | – | – |
+| Weekly Plan, open month | 3 | 0 | 146 | 0 | 48.7 |
+| Scrap Detail open / 31 days | 2 | 0 | 334 / 382 | 0 | 167 / 191 |
+| Improvement list | 1 | 0 | 250 | 0 | 250 |
+| Improvement edit page | 2 → **1** | 0 → **1** | 500 → **251** | – | – |
+| Executive Report | 3 | 6 | 258 | 2.0 | 28.7 |
+
+Comparison with Update 3 (consistency only):
+- Pattern B hours (GET / LIST about 9-56) fall in the range of QD multi-day Dashboard views (31 days 62, Refresh 46.5, 7 days about 8). QD also reads production documents that do not exist (6 of 186 in the test), which could explain hours with more GET evaluations than reads (hypothesis).
+- Pattern A (27 Oct 11:00-12:00 Thailand: GET / LIST 0.69, about 15.6 reads per evaluation) is consistent with a mix of 1-day Dashboard opens and Scrap Detail / Weekly Plan, but the number of opens implied by LIST (about 143) and by reads (about 57 at this data size) disagree; it depends on the real L and I (U3).
+- The 8 snapshot listeners in that hour cannot be QD (no `onSnapshot` in QD).
+
+**R1 does not identify the cause of the read spikes.** It shows that QD can produce both patterns, so QD is neither attributed nor excluded; a listener-using client other than QD was active in the 22,636-read hour.
+
+### Q2b: done (commit `f6f83fd`, branch only; not merged or deployed)
+
+Edit page: one document read instead of the whole collection (2 LIST / 500 → 1 LIST + 1 GET / 251 at 250 improvements). Same record and form values for existing, unknown and malformed ids; all other pages read and show the same as before. Tests: unit 59/59, regression 15/15, rules + privacy / ops-console e2e 156/156, Q2 equivalence + read signature 19/19. Cache busting `?v=20261109-q2b` on every page that loads the two files.
+
+### Q2a: rejected approach, on hold
+
+Server `orderBy('createdAt','desc').limit(201)` with a full-read fallback read the collection **twice** whenever 200 or fewer records have `createdAt` (I = 200: 400 reads); the regression test caught it. Removed before commit; not to be reused. Also found: the compat SDK 10.13.0 used by QD has **no aggregate `count()`**. Redesign constraints are in the [P0 plan](p0-read-reduction-plan.md), Revision 1.
+
+### Q1: redesigned (plan only)
+
+Without `count()` and timestamps: the gate reads `scrapLogs` and `scrapSlots` once, groups logs in memory exactly like the `==` queries, and runs the same checks (plus log-id / fingerprint checks). Estimated gate reads about N_L + P lower; details and tests in the [P0 plan](p0-read-reduction-plan.md), Revision 1. No code change yet.
+
+### R2: `a1-querystat.sh` prepared, NOT run
+
+SHA-256 `63b5afbef7b66ea85bc43bd5cef4929b390578681af7e73b6bf48adf5a1c812b`. GET only (Cloud Monitoring); collects `document/read_ops_count` (by type) and the `query_stat/per_query` distributions (queries per hour, mean results / scanned documents / index entries per query), with `read_count` checked against Update 2. **A target metric with no data, or missing from the list, gives INCOMPLETE**; the table shows "no data", never 0. Mock tests: 21 scenarios + token checks, all as expected.
+
+Run procedure (for when it is approved):
+1. Cloud Shell → ⋮ → Upload `a1-querystat.sh`.
+2. `sha256sum ~/a1-querystat.sh; sed -n 2p ~/a1-querystat.sh; grep -c $'\r' ~/a1-querystat.sh; wc -l < ~/a1-querystat.sh` → the hash above, a line containing "R2", 0, 447. Anything else: do not run.
+3. `bash ~/a1-querystat.sh; echo "exit=$?"`
+4. `cloudshell download "$(ls -t ~/a1-querystat-*.tar.gz | head -1)"` and send the package and its `.sha256` value (exit 1: `collect-log.txt` only; exit 9: send nothing).
+
+**Status: A1 = HIGH. G2 = NOT APPROVED.**

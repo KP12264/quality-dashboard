@@ -1,0 +1,353 @@
+{
+ "seed": {
+  "ym": "2026-10",
+  "improvements": 250,
+  "withoutCreatedAt": 5
+ },
+ "results": [
+  {
+   "screen": "Dashboard",
+   "action": "open (default today)",
+   "reads": {
+    "prodV2_actualLogs": {
+     "LIST": 0,
+     "GET": 6,
+     "docs": 0,
+     "billed": 6
+    },
+    "scrapLogs": {
+     "LIST": 2,
+     "GET": 0,
+     "docs": 84,
+     "billed": 85
+    },
+    "scrapCloseSummary": {
+     "LIST": 2,
+     "GET": 0,
+     "docs": 0,
+     "billed": 2
+    },
+    "improvements": {
+     "LIST": 1,
+     "GET": 0,
+     "docs": 250,
+     "billed": 250
+    },
+    "scrapWeeklyPlans": {
+     "LIST": 1,
+     "GET": 0,
+     "docs": 0,
+     "billed": 1
+    }
+   },
+   "view": {
+    "kpiSection": "SCRAP TOTAL – pcs No data in this scope SCRAP RATE N/A Production 0 pcs · no production in this scope SCRAP COST – No scrap recorded in this scope TARGET PERFORMANCE NO DATA Targetⓘ ≤50 pcs scrap / day DAYS: 0 Within 0 Over 0 Incomplete 1 No Data Shift close: 0/6 shifts confirmed → View Details →",
+    "planCard": "Scrap Budget · Nov 2026 Door A+B+C · Day + Night · daily limit ≤50 pcs · as of 09 Nov Weekly Plan → THIS WEEK · W3 (09 NOV – 15 NOV) Within plan · so far No daily data yet Not final default · not set PLAN 350 ACTUAL No log REMAINING – USED – 0/1 days final · 1 without scrap log (not counted as 0) · 09 Nov: no scrap log yet THIS MONTH Within plan · so far All days within limit (≤50) · so far Not final default · not set PLAN 1,500 ACTUAL 62 so far REMAINING 1,438 USED 4% 0/9 days final · 6 without scrap log (not counted as 0) · no day over 50 so far 6 of 6 weeks have no plan set: their default (50 × days) is not an approved plan.",
+    "topDefectsCard": "Top 5 Defects Top 5 by Scrap Qty | 09 Nov 2026 No defects recorded in this scope.",
+    "doorLineCard": "Door Line Comparison All 3 lines · no per-line target View Line Detail → Line Production Scrap Qty Scrap Rate Scrap Share ADoor A – pcs – N/A – BDoor B – pcs – N/A – CDoor C – pcs – N/A –",
+    "attentionSummary": "RECURRING PROBLEMS 4 Seen on 3+ days Scrap Detail IMPROVEMENT RECORDS 200 100 need action Improvement Top recurring problems · in last 30 days · 3 of 4 1 บุบ (Dent) A · M-100 FR 9d ago 79 pcs 2 รอยขีดข่วน (Scratch) B · M-100 FR 9d ago 57 pcs 3 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C · M-100 FR 9d ago 39 pcs Improvement status 50 Monitoring 50 Controlled 50 Not Effective 50 Recurring",
+    "paretoCard": "Pareto Analysis Top 10 defects + Others by Scrap Qty | No defects recorded in this scope."
+   },
+   "note": ""
+  },
+  {
+   "screen": "Dashboard",
+   "action": "1 day",
+   "reads": {
+    "prodV2_actualLogs": {
+     "LIST": 0,
+     "GET": 6,
+     "docs": 6,
+     "billed": 6
+    },
+    "scrapLogs": {
+     "LIST": 2,
+     "GET": 0,
+     "docs": 135,
+     "billed": 135
+    },
+    "scrapCloseSummary": {
+     "LIST": 2,
+     "GET": 0,
+     "docs": 12,
+     "billed": 12
+    },
+    "improvements": {
+     "LIST": 1,
+     "GET": 0,
+     "docs": 250,
+     "billed": 250
+    },
+    "scrapWeeklyPlans": {
+     "LIST": 1,
+     "GET": 0,
+     "docs": 2,
+     "billed": 2
+    }
+   },
+   "view": {
+    "kpiSection": "SCRAP TOTAL 11 pcs 3 scrap records SCRAP RATE 0.36% Production 3,046 pcs SCRAP COST N/A No cost on these records (manual entries carry no cost) TARGET PERFORMANCE WITHIN TARGET Targetⓘ ≤50 pcs scrap / day DAYS: 1 Within 0 Over 0 Incomplete 0 No Data Shift close: 6/6 shifts confirmed → View Details →",
+    "planCard": "Scrap Budget · Oct 2026 Door A+B+C · Day + Night · daily limit ≤50 pcs · as of 31 Oct Weekly Plan → THIS WEEK · W5 (26 OCT – 31 OCT) Within plan · so far All days within limit (≤50) · so far Not final default · not set PLAN 300 ACTUAL 48 so far REMAINING 252 USED 16% 3/6 days final · 1 without scrap log (not counted as 0) · 31 Oct: 11 pcs ≤ 50 THIS MONTH Within plan · so far Daily limit breached · 2 days >50 Not final default · not set PLAN 1,320 ACTUAL 430 so far REMAINING 890 USED 33% 10/31 days final · 4 without scrap log (not counted as 0) · 2 days over 50 3 of 5 weeks have no plan set: their default (50 × days) is not an approved plan.",
+    "topDefectsCard": "Top 5 Defects Top 5 by Scrap Qty | 31 Oct 2026 # DEFECT TYPE SCRAP QTY % OF TOTAL CONTRIBUTION 1 บุบ (Dent) 5 45% 2 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) 4 36% 3 รอยขีดข่วน (Scratch) 2 18%",
+    "doorLineCard": "Door Line Comparison All 3 lines · no per-line target View Line Detail → Line Production Scrap Qty Scrap Rate Scrap Share ADoor A 1,111 pcs 5 pcs 0.45% 45% BDoor B 1,008 pcs 2 pcs 0.20% 18% CDoor C 927 pcs 4 pcs 0.43% 36%",
+    "attentionSummary": "RECURRING PROBLEMS 9 Seen on 3+ days Scrap Detail IMPROVEMENT RECORDS 200 100 need action Improvement Top recurring problems · in last 30 days · 3 of 9 1 บุบ (Dent) A · M-100 FR today 83 pcs 2 รอยขีดข่วน (Scratch) B · M-100 FR today 58 pcs 3 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C · M-100 FR today 39 pcs Improvement status 50 Monitoring 50 Controlled 50 Not Effective 50 Recurring",
+    "paretoCard": "Pareto Analysis Top 10 defects + Others by Scrap Qty | 31 Oct 2026 TOTAL SCRAP 11 pcs PRIORITY DEFECTS 2 of 3 types COVERAGE 81.8% of scrap Scrap Qty Others Cumulative % 80% reference 2 defect types account for 81.8% of scrap. View Defect Names Rank → full defect name"
+   },
+   "note": ""
+  },
+  {
+   "screen": "Dashboard",
+   "action": "31 days",
+   "reads": {
+    "prodV2_actualLogs": {
+     "LIST": 0,
+     "GET": 186,
+     "docs": 180,
+     "billed": 186
+    },
+    "scrapLogs": {
+     "LIST": 1,
+     "GET": 0,
+     "docs": 132,
+     "billed": 132
+    },
+    "scrapCloseSummary": {
+     "LIST": 1,
+     "GET": 0,
+     "docs": 12,
+     "billed": 12
+    },
+    "improvements": {
+     "LIST": 1,
+     "GET": 0,
+     "docs": 250,
+     "billed": 250
+    }
+   },
+   "view": {
+    "kpiSection": "SCRAP TOTAL 430 pcs 131 scrap records SCRAP RATE 0.45% Production 95,451 pcs SCRAP COST N/A No cost on these records (manual entries carry no cost) TARGET PERFORMANCE OVER TARGET Targetⓘ ≤50 pcs scrap / day DAYS: 22 Within 2 Over 4 Incomplete 1 Conflict 1 No Production 1 No Data Shift close: 10/13 days fully confirmed → View Details →",
+    "planCard": "Scrap Budget · Oct 2026 Door A+B+C · Day + Night · daily limit ≤50 pcs · as of 31 Oct Weekly Plan → THIS WEEK · W5 (26 OCT – 31 OCT) Within plan · so far All days within limit (≤50) · so far Not final default · not set PLAN 300 ACTUAL 48 so far REMAINING 252 USED 16% 3/6 days final · 1 without scrap log (not counted as 0) · 31 Oct: 11 pcs ≤ 50 THIS MONTH Within plan · so far Daily limit breached · 2 days >50 Not final default · not set PLAN 1,320 ACTUAL 430 so far REMAINING 890 USED 33% 10/31 days final · 4 without scrap log (not counted as 0) · 2 days over 50 3 of 5 weeks have no plan set: their default (50 × days) is not an approved plan.",
+    "topDefectsCard": "Top 5 Defects Top 5 by Scrap Qty | 01 Oct 2026 – 31 Oct 2026 # DEFECT TYPE SCRAP QTY % OF TOTAL CONTRIBUTION 1 บุบ (Dent) 149 35% 2 รอยขีดข่วน (Scratch) 83 19% 3 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) 68 16% 4 สีไหลย้อย 40 9% 5 Dirt / Dust 32 7%",
+    "doorLineCard": "Door Line Comparison All 3 lines · no per-line target View Line Detail → Line Production Scrap Qty Scrap Rate Scrap Share ADoor A 31,998 pcs 148 pcs 0.46% 34% BDoor B 32,194 pcs 151 pcs 0.47% 35% CDoor C 31,259 pcs 131 pcs 0.42% 30%",
+    "attentionSummary": "RECURRING PROBLEMS 9 Seen on 3+ days Scrap Detail IMPROVEMENT RECORDS 200 100 need action Improvement Top recurring problems · in selected range · 3 of 9 1 บุบ (Dent) A · M-100 FR today 83 pcs 2 รอยขีดข่วน (Scratch) B · M-100 FR today 58 pcs 3 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C · M-100 FR today 39 pcs Improvement status 50 Monitoring 50 Controlled 50 Not Effective 50 Recurring",
+    "paretoCard": "Pareto Analysis Top 10 defects + Others by Scrap Qty | 01 Oct 2026 – 31 Oct 2026 TOTAL SCRAP 430 pcs PRIORITY DEFECTS 5 of 8 types COVERAGE 86.5% of scrap Scrap Qty Others Cumulative % 80% reference 5 defect types account for 86.5% of scrap. View Defect Names Rank → full defect name"
+   },
+   "note": ""
+  },
+  {
+   "screen": "Dashboard",
+   "action": "Refresh (31 days)",
+   "reads": {
+    "prodV2_actualLogs": {
+     "LIST": 0,
+     "GET": 186,
+     "docs": 180,
+     "billed": 186
+    },
+    "scrapLogs": {
+     "LIST": 1,
+     "GET": 0,
+     "docs": 132,
+     "billed": 132
+    },
+    "scrapCloseSummary": {
+     "LIST": 1,
+     "GET": 0,
+     "docs": 12,
+     "billed": 12
+    },
+    "improvements": {
+     "LIST": 1,
+     "GET": 0,
+     "docs": 250,
+     "billed": 250
+    },
+    "scrapWeeklyPlans": {
+     "LIST": 1,
+     "GET": 0,
+     "docs": 2,
+     "billed": 2
+    }
+   },
+   "view": {
+    "kpiSection": "SCRAP TOTAL 430 pcs 131 scrap records SCRAP RATE 0.45% Production 95,451 pcs SCRAP COST N/A No cost on these records (manual entries carry no cost) TARGET PERFORMANCE OVER TARGET Targetⓘ ≤50 pcs scrap / day DAYS: 22 Within 2 Over 4 Incomplete 1 Conflict 1 No Production 1 No Data Shift close: 10/13 days fully confirmed → View Details →",
+    "planCard": "Scrap Budget · Oct 2026 Door A+B+C · Day + Night · daily limit ≤50 pcs · as of 31 Oct Weekly Plan → THIS WEEK · W5 (26 OCT – 31 OCT) Within plan · so far All days within limit (≤50) · so far Not final default · not set PLAN 300 ACTUAL 48 so far REMAINING 252 USED 16% 3/6 days final · 1 without scrap log (not counted as 0) · 31 Oct: 11 pcs ≤ 50 THIS MONTH Within plan · so far Daily limit breached · 2 days >50 Not final default · not set PLAN 1,320 ACTUAL 430 so far REMAINING 890 USED 33% 10/31 days final · 4 without scrap log (not counted as 0) · 2 days over 50 3 of 5 weeks have no plan set: their default (50 × days) is not an approved plan.",
+    "topDefectsCard": "Top 5 Defects Top 5 by Scrap Qty | 01 Oct 2026 – 31 Oct 2026 # DEFECT TYPE SCRAP QTY % OF TOTAL CONTRIBUTION 1 บุบ (Dent) 149 35% 2 รอยขีดข่วน (Scratch) 83 19% 3 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) 68 16% 4 สีไหลย้อย 40 9% 5 Dirt / Dust 32 7%",
+    "doorLineCard": "Door Line Comparison All 3 lines · no per-line target View Line Detail → Line Production Scrap Qty Scrap Rate Scrap Share ADoor A 31,998 pcs 148 pcs 0.46% 34% BDoor B 32,194 pcs 151 pcs 0.47% 35% CDoor C 31,259 pcs 131 pcs 0.42% 30%",
+    "attentionSummary": "RECURRING PROBLEMS 9 Seen on 3+ days Scrap Detail IMPROVEMENT RECORDS 200 100 need action Improvement Top recurring problems · in selected range · 3 of 9 1 บุบ (Dent) A · M-100 FR today 83 pcs 2 รอยขีดข่วน (Scratch) B · M-100 FR today 58 pcs 3 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C · M-100 FR today 39 pcs Improvement status 50 Monitoring 50 Controlled 50 Not Effective 50 Recurring",
+    "paretoCard": "Pareto Analysis Top 10 defects + Others by Scrap Qty | 01 Oct 2026 – 31 Oct 2026 TOTAL SCRAP 430 pcs PRIORITY DEFECTS 5 of 8 types COVERAGE 86.5% of scrap Scrap Qty Others Cumulative % 80% reference 5 defect types account for 86.5% of scrap. View Defect Names Rank → full defect name"
+   },
+   "note": ""
+  },
+  {
+   "screen": "Weekly Plan",
+   "action": "open month",
+   "reads": {
+    "scrapLogs": {
+     "LIST": 1,
+     "GET": 0,
+     "docs": 132,
+     "billed": 132
+    },
+    "scrapWeeklyPlans": {
+     "LIST": 1,
+     "GET": 0,
+     "docs": 2,
+     "billed": 2
+    },
+    "scrapCloseSummary": {
+     "LIST": 1,
+     "GET": 0,
+     "docs": 12,
+     "billed": 12
+    }
+   },
+   "view": {
+    "wpMonth": "Oct 2026 Within plan · so far Daily limit breached · 2 days >50 Not final as of 31 Oct MONTHLY BUDGET · DEFAULT 1,320 pcs Default · not set = sum of 5 weekly plans · 2 of 5 weeks set by an Admin, 3 default (not set) · base 50 × 31 days = 1,550 ACTUAL 430 pcsso far plan to date 1,320 pcs REMAINING 890 pcs at most, while days are not final % USED 33% projection: needs a log every day Data: 10 of 31 days final · 15 logged, not closed · 1 pending close · 1 conflict · 4 without any scrap log (not counted as 0)",
+    "wpWeeks": "Week Dates Days Plan · source Plan to date Actual Remaining Used Budget Daily limit Data W1 01 Oct – 04 Oct 4 200 Default · not set 200 43so far 157 22% Within plan · so far All days within limit (≤50) · so far Not final 0/4 days final W2 05 Oct – 11 Oct 7 120 base 350 Set by Admin 120 148so far 28 over 123% Over plan Daily limit breached · 1 day >50 Not final 0/7 days final W3 12 Oct – 18 Oct 7 350 Default · not set 350 62so far 288 18% Within plan · so far All days within limit (≤50) · so far Not final 0/7 days final W4 19 Oct – 25 Oct 7 350 Default · confirmed 350 129 221 37% Within plan Daily limit breached · 1 day >50 Final 7/7 days final W5 26 Oct – 31 Oct 6 300 Default · not set 300 48so far 252 16% Within plan · so far All days within limit (≤50) · so far Not final 3/6 days final Month 31 1,320 Default · not set 1,320 430 890 33% Within plan · so far Daily limit breached · 2 days >50 Not final 10/31 days final Weeks run Monday–Sunday inside the month, so a day is counted in one week of one month only. Plan = 50 × days unless an Admin sets a lower plan.",
+    "wpImprove": "Improve · Top 5 defects (all lines) W5 Month to date 1 บุบ (Dent) Recurring · 22 days 149 pcs · 34.7% Door A 101 Door B 31 Door C 17 Sub-causes (5) 2 รอยขีดข่วน (Scratch) Recurring · 18 days 83 pcs · 19.3% Door A 4 Door B 71 Door C 8 Sub-causes (5) 3 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) Recurring · 17 days 68 pcs · 15.8% Door A 14 Door B 7 Door C 47 Sub-causes (4) 4 สีไหลย้อย Recurring · 8 days 40 pcs · 9.3% Door A 7 Door B 23 Door C 10 Sub-causes (5) 5 Dirt / Dust Recurring · 8 days 32 pcs · 7.4% Door A 7 Door B 4 Door C 21 Sub-causes (5) One row per defect, all lines together (never repeated per line). 8 defect types · 430 pcs in the period. Open Improvement →"
+   },
+   "note": ""
+  },
+  {
+   "screen": "Scrap Detail",
+   "action": "open (default range)",
+   "reads": {
+    "scrapLogs": {
+     "LIST": 1,
+     "GET": 0,
+     "docs": 84,
+     "billed": 84
+    },
+    "improvements": {
+     "LIST": 1,
+     "GET": 0,
+     "docs": 250,
+     "billed": 250
+    }
+   },
+   "view": {
+    "topDefectRow": "#1 บุบ (Dent) 112 pcs #2 รอยขีดข่วน (Scratch) 63 pcs #3 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) 53 pcs",
+    "scrapDetailTable": "DATE SHIFT LINE MODEL DEFECT QTY REMARK 4M IMPROVEMENT ACTION 2026-11-03 Night Door A M-100 FR ยับ (Wrinkle) 4 – – NONE + Create Edit Delete 2026-11-03 Night Door A M-100 RR บุบ (Dent) RECURRING 3 – – NONE + Create Edit Delete 2026-11-03 Night Door B M-300 RR สีไหลย้อย 3 – – NONE + Create Edit Delete 2026-11-03 Night Door B M-200 FR Dirt / Dust 4 – – NONE + Create Edit Delete 2026-11-03 Day Door C M-200 FR คลิปหาย 3 – – NONE + Create Edit Delete 2026-11-03 Day Door C M-200 FR บุบ (Dent) 2 – – NONE + Create Edit Delete 2026-11-03 Night Door C M-200 FR ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) 4 – – NONE + Create Edit Delete 2026-11-03 Night Door C M-300 RR คลิปหาย 2 – – NONE + Create Edit Delete 2026-11-02 Day Door A M-300 RR คลิปหาย 1 – – NONE + Create Edit Delete 2026-11-02 Night Door A M-100 RR บุบ (Dent) RECURRING 1 – – NONE + Create Edit Delete 2026-11-02 Night Door A M-100 RR Dirt / Dust 4 – – NONE + Create Edit Delete 2026-11-02 Day Door B M-300 RR รอยขีดข่วน (Scratch) 1 – – NONE + Create Edit Delete 2026-11-02 Day Door B M-100 RR รอยขีดข่วน (Scratch) 3 – – NONE + Create Edit Delete 2026-11-02 Night Door B M-200 FR บุบ (Dent) 4 – – NONE + Create Edit Delete 2026-11-02 Day Door C M-100 FR คลิปหาย 2 – – NONE + Create Edit Delete 2026-11-02 Day Door C M-100 RR คลิปหาย 3 – – NONE + Create Edit Delete 2026-11-01 Day Door B M-300 RR Dirt / Dust 4 – – NONE + Create Edit Delete 2026-11-01 Day Door B M-100 FR บุบ (Dent) 4 – – NONE + Create Edit Delete 2026-11-01 Night Door B M-300 RR สีไหลย้อย 1 – – NONE + Create Edit Delete 2026-11-01 Night Door C M-100 FR บุบ (Dent) 2 – – NONE + Create Edit Delete 2026-11-01 Night Door C M-300 RR สีไหลย้อย 1 – – NONE + Create Edit Delete 2026-11-01 Night Door A M-100 RR ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) 2 – – NONE + Create Edit Delete 2026-11-01 Night Door A M-300 RR ยับ (Wrinkle) 4 – – NONE + Create Edit Delete 2026-10-31 Night Door B M-100 FR รอยขีดข่วน (Scratch) RECURRING 2 – – NONE + Create Edit Delete 2026-10-31 Day Door A M-100 FR บุบ (Dent) RECURRING 5 – – LINKED View Edit Delete 2026-10-31 Day Door C M-100 FR ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) RECURRING 4 – – NONE + Create Edit Delete 2026-10-30 Day Door A M-100 FR บุบ (Dent) RECURRING 6 – – LINKED View Edit Delete 2026-10-30 Night Door B M-100 FR รอยขีดข่วน (Scratch) RECURRING 4 – – NONE + Create Edit Delete 2026-10-30 Day Door C M-100 FR ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) RECURRING 4 – – NONE + Create Edit Delete 2026-10-27 Day Door A M-100 FR บุบ (Dent) RECURRING 7 – – LINKED View Edit Delete 2026-10-27 Day Door C M-100 FR ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) RECURRING 1 – – NONE + Create Edit Delete 2026-10-27 Night Door B M บุบ (Dent) 2 – – NONE + Create Edit Delete 2026-10-27 Night Door B M-100 FR รอยขีดข่วน (Scratch) RECURRING 2 – – NONE + Create Edit Delete 2026-10-26 Day Door A M-100 FR บุบ (Dent) RECURRING 6 – – LINKED View Edit Delete 2026-10-26 Night Door B M-100 FR รอยขีดข่วน (Scratch) RECURRING 4 – – NONE + Create Edit Delete 2026-10-26 Day Door C M-100 FR ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) RECURRING 1 – – NONE + Create Edit Delete 2026-10-25 Night Door B M-100 FR รอยขีดข่วน (Scratch) RECURRING 2 – – NONE + Create Edit Delete 2026-10-25 Day Door C M-100 FR ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) RECURRING 2 – – NONE + Create Edit Delete 2026-10-25 Day Door A M-100 FR บุบ (Dent) RECURRING 8 – – LINKED View Edit Delete 2026-10-24 Day Door C M-100 FR ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) RECURRING 3 – – NONE + Create Edit Delete 2026-10-24 Day Door A M-100 FR บุบ (Dent) RECURRING 6 – – LINKED View Edit Delete 2026-10-24 Night Door B M-100 FR รอยขีดข่วน (Scratch) RECURRING 6 – – NONE + Create Edit Delete 2026-10-23 Day Door A M-100 FR บุบ (Dent) RECURRING 8 – – LINKED View Edit Delete 2026-10-23 Night Door B M-100 FR รอยขีดข่วน (Scratch) RECURRING 4 – – NONE + Create Edit Delete 2026-10-23 Day Door C M-100 FR ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) RECURRING 2 – – NONE + Create Edit Delete 2026-10-22 Night Door C M-100 FR ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) RECURRING 17 – – NONE + Create Edit Delete 2026-10-22 Day Door A M-100 FR บุบ (Dent) RECURRING 20 – – LINKED View Edit Delete 2026-10-22 Day Door B M-100 FR รอยขีดข่วน (Scratch) RECURRING 18 – – NONE + Create Edit Delete 2026-10-21 Day Door C M-100 FR ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) RECURRING 3 – – NONE + Create Edit Delete 2026-10-21 Night Door B M-100 FR รอยขีดข่วน (Scratch) RECURRING 6 – – NONE + Create Edit Delete 2026-10-21 Day Door A M-100 FR บุบ (Dent) RECURRING 3 – – LINKED View Edit Delete 2026-10-20 Night Door B M-100 FR รอยขีดข่วน (Scratch) RECURRING 4 – – NONE + Create Edit Delete 2026-10-20 Day Door A M-100 FR บุบ (Dent) RECURRING 5 – – LINKED View Edit Delete 2026-10-20 Day Door C M-100 FR ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) RECURRING 1 – – NONE + Create Edit Delete 2026-10-19 Day Door C M-100 FR ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) RECURRING 1 – – NONE + Create Edit Delete 2026-10-19 Day Door A M-100 FR บุบ (Dent) RECURRING 5 – – LINKED View Edit Delete 2026-10-19 Night Door B M-100 FR รอยขีดข่วน (Scratch) RECURRING 5 – – NONE + Create Edit Delete 2026-10-18 Day Door A M-100 FR Dirt / Dust 3 – – NONE + Create Edit Delete 2026-10-18 Day Door A M-100 RR สีไหลย้อย 2 – – NONE + Create Edit Delete 2026-10-17 Day Door B M-100 FR Dirt / Dust 4 – – NONE + Create Edit Delete 2026-10-17 Day Door B M-100 RR บุบ (Dent) 4 – – NONE + Create Edit Delete 2026-10-17 Night Door B M-300 RR บุบ (Dent) 1 – – NONE + Create Edit Delete 2026-10-17 Night Door B M-200 FR บุบ (Dent) 3 – – NONE + Create Edit Delete 2026-10-17 Night Door C M-100 RR Dirt / Dust 3 – – NONE + Create Edit Delete 2026-10-17 Night Door C M-100 FR คลิปหาย 4 – – NONE + Create Edit Delete 2026-10-16 Day Door A M-100 RR บุบ (Dent) RECURRING 2 – – NONE + Create Edit Delete 2026-10-16 Day Door A M-300 RR บุบ (Dent) 1 – – NONE + Create Edit Delete 2026-10-16 Night Door A M-300 RR ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) 1 – – NONE + Create Edit Delete 2026-10-16 Night Door A M-100 FR ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) 3 – – NONE + Create Edit Delete 2026-10-16 Day Door B M-200 FR คลิปหาย 2 – – NONE + Create Edit Delete 2026-10-16 Day Door C M-200 FR Dirt / Dust 4 – – NONE + Create Edit Delete 2026-10-15 Night Door B M-300 RR บุบ (Dent) 1 – – NONE + Create Edit Delete 2026-10-15 Night Door B M-300 RR บุบ (Dent) 1 – – NONE + Create Edit Delete 2026-10-15 Day Door C M-100 RR Burr 1 – – NONE + Create Edit Delete 2026-10-15 Night Door C M-300 RR คลิปหาย 1 – – NONE + Create Edit Delete 2026-10-14 Day Door A M-300 RR สีไหลย้อย 1 – – NONE + Create Edit Delete 2026-10-14 Day Door A M-100 FR คลิปหาย 3 – – NONE + Create Edit Delete 2026-10-14 Day Door B M-300 RR ยับ (Wrinkle) 1 – – NONE + Create Edit Delete 2026-10-14 Night Door B M-200 FR ยับ (Wrinkle) 3 – – NONE + Create Edit Delete 2026-10-14 Day Door C M-200 FR สีไหลย้อย 4 – – NONE + Create Edit Delete 2026-10-14 Night Door C M-100 FR รอยขีดข่วน (Scratch) 2 – – NONE + Create Edit Delete 2026-10-13 Night Door A M-100 RR บุบ (Dent) RECURRING 2 – – NONE + Create Edit Delete 2026-10-13 Night Door A M-100 FR ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) 4 – – NONE + Create Edit Delete 2026-10-13 Night Door B M-100 FR คลิปหาย 1 – – NONE + Create Edit Delete"
+   },
+   "note": ""
+  },
+  {
+   "screen": "Scrap Detail",
+   "action": "31 days",
+   "reads": {
+    "scrapLogs": {
+     "LIST": 1,
+     "GET": 0,
+     "docs": 132,
+     "billed": 132
+    },
+    "improvements": {
+     "LIST": 1,
+     "GET": 0,
+     "docs": 250,
+     "billed": 250
+    }
+   },
+   "view": {
+    "topDefectRow": "#1 บุบ (Dent) 158 pcs #2 รอยขีดข่วน (Scratch) 83 pcs #3 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) 68 pcs",
+    "scrapDetailTable": "DATE SHIFT LINE MODEL DEFECT QTY REMARK 4M IMPROVEMENT ACTION 2026-10-31 Night Door B M-100 FR รอยขีดข่วน (Scratch) RECURRING 2 – – NONE + Create Edit Delete 2026-10-31 Day Door A M-100 FR บุบ (Dent) RECURRING 5 – – LINKED View Edit Delete 2026-10-31 Day Door C M-100 FR ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) RECURRING 4 – – NONE + Create Edit Delete 2026-10-30 Day Door A M-100 FR บุบ (Dent) RECURRING 6 – – LINKED View Edit Delete 2026-10-30 Night Door B M-100 FR รอยขีดข่วน (Scratch) RECURRING 4 – – NONE + Create Edit Delete 2026-10-30 Day Door C M-100 FR ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) RECURRING 4 – – NONE + Create Edit Delete 2026-10-27 Day Door A M-100 FR บุบ (Dent) RECURRING 7 – – LINKED View Edit Delete 2026-10-27 Day Door C M-100 FR ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) RECURRING 1 – – NONE + Create Edit Delete 2026-10-27 Night Door B M บุบ (Dent) 2 – – NONE + Create Edit Delete 2026-10-27 Night Door B M-100 FR รอยขีดข่วน (Scratch) RECURRING 2 – – NONE + Create Edit Delete 2026-10-26 Day Door A M-100 FR บุบ (Dent) RECURRING 6 – – LINKED View Edit Delete 2026-10-26 Night Door B M-100 FR รอยขีดข่วน (Scratch) RECURRING 4 – – NONE + Create Edit Delete 2026-10-26 Day Door C M-100 FR ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) RECURRING 1 – – NONE + Create Edit Delete 2026-10-25 Night Door B M-100 FR รอยขีดข่วน (Scratch) RECURRING 2 – – NONE + Create Edit Delete 2026-10-25 Day Door C M-100 FR ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) RECURRING 2 – – NONE + Create Edit Delete 2026-10-25 Day Door A M-100 FR บุบ (Dent) RECURRING 8 – – LINKED View Edit Delete 2026-10-24 Day Door C M-100 FR ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) RECURRING 3 – – NONE + Create Edit Delete 2026-10-24 Day Door A M-100 FR บุบ (Dent) RECURRING 6 – – LINKED View Edit Delete 2026-10-24 Night Door B M-100 FR รอยขีดข่วน (Scratch) RECURRING 6 – – NONE + Create Edit Delete 2026-10-23 Day Door A M-100 FR บุบ (Dent) RECURRING 8 – – LINKED View Edit Delete 2026-10-23 Night Door B M-100 FR รอยขีดข่วน (Scratch) RECURRING 4 – – NONE + Create Edit Delete 2026-10-23 Day Door C M-100 FR ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) RECURRING 2 – – NONE + Create Edit Delete 2026-10-22 Night Door C M-100 FR ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) RECURRING 17 – – NONE + Create Edit Delete 2026-10-22 Day Door A M-100 FR บุบ (Dent) RECURRING 20 – – LINKED View Edit Delete 2026-10-22 Day Door B M-100 FR รอยขีดข่วน (Scratch) RECURRING 18 – – NONE + Create Edit Delete 2026-10-21 Day Door C M-100 FR ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) RECURRING 3 – – NONE + Create Edit Delete 2026-10-21 Night Door B M-100 FR รอยขีดข่วน (Scratch) RECURRING 6 – – NONE + Create Edit Delete 2026-10-21 Day Door A M-100 FR บุบ (Dent) RECURRING 3 – – LINKED View Edit Delete 2026-10-20 Night Door B M-100 FR รอยขีดข่วน (Scratch) RECURRING 4 – – NONE + Create Edit Delete 2026-10-20 Day Door A M-100 FR บุบ (Dent) RECURRING 5 – – LINKED View Edit Delete 2026-10-20 Day Door C M-100 FR ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) RECURRING 1 – – NONE + Create Edit Delete 2026-10-19 Day Door C M-100 FR ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) RECURRING 1 – – NONE + Create Edit Delete 2026-10-19 Day Door A M-100 FR บุบ (Dent) RECURRING 5 – – LINKED View Edit Delete 2026-10-19 Night Door B M-100 FR รอยขีดข่วน (Scratch) RECURRING 5 – – NONE + Create Edit Delete 2026-10-18 Day Door A M-100 FR Dirt / Dust 3 – – NONE + Create Edit Delete 2026-10-18 Day Door A M-100 RR สีไหลย้อย 2 – – NONE + Create Edit Delete 2026-10-17 Day Door B M-100 FR Dirt / Dust 4 – – NONE + Create Edit Delete 2026-10-17 Day Door B M-100 RR บุบ (Dent) RECURRING 4 – – NONE + Create Edit Delete 2026-10-17 Night Door B M-300 RR บุบ (Dent) 1 – – NONE + Create Edit Delete 2026-10-17 Night Door B M-200 FR บุบ (Dent) 3 – – NONE + Create Edit Delete 2026-10-17 Night Door C M-100 RR Dirt / Dust RECURRING 3 – – NONE + Create Edit Delete 2026-10-17 Night Door C M-100 FR คลิปหาย 4 – – NONE + Create Edit Delete 2026-10-16 Day Door A M-100 RR บุบ (Dent) RECURRING 2 – – NONE + Create Edit Delete 2026-10-16 Day Door A M-300 RR บุบ (Dent) RECURRING 1 – – NONE + Create Edit Delete 2026-10-16 Night Door A M-300 RR ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) 1 – – NONE + Create Edit Delete 2026-10-16 Night Door A M-100 FR ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) RECURRING 3 – – NONE + Create Edit Delete 2026-10-16 Day Door B M-200 FR คลิปหาย 2 – – NONE + Create Edit Delete 2026-10-16 Day Door C M-200 FR Dirt / Dust 4 – – NONE + Create Edit Delete 2026-10-15 Night Door B M-300 RR บุบ (Dent) 1 – – NONE + Create Edit Delete 2026-10-15 Night Door B M-300 RR บุบ (Dent) 1 – – NONE + Create Edit Delete 2026-10-15 Day Door C M-100 RR Burr 1 – – NONE + Create Edit Delete 2026-10-15 Night Door C M-300 RR คลิปหาย 1 – – NONE + Create Edit Delete 2026-10-14 Day Door A M-300 RR สีไหลย้อย 1 – – NONE + Create Edit Delete 2026-10-14 Day Door A M-100 FR คลิปหาย 3 – – NONE + Create Edit Delete 2026-10-14 Day Door B M-300 RR ยับ (Wrinkle) 1 – – NONE + Create Edit Delete 2026-10-14 Night Door B M-200 FR ยับ (Wrinkle) 3 – – NONE + Create Edit Delete 2026-10-14 Day Door C M-200 FR สีไหลย้อย 4 – – NONE + Create Edit Delete 2026-10-14 Night Door C M-100 FR รอยขีดข่วน (Scratch) 2 – – NONE + Create Edit Delete 2026-10-13 Night Door A M-100 RR บุบ (Dent) RECURRING 2 – – NONE + Create Edit Delete 2026-10-13 Night Door A M-100 FR ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) RECURRING 4 – – NONE + Create Edit Delete 2026-10-13 Night Door B M-100 FR คลิปหาย 1 – – NONE + Create Edit Delete 2026-10-10 Day Door B M-100 FR บุบ (Dent) RECURRING 1 – – NONE + Create Edit Delete 2026-10-10 Night Door B M-300 RR คลิปหาย 2 – – NONE + Create Edit Delete 2026-10-10 Day Door C M-100 RR คลิปหาย 1 – – NONE + Create Edit Delete 2026-10-10 Day Door C M-200 FR บุบ (Dent) 4 – – NONE + Create Edit Delete 2026-10-10 Night Door C M-200 FR บุบ (Dent) 4 – – NONE + Create Edit Delete 2026-10-09 Day Door A M-100 RR Dirt / Dust 1 – – NONE + Create Edit Delete 2026-10-09 Day Door A M-300 RR คลิปหาย 3 – – NONE + Create Edit Delete 2026-10-09 Day Door B M-100 FR ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) 3 – – NONE + Create Edit Delete 2026-10-09 Night Door B M-300 RR ยับ (Wrinkle) 3 – – NONE + Create Edit Delete 2026-10-09 Night Door B M-100 FR สีไหลย้อย 3 – – NONE + Create Edit Delete 2026-10-09 Day Door C M-100 RR Dirt / Dust RECURRING 4 – – NONE + Create Edit Delete 2026-10-09 Night Door C M-200 FR คลิปหาย 4 – – NONE + Create Edit Delete 2026-10-09 Night Door C M-100 RR ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) 4 – – NONE + Create Edit Delete 2026-10-08 Day Door A M-200 FR Burr 1 – – NONE + Create Edit Delete 2026-10-08 Day Door A M-100 FR รอยขีดข่วน (Scratch) 1 – – NONE + Create Edit Delete 2026-10-08 Night Door A M-300 RR Burr 2 – – NONE + Create Edit Delete 2026-10-08 Day Door B M-100 RR รอยขีดข่วน (Scratch) 4 – – NONE + Create Edit Delete 2026-10-08 Night Door B M-100 FR บุบ (Dent) RECURRING 4 – – NONE + Create Edit Delete 2026-10-08 Night Door B M-100 RR Burr 2 – – NONE + Create Edit Delete 2026-10-08 Day Door C M-100 FR Dirt / Dust 3 – – NONE + Create Edit Delete 2026-10-08 Day Door C M-200 FR ยับ (Wrinkle) 4 – – NONE + Create Edit Delete 2026-10-08 Night Door C M-100 RR Dirt / Dust RECURRING 1 – – NONE + Create Edit Delete 2026-10-08 Night Door C M-200 FR Burr 4 – – NONE + Create Edit Delete 2026-10-07 Day Door A M-300 RR Dirt / Dust 3 – – NONE + Create Edit Delete 2026-10-07 Day Door A M-100 RR บุบ (Dent) RECURRING 3 – – NONE + Create Edit Delete 2026-10-07 Day Door A M-100 FR บุบ (Dent) RECURRING 4 – – LINKED View Edit Delete 2026-10-07 Night Door A M-100 FR สีไหลย้อย 3 – – NONE + Create Edit Delete 2026-10-07 Night Door A M-300 RR บุบ (Dent) RECURRING 3 – – NONE + Create Edit Delete 2026-10-07 Night Door A M-300 RR ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) 4 – – NONE + Create Edit Delete 2026-10-07 Day Door B M-100 FR สีไหลย้อย 3 – – NONE + Create Edit Delete 2026-10-07 Day Door B M-100 FR บุบ (Dent) RECURRING 4 – – NONE + Create Edit Delete 2026-10-07 Day Door B M-100 FR บุบ (Dent) RECURRING 4 – – NONE + Create Edit Delete 2026-10-07 Night Door B M-100 RR สีไหลย้อย 4 – – NONE + Create Edit Delete 2026-10-07 Night Door B M-100 RR รอยขีดข่วน (Scratch) 3 – – NONE + Create Edit Delete 2026-10-07 Night Door B M-100 RR ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) 4 – – NONE + Create Edit Delete 2026-10-07 Day Door C M-300 RR บุบ (Dent) 4 – – NONE + Create Edit Delete 2026-10-07 Day Door C M-300 RR สีไหลย้อย 3 – – NONE + Create Edit Delete 2026-10-07 Day Door C M-200 FR ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) 3 – – NONE + Create Edit Delete 2026-10-07 Night Door C M-100 RR รอยขีดข่วน (Scratch) 3 – – NONE + Create Edit Delete 2026-10-07 Night Door C M-100 RR ยับ (Wrinkle) 4 – – NONE + Create Edit Delete 2026-10-07 Night Door C M-100 RR รอยขีดข่วน (Scratch) 3 – – NONE + Create Edit Delete 2026-10-06 Night Door A M-200 FR ยับ (Wrinkle) 2 – – NONE + Create Edit Delete 2026-10-06 Night Door A M-300 RR บุบ (Dent) RECURRING 3 – – NONE + Create Edit Delete 2026-10-06 Day Door B M-300 RR รอยขีดข่วน (Scratch) 3 – – NONE + Create Edit Delete 2026-10-06 Day Door B M-200 FR บุบ (Dent) 1 – – NONE + Create Edit Delete 2026-10-06 Night Door C M-100 RR บุบ (Dent) 1 – – NONE + Create Edit Delete 2026-10-05 Night Door A M-100 RR รอยขีดข่วน (Scratch) 1 – – NONE + Create Edit Delete 2026-10-05 Night Door A M-300 RR บุบ (Dent) RECURRING 4 – – NONE + Create Edit Delete 2026-10-05 Day Door B M-300 RR สีไหลย้อย 4 – – NONE + Create Edit Delete 2026-10-05 Day Door B M-200 FR สีไหลย้อย 2 – – NONE + Create Edit Delete 2026-10-05 Night Door B M-100 RR บุบ (Dent) RECURRING 1 – – NONE + Create Edit Delete 2026-10-05 Night Door C M-100 RR ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) 1 – – NONE + Create Edit Delete 2026-10-05 Day DID MD บุบ (Dent) 9 – – NONE + Create Edit Delete 2026-10-03 Day Door A M-100 RR สีไหลย้อย 1 – – NONE + Create Edit Delete 2026-10-03 Day Door A M-100 RR ยับ (Wrinkle) 3 – – NONE + Create Edit Delete 2026-10-03 Night Door A M-100 FR ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) RECURRING 2 – – NONE + Create Edit Delete 2026-10-03 Night Door A M-300 RR รอยขีดข่วน (Scratch) 2 – – NONE + Create Edit Delete 2026-10-03 Night Door B M-100 FR รอยขีดข่วน (Scratch) RECURRING 1 – – NONE + Create Edit Delete 2026-10-03 Night Door B M-100 FR คลิปหาย 1 – – NONE + Create Edit Delete 2026-10-02 Day Door C M-100 RR ยับ (Wrinkle) 2 – – NONE + Create Edit Delete 2026-10-02 Day Door C M-200 FR สีไหลย้อย 3 – – NONE + Create Edit Delete 2026-10-02 Night Door C M-200 FR Dirt / Dust 4 – – NONE + Create Edit Delete 2026-10-02 Day Door A M-200 FR Burr 1 – – NONE + Create Edit Delete 2026-10-02 Day Door B M-100 RR บุบ (Dent) RECURRING 4 – – NONE + Create Edit Delete 2026-10-02 Night Door B M-100 RR สีไหลย้อย 3 – – NONE + Create Edit Delete 2026-10-01 Night Door B M-200 FR สีไหลย้อย 4 – – NONE + Create Edit Delete 2026-10-01 Night Door B M-300 RR รอยขีดข่วน (Scratch) 3 – – NONE + Create Edit Delete 2026-10-01 Day Door C M-100 FR คลิปหาย 3 – – NONE + Create Edit Delete 2026-10-01 Day Door C M-100 RR บุบ (Dent) 1 – – NONE + Create Edit Delete 2026-10-01 Night Door C M-100 RR Dirt / Dust RECURRING 2 – – NONE + Create Edit Delete 2026-10-01 Night Door C M-100 RR บุบ (Dent) 3 – – NONE + Create Edit Delete"
+   },
+   "note": ""
+  },
+  {
+   "screen": "Improvement",
+   "action": "list",
+   "reads": {
+    "improvements": {
+     "LIST": 1,
+     "GET": 0,
+     "docs": 250,
+     "billed": 250
+    }
+   },
+   "view": {
+    "improvementTableBody": "imp0249 Synthetic improvement 249 บุบ (Dent) A / M-100 FR – – → – – Recurring imp0248 Synthetic improvement 248 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Monitoring imp0247 Synthetic improvement 247 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Controlled imp0246 Synthetic improvement 246 บุบ (Dent) A / M-100 FR – – → – – Not Effective imp0245 Synthetic improvement 245 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Recurring imp0244 Synthetic improvement 244 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Monitoring imp0243 Synthetic improvement 243 บุบ (Dent) A / M-100 FR – – → – – Controlled imp0242 Synthetic improvement 242 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Not Effective imp0241 Synthetic improvement 241 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Recurring imp0240 Synthetic improvement 240 บุบ (Dent) A / M-100 FR – – → – – Monitoring imp0239 Synthetic improvement 239 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Controlled imp0238 Synthetic improvement 238 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Not Effective imp0237 Synthetic improvement 237 บุบ (Dent) A / M-100 FR – – → – – Recurring imp0236 Synthetic improvement 236 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Monitoring imp0235 Synthetic improvement 235 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Controlled imp0234 Synthetic improvement 234 บุบ (Dent) A / M-100 FR – – → – – Not Effective imp0233 Synthetic improvement 233 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Recurring imp0232 Synthetic improvement 232 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Monitoring imp0231 Synthetic improvement 231 บุบ (Dent) A / M-100 FR – – → – – Controlled imp0230 Synthetic improvement 230 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Not Effective imp0229 Synthetic improvement 229 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Recurring imp0228 Synthetic improvement 228 บุบ (Dent) A / M-100 FR – – → – – Monitoring imp0227 Synthetic improvement 227 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Controlled imp0226 Synthetic improvement 226 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Not Effective imp0225 Synthetic improvement 225 บุบ (Dent) A / M-100 FR – – → – – Recurring imp0224 Synthetic improvement 224 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Monitoring imp0223 Synthetic improvement 223 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Controlled imp0222 Synthetic improvement 222 บุบ (Dent) A / M-100 FR – – → – – Not Effective imp0221 Synthetic improvement 221 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Recurring imp0220 Synthetic improvement 220 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Monitoring imp0219 Synthetic improvement 219 บุบ (Dent) A / M-100 FR – – → – – Controlled imp0218 Synthetic improvement 218 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Not Effective imp0217 Synthetic improvement 217 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Recurring imp0216 Synthetic improvement 216 บุบ (Dent) A / M-100 FR – – → – – Monitoring imp0215 Synthetic improvement 215 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Controlled imp0214 Synthetic improvement 214 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Not Effective imp0213 Synthetic improvement 213 บุบ (Dent) A / M-100 FR – – → – – Recurring imp0212 Synthetic improvement 212 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Monitoring imp0211 Synthetic improvement 211 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Controlled imp0210 Synthetic improvement 210 บุบ (Dent) A / M-100 FR – – → – – Not Effective imp0209 Synthetic improvement 209 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Recurring imp0208 Synthetic improvement 208 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Monitoring imp0207 Synthetic improvement 207 บุบ (Dent) A / M-100 FR – – → – – Controlled imp0206 Synthetic improvement 206 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Not Effective imp0205 Synthetic improvement 205 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Recurring imp0204 Synthetic improvement 204 บุบ (Dent) A / M-100 FR – – → – – Monitoring imp0203 Synthetic improvement 203 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Controlled imp0202 Synthetic improvement 202 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Not Effective imp0201 Synthetic improvement 201 บุบ (Dent) A / M-100 FR – – → – – Recurring imp0200 Synthetic improvement 200 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Monitoring imp0199 Synthetic improvement 199 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Controlled imp0198 Synthetic improvement 198 บุบ (Dent) A / M-100 FR – – → – – Not Effective imp0197 Synthetic improvement 197 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Recurring imp0196 Synthetic improvement 196 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Monitoring imp0195 Synthetic improvement 195 บุบ (Dent) A / M-100 FR – – → – – Controlled imp0194 Synthetic improvement 194 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Not Effective imp0193 Synthetic improvement 193 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Recurring imp0192 Synthetic improvement 192 บุบ (Dent) A / M-100 FR – – → – – Monitoring imp0191 Synthetic improvement 191 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Controlled imp0190 Synthetic improvement 190 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Not Effective imp0189 Synthetic improvement 189 บุบ (Dent) A / M-100 FR – – → – – Recurring imp0188 Synthetic improvement 188 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Monitoring imp0187 Synthetic improvement 187 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Controlled imp0186 Synthetic improvement 186 บุบ (Dent) A / M-100 FR – – → – – Not Effective imp0185 Synthetic improvement 185 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Recurring imp0184 Synthetic improvement 184 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Monitoring imp0183 Synthetic improvement 183 บุบ (Dent) A / M-100 FR – – → – – Controlled imp0182 Synthetic improvement 182 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Not Effective imp0181 Synthetic improvement 181 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Recurring imp0180 Synthetic improvement 180 บุบ (Dent) A / M-100 FR – – → – – Monitoring imp0179 Synthetic improvement 179 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Controlled imp0178 Synthetic improvement 178 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Not Effective imp0177 Synthetic improvement 177 บุบ (Dent) A / M-100 FR – – → – – Recurring imp0176 Synthetic improvement 176 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Monitoring imp0175 Synthetic improvement 175 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Controlled imp0174 Synthetic improvement 174 บุบ (Dent) A / M-100 FR – – → – – Not Effective imp0173 Synthetic improvement 173 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Recurring imp0172 Synthetic improvement 172 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Monitoring imp0171 Synthetic improvement 171 บุบ (Dent) A / M-100 FR – – → – – Controlled imp0170 Synthetic improvement 170 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Not Effective imp0169 Synthetic improvement 169 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Recurring imp0168 Synthetic improvement 168 บุบ (Dent) A / M-100 FR – – → – – Monitoring imp0167 Synthetic improvement 167 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Controlled imp0166 Synthetic improvement 166 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Not Effective imp0165 Synthetic improvement 165 บุบ (Dent) A / M-100 FR – – → – – Recurring imp0164 Synthetic improvement 164 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Monitoring imp0163 Synthetic improvement 163 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Controlled imp0162 Synthetic improvement 162 บุบ (Dent) A / M-100 FR – – → – – Not Effective imp0161 Synthetic improvement 161 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Recurring imp0160 Synthetic improvement 160 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Monitoring imp0159 Synthetic improvement 159 บุบ (Dent) A / M-100 FR – – → – – Controlled imp0158 Synthetic improvement 158 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Not Effective imp0157 Synthetic improvement 157 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Recurring imp0156 Synthetic improvement 156 บุบ (Dent) A / M-100 FR – – → – – Monitoring imp0155 Synthetic improvement 155 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Controlled imp0154 Synthetic improvement 154 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Not Effective imp0153 Synthetic improvement 153 บุบ (Dent) A / M-100 FR – – → – – Recurring imp0152 Synthetic improvement 152 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Monitoring imp0151 Synthetic improvement 151 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Controlled imp0150 Synthetic improvement 150 บุบ (Dent) A / M-100 FR – – → – – Not Effective imp0149 Synthetic improvement 149 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Recurring imp0148 Synthetic improvement 148 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Monitoring imp0147 Synthetic improvement 147 บุบ (Dent) A / M-100 FR – – → – – Controlled imp0146 Synthetic improvement 146 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Not Effective imp0145 Synthetic improvement 145 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Recurring imp0144 Synthetic improvement 144 บุบ (Dent) A / M-100 FR – – → – – Monitoring imp0143 Synthetic improvement 143 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Controlled imp0142 Synthetic improvement 142 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Not Effective imp0141 Synthetic improvement 141 บุบ (Dent) A / M-100 FR – – → – – Recurring imp0140 Synthetic improvement 140 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Monitoring imp0139 Synthetic improvement 139 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Controlled imp0138 Synthetic improvement 138 บุบ (Dent) A / M-100 FR – – → – – Not Effective imp0137 Synthetic improvement 137 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Recurring imp0136 Synthetic improvement 136 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Monitoring imp0135 Synthetic improvement 135 บุบ (Dent) A / M-100 FR – – → – – Controlled imp0134 Synthetic improvement 134 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Not Effective imp0133 Synthetic improvement 133 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Recurring imp0132 Synthetic improvement 132 บุบ (Dent) A / M-100 FR – – → – – Monitoring imp0131 Synthetic improvement 131 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Controlled imp0130 Synthetic improvement 130 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Not Effective imp0129 Synthetic improvement 129 บุบ (Dent) A / M-100 FR – – → – – Recurring imp0128 Synthetic improvement 128 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Monitoring imp0127 Synthetic improvement 127 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Controlled imp0126 Synthetic improvement 126 บุบ (Dent) A / M-100 FR – – → – – Not Effective imp0125 Synthetic improvement 125 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Recurring imp0124 Synthetic improvement 124 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Monitoring imp0123 Synthetic improvement 123 บุบ (Dent) A / M-100 FR – – → – – Controlled imp0122 Synthetic improvement 122 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Not Effective imp0121 Synthetic improvement 121 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Recurring imp0120 Synthetic improvement 120 บุบ (Dent) A / M-100 FR – – → – – Monitoring imp0119 Synthetic improvement 119 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Controlled imp0118 Synthetic improvement 118 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Not Effective imp0117 Synthetic improvement 117 บุบ (Dent) A / M-100 FR – – → – – Recurring imp0116 Synthetic improvement 116 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Monitoring imp0115 Synthetic improvement 115 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Controlled imp0114 Synthetic improvement 114 บุบ (Dent) A / M-100 FR – – → – – Not Effective imp0113 Synthetic improvement 113 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Recurring imp0112 Synthetic improvement 112 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Monitoring imp0111 Synthetic improvement 111 บุบ (Dent) A / M-100 FR – – → – – Controlled imp0110 Synthetic improvement 110 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Not Effective imp0109 Synthetic improvement 109 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Recurring imp0108 Synthetic improvement 108 บุบ (Dent) A / M-100 FR – – → – – Monitoring imp0107 Synthetic improvement 107 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Controlled imp0106 Synthetic improvement 106 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Not Effective imp0105 Synthetic improvement 105 บุบ (Dent) A / M-100 FR – – → – – Recurring imp0104 Synthetic improvement 104 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Monitoring imp0103 Synthetic improvement 103 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Controlled imp0102 Synthetic improvement 102 บุบ (Dent) A / M-100 FR – – → – – Not Effective imp0101 Synthetic improvement 101 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Recurring imp0100 Synthetic improvement 100 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Monitoring imp0099 Synthetic improvement 99 บุบ (Dent) A / M-100 FR – – → – – Controlled imp0098 Synthetic improvement 98 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Not Effective imp0097 Synthetic improvement 97 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Recurring imp0096 Synthetic improvement 96 บุบ (Dent) A / M-100 FR – – → – – Monitoring imp0095 Synthetic improvement 95 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Controlled imp0094 Synthetic improvement 94 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Not Effective imp0093 Synthetic improvement 93 บุบ (Dent) A / M-100 FR – – → – – Recurring imp0092 Synthetic improvement 92 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Monitoring imp0091 Synthetic improvement 91 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Controlled imp0090 Synthetic improvement 90 บุบ (Dent) A / M-100 FR – – → – – Not Effective imp0089 Synthetic improvement 89 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Recurring imp0088 Synthetic improvement 88 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Monitoring imp0087 Synthetic improvement 87 บุบ (Dent) A / M-100 FR – – → – – Controlled imp0086 Synthetic improvement 86 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Not Effective imp0085 Synthetic improvement 85 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Recurring imp0084 Synthetic improvement 84 บุบ (Dent) A / M-100 FR – – → – – Monitoring imp0083 Synthetic improvement 83 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Controlled imp0082 Synthetic improvement 82 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Not Effective imp0081 Synthetic improvement 81 บุบ (Dent) A / M-100 FR – – → – – Recurring imp0080 Synthetic improvement 80 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Monitoring imp0079 Synthetic improvement 79 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Controlled imp0078 Synthetic improvement 78 บุบ (Dent) A / M-100 FR – – → – – Not Effective imp0077 Synthetic improvement 77 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Recurring imp0076 Synthetic improvement 76 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Monitoring imp0075 Synthetic improvement 75 บุบ (Dent) A / M-100 FR – – → – – Controlled imp0074 Synthetic improvement 74 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Not Effective imp0073 Synthetic improvement 73 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Recurring imp0072 Synthetic improvement 72 บุบ (Dent) A / M-100 FR – – → – – Monitoring imp0071 Synthetic improvement 71 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Controlled imp0070 Synthetic improvement 70 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Not Effective imp0069 Synthetic improvement 69 บุบ (Dent) A / M-100 FR – – → – – Recurring imp0068 Synthetic improvement 68 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Monitoring imp0067 Synthetic improvement 67 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Controlled imp0066 Synthetic improvement 66 บุบ (Dent) A / M-100 FR – – → – – Not Effective imp0065 Synthetic improvement 65 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Recurring imp0064 Synthetic improvement 64 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Monitoring imp0063 Synthetic improvement 63 บุบ (Dent) A / M-100 FR – – → – – Controlled imp0062 Synthetic improvement 62 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Not Effective imp0061 Synthetic improvement 61 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Recurring imp0060 Synthetic improvement 60 บุบ (Dent) A / M-100 FR – – → – – Monitoring imp0059 Synthetic improvement 59 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Controlled imp0058 Synthetic improvement 58 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Not Effective imp0057 Synthetic improvement 57 บุบ (Dent) A / M-100 FR – – → – – Recurring imp0056 Synthetic improvement 56 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Monitoring imp0055 Synthetic improvement 55 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Controlled imp0054 Synthetic improvement 54 บุบ (Dent) A / M-100 FR – – → – – Not Effective imp0053 Synthetic improvement 53 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Recurring imp0052 Synthetic improvement 52 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Monitoring imp0051 Synthetic improvement 51 บุบ (Dent) A / M-100 FR – – → – – Controlled imp0050 Synthetic improvement 50 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Not Effective imp0049 Synthetic improvement 49 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Recurring imp0048 Synthetic improvement 48 บุบ (Dent) A / M-100 FR – – → – – Monitoring imp0047 Synthetic improvement 47 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Controlled imp0046 Synthetic improvement 46 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Not Effective imp0045 Synthetic improvement 45 บุบ (Dent) A / M-100 FR – – → – – Recurring imp0044 Synthetic improvement 44 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Monitoring imp0043 Synthetic improvement 43 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Controlled imp0042 Synthetic improvement 42 บุบ (Dent) A / M-100 FR – – → – – Not Effective imp0041 Synthetic improvement 41 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Recurring imp0040 Synthetic improvement 40 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Monitoring imp0039 Synthetic improvement 39 บุบ (Dent) A / M-100 FR – – → – – Controlled imp0038 Synthetic improvement 38 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Not Effective imp0037 Synthetic improvement 37 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Recurring imp0036 Synthetic improvement 36 บุบ (Dent) A / M-100 FR – – → – – Monitoring imp0035 Synthetic improvement 35 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Controlled imp0034 Synthetic improvement 34 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Not Effective imp0033 Synthetic improvement 33 บุบ (Dent) A / M-100 FR – – → – – Recurring imp0032 Synthetic improvement 32 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Monitoring imp0031 Synthetic improvement 31 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Controlled imp0030 Synthetic improvement 30 บุบ (Dent) A / M-100 FR – – → – – Not Effective imp0029 Synthetic improvement 29 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Recurring imp0028 Synthetic improvement 28 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Monitoring imp0027 Synthetic improvement 27 บุบ (Dent) A / M-100 FR – – → – – Controlled imp0026 Synthetic improvement 26 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Not Effective imp0025 Synthetic improvement 25 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Recurring imp0024 Synthetic improvement 24 บุบ (Dent) A / M-100 FR – – → – – Monitoring imp0023 Synthetic improvement 23 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Controlled imp0022 Synthetic improvement 22 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Not Effective imp0021 Synthetic improvement 21 บุบ (Dent) A / M-100 FR – – → – – Recurring imp0020 Synthetic improvement 20 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Monitoring imp0019 Synthetic improvement 19 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Controlled imp0018 Synthetic improvement 18 บุบ (Dent) A / M-100 FR – – → – – Not Effective imp0017 Synthetic improvement 17 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Recurring imp0016 Synthetic improvement 16 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Monitoring imp0015 Synthetic improvement 15 บุบ (Dent) A / M-100 FR – – → – – Controlled imp0014 Synthetic improvement 14 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Not Effective imp0013 Synthetic improvement 13 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Recurring imp0012 Synthetic improvement 12 บุบ (Dent) A / M-100 FR – – → – – Monitoring imp0011 Synthetic improvement 11 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Controlled imp0010 Synthetic improvement 10 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Not Effective imp0009 Synthetic improvement 9 บุบ (Dent) A / M-100 FR – – → – – Recurring imp0008 Synthetic improvement 8 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Monitoring imp0007 Synthetic improvement 7 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Controlled imp0006 Synthetic improvement 6 บุบ (Dent) A / M-100 FR – – → – – Not Effective imp0005 Synthetic improvement 5 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Recurring imp0000 Synthetic improvement 0 บุบ (Dent) A / M-100 FR – – → – – Monitoring imp0001 Synthetic improvement 1 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Recurring imp0002 Synthetic improvement 2 ช่องว่าง/ระดับไม่เสมอ (Gap / Flush NG) C / M-300 RR – – → – – Not Effective imp0003 Synthetic improvement 3 บุบ (Dent) A / M-100 FR – – → – – Controlled imp0004 Synthetic improvement 4 รอยขีดข่วน (Scratch) B / M-200 FR – – → – – Monitoring"
+   },
+   "note": ""
+  },
+  {
+   "screen": "Improvement",
+   "action": "edit page (id=imp0120)",
+   "reads": {
+    "improvements": {
+     "LIST": 2,
+     "GET": 0,
+     "docs": 500,
+     "billed": 500
+    }
+   },
+   "view": {
+    "form": {
+     "fProblem": "Synthetic improvement 120",
+     "fDefectType": "",
+     "fFourM": "",
+     "fLine": "A",
+     "fModel": "M-100 FR",
+     "fRootCause": "",
+     "fBeforePhoto": "",
+     "fRootCausePhoto": "",
+     "fActionPhoto": "",
+     "fAfterPhoto": "",
+     "fBeforeScrap": "",
+     "fAfterScrap": "",
+     "fStatus": "Monitoring"
+    }
+   },
+   "note": ""
+  },
+  {
+   "screen": "Improvement",
+   "action": "edit page (unknown id)",
+   "reads": {
+    "improvements": {
+     "LIST": 2,
+     "GET": 0,
+     "docs": 500,
+     "billed": 500
+    }
+   },
+   "view": {
+    "connectionBanner": "⚠ Improvement record not found."
+   },
+   "note": ""
+  },
+  {
+   "screen": "Executive Report",
+   "action": "open",
+   "reads": {
+    "prodV2_actualLogs": {
+     "LIST": 0,
+     "GET": 6,
+     "docs": 0,
+     "billed": 6
+    },
+    "scrapLogs": {
+     "LIST": 1,
+     "GET": 0,
+     "docs": 0,
+     "billed": 1
+    },
+    "improvements": {
+     "LIST": 1,
+     "GET": 0,
+     "docs": 250,
+     "billed": 250
+    },
+    "scrapCloseSummary": {
+     "LIST": 1,
+     "GET": 0,
+     "docs": 0,
+     "billed": 1
+    }
+   },
+   "view": {},
+   "note": ""
+  }
+ ]
+}

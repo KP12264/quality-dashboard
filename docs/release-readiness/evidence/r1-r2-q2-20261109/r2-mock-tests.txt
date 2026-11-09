@@ -1,0 +1,21 @@
+ok | VERIFY STATUS: PASS | RESULT: verification PASS
+listpage | VERIFY STATUS: PASS | RESULT: verification PASS
+qs_nodata | VERIFY STATUS: INCOMPLETE | RESULT: verification INCOMPLETE - send the package; do not edit files
+ops_nodata | VERIFY STATUS: INCOMPLETE | RESULT: verification INCOMPLETE - send the package; do not edit files
+all_nodata | VERIFY STATUS: INCOMPLETE | RESULT: verification INCOMPLETE - send the package; do not edit files
+missing | VERIFY STATUS: INCOMPLETE | RESULT: verification INCOMPLETE - send the package; do not edit files
+baddist | VERIFY STATUS: FAIL | RESULT: verification FAIL - send the package; do not edit files
+wrongkind |  | STOP: metric firestore.googleapis.com/document/read_ops_count is GAUGE/INT64, expected DELTA/INT64 or DELTA/DI
+noread |  | STOP: firestore.googleapis.com/document/read_count is not in the metric list; refusing to continue
+listforeign |  | STOP: metric list contains 1 types outside firestore.googleapis.com/ (filter not applied as expected)
+listshape |  | STOP: metric list page 1: response does not match ListMetricDescriptorsResponse shape
+api403 |  | STOP: API call failed (see above). Nothing was changed.
+html502 |  | STOP: API call failed (see above). Nothing was changed.
+bad400 |  | STOP: API call failed (see above). Nothing was changed.
+loop_token |  | STOP: headers__document_read_count: API returned the same nextPageToken twice
+readmismatch | VERIFY STATUS: FAIL | RESULT: verification FAIL - send the package; do not edit files
+wrongrt | VERIFY STATUS: FAIL | RESULT: verification FAIL - send the package; do not edit files
+execerr | VERIFY STATUS: FAIL | RESULT: verification FAIL - send the package; do not edit files
+unreachable | VERIFY STATUS: FAIL | RESULT: verification FAIL - send the package; do not edit files
+notaunit | VERIFY STATUS: FAIL | RESULT: verification FAIL - send the package; do not edit files
+dup_conflict | VERIFY STATUS: FAIL | RESULT: verification FAIL - send the package; do not edit files

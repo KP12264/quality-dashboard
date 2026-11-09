@@ -1,0 +1,17 @@
+unit exit=0
+# pass 59
+# fail 0
+regression exit=0
+# pass 15
+# fail 0
+rules+e2e exit=0
+# pass 156
+# fail 0
+q2+signature exit=0
+# pass 19
+# fail 0
+ M docs/phase5/generated/migration-dry-run.md
+ M js/improvement-adapter.js
+ M js/improvement-page.js
+ M js/improvement-adapter.js
+ M js/improvement-page.js
