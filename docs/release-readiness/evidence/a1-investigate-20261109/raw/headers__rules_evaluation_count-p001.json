@@ -1,0 +1,215 @@
+{
+  "timeSeries": [
+    {
+      "metric": {
+        "labels": {
+          "module": "",
+          "request_method": "CREATE",
+          "ruleset_label": "STABLE",
+          "result": "ALLOW",
+          "version": ""
+        },
+        "type": "firestore.googleapis.com/rules/evaluation_count"
+      },
+      "resource": {
+        "type": "firestore.googleapis.com/Database",
+        "labels": {
+          "location": "asia-southeast1",
+          "project_id": "daily-production-report-46b60",
+          "database_id": "(default)"
+        }
+      },
+      "metricKind": "DELTA",
+      "valueType": "INT64"
+    },
+    {
+      "metric": {
+        "labels": {
+          "request_method": "DELETE",
+          "module": "",
+          "ruleset_label": "STABLE",
+          "result": "ALLOW",
+          "version": ""
+        },
+        "type": "firestore.googleapis.com/rules/evaluation_count"
+      },
+      "resource": {
+        "type": "firestore.googleapis.com/Database",
+        "labels": {
+          "location": "asia-southeast1",
+          "project_id": "daily-production-report-46b60",
+          "database_id": "(default)"
+        }
+      },
+      "metricKind": "DELTA",
+      "valueType": "INT64"
+    },
+    {
+      "metric": {
+        "labels": {
+          "result": "ALLOW",
+          "request_method": "GET",
+          "ruleset_label": "STABLE",
+          "module": "",
+          "version": ""
+        },
+        "type": "firestore.googleapis.com/rules/evaluation_count"
+      },
+      "resource": {
+        "type": "firestore.googleapis.com/Database",
+        "labels": {
+          "project_id": "daily-production-report-46b60",
+          "database_id": "(default)",
+          "location": "asia-southeast1"
+        }
+      },
+      "metricKind": "DELTA",
+      "valueType": "INT64"
+    },
+    {
+      "metric": {
+        "labels": {
+          "request_method": "LIST",
+          "ruleset_label": "STABLE",
+          "result": "ALLOW",
+          "version": "",
+          "module": ""
+        },
+        "type": "firestore.googleapis.com/rules/evaluation_count"
+      },
+      "resource": {
+        "type": "firestore.googleapis.com/Database",
+        "labels": {
+          "project_id": "daily-production-report-46b60",
+          "location": "asia-southeast1",
+          "database_id": "(default)"
+        }
+      },
+      "metricKind": "DELTA",
+      "valueType": "INT64"
+    },
+    {
+      "metric": {
+        "labels": {
+          "ruleset_label": "STABLE",
+          "version": "",
+          "result": "ALLOW",
+          "request_method": "UPDATE",
+          "module": ""
+        },
+        "type": "firestore.googleapis.com/rules/evaluation_count"
+      },
+      "resource": {
+        "type": "firestore.googleapis.com/Database",
+        "labels": {
+          "database_id": "(default)",
+          "project_id": "daily-production-report-46b60",
+          "location": "asia-southeast1"
+        }
+      },
+      "metricKind": "DELTA",
+      "valueType": "INT64"
+    },
+    {
+      "metric": {
+        "labels": {
+          "request_method": "CREATE",
+          "result": "ALLOW",
+          "version": "__unknown__",
+          "ruleset_label": "STABLE",
+          "module": "__unknown__"
+        },
+        "type": "firestore.googleapis.com/rules/evaluation_count"
+      },
+      "resource": {
+        "type": "firestore_instance",
+        "labels": {
+          "project_id": "daily-production-report-46b60"
+        }
+      },
+      "metricKind": "DELTA",
+      "valueType": "INT64"
+    },
+    {
+      "metric": {
+        "labels": {
+          "request_method": "DELETE",
+          "module": "__unknown__",
+          "ruleset_label": "STABLE",
+          "version": "__unknown__",
+          "result": "ALLOW"
+        },
+        "type": "firestore.googleapis.com/rules/evaluation_count"
+      },
+      "resource": {
+        "type": "firestore_instance",
+        "labels": {
+          "project_id": "daily-production-report-46b60"
+        }
+      },
+      "metricKind": "DELTA",
+      "valueType": "INT64"
+    },
+    {
+      "metric": {
+        "labels": {
+          "version": "__unknown__",
+          "module": "__unknown__",
+          "ruleset_label": "STABLE",
+          "result": "ALLOW",
+          "request_method": "GET"
+        },
+        "type": "firestore.googleapis.com/rules/evaluation_count"
+      },
+      "resource": {
+        "type": "firestore_instance",
+        "labels": {
+          "project_id": "daily-production-report-46b60"
+        }
+      },
+      "metricKind": "DELTA",
+      "valueType": "INT64"
+    },
+    {
+      "metric": {
+        "labels": {
+          "version": "__unknown__",
+          "module": "__unknown__",
+          "request_method": "LIST",
+          "result": "ALLOW",
+          "ruleset_label": "STABLE"
+        },
+        "type": "firestore.googleapis.com/rules/evaluation_count"
+      },
+      "resource": {
+        "type": "firestore_instance",
+        "labels": {
+          "project_id": "daily-production-report-46b60"
+        }
+      },
+      "metricKind": "DELTA",
+      "valueType": "INT64"
+    },
+    {
+      "metric": {
+        "labels": {
+          "version": "__unknown__",
+          "module": "__unknown__",
+          "ruleset_label": "STABLE",
+          "result": "ALLOW",
+          "request_method": "UPDATE"
+        },
+        "type": "firestore.googleapis.com/rules/evaluation_count"
+      },
+      "resource": {
+        "type": "firestore_instance",
+        "labels": {
+          "project_id": "daily-production-report-46b60"
+        }
+      },
+      "metricKind": "DELTA",
+      "valueType": "INT64"
+    }
+  ],
+  "unit": "1"
+}

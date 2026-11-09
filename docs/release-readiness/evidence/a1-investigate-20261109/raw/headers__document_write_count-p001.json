@@ -1,0 +1,59 @@
+{
+  "timeSeries": [
+    {
+      "metric": {
+        "labels": {
+          "version": "__unknown__",
+          "module": "__unknown__",
+          "op": "CREATE"
+        },
+        "type": "firestore.googleapis.com/document/write_count"
+      },
+      "resource": {
+        "type": "firestore_instance",
+        "labels": {
+          "project_id": "daily-production-report-46b60"
+        }
+      },
+      "metricKind": "DELTA",
+      "valueType": "INT64"
+    },
+    {
+      "metric": {
+        "labels": {
+          "op": "UPDATE",
+          "module": "__unknown__",
+          "version": "__unknown__"
+        },
+        "type": "firestore.googleapis.com/document/write_count"
+      },
+      "resource": {
+        "type": "firestore_instance",
+        "labels": {
+          "project_id": "daily-production-report-46b60"
+        }
+      },
+      "metricKind": "DELTA",
+      "valueType": "INT64"
+    },
+    {
+      "metric": {
+        "labels": {
+          "op": "UPDATE_NOOP",
+          "version": "__unknown__",
+          "module": "__unknown__"
+        },
+        "type": "firestore.googleapis.com/document/write_count"
+      },
+      "resource": {
+        "type": "firestore_instance",
+        "labels": {
+          "project_id": "daily-production-report-46b60"
+        }
+      },
+      "metricKind": "DELTA",
+      "valueType": "INT64"
+    }
+  ],
+  "unit": "1"
+}

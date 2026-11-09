@@ -1,0 +1,75 @@
+{
+  "name": "headers__document_write_count",
+  "metric": "firestore.googleapis.com/document/write_count",
+  "resourceType": "",
+  "filter": "metric.type=\"firestore.googleapis.com/document/write_count\"",
+  "view": "HEADERS",
+  "startTime": "2026-10-26T00:00:00Z",
+  "endTime": "2026-10-31T00:00:00Z",
+  "alignmentPeriod": "",
+  "perSeriesAligner": "",
+  "crossSeriesReducer": "",
+  "groupByFields": [],
+  "pages": 1,
+  "units": [
+    "1"
+  ],
+  "executionErrors": [],
+  "unreachable": [],
+  "timeSeries": [
+    {
+      "metric": {
+        "labels": {
+          "version": "__unknown__",
+          "module": "__unknown__",
+          "op": "CREATE"
+        },
+        "type": "firestore.googleapis.com/document/write_count"
+      },
+      "resource": {
+        "type": "firestore_instance",
+        "labels": {
+          "project_id": "daily-production-report-46b60"
+        }
+      },
+      "metricKind": "DELTA",
+      "valueType": "INT64"
+    },
+    {
+      "metric": {
+        "labels": {
+          "op": "UPDATE",
+          "module": "__unknown__",
+          "version": "__unknown__"
+        },
+        "type": "firestore.googleapis.com/document/write_count"
+      },
+      "resource": {
+        "type": "firestore_instance",
+        "labels": {
+          "project_id": "daily-production-report-46b60"
+        }
+      },
+      "metricKind": "DELTA",
+      "valueType": "INT64"
+    },
+    {
+      "metric": {
+        "labels": {
+          "op": "UPDATE_NOOP",
+          "version": "__unknown__",
+          "module": "__unknown__"
+        },
+        "type": "firestore.googleapis.com/document/write_count"
+      },
+      "resource": {
+        "type": "firestore_instance",
+        "labels": {
+          "project_id": "daily-production-report-46b60"
+        }
+      },
+      "metricKind": "DELTA",
+      "valueType": "INT64"
+    }
+  ]
+}

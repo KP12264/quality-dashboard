@@ -1,0 +1,53 @@
+{
+  "name": "ts__document_delete_count__firestore_instance",
+  "metric": "firestore.googleapis.com/document/delete_count",
+  "resourceType": "firestore_instance",
+  "filter": "metric.type=\"firestore.googleapis.com/document/delete_count\" AND resource.type=\"firestore_instance\"",
+  "view": "FULL",
+  "startTime": "2026-10-26T00:00:00Z",
+  "endTime": "2026-10-31T00:00:00Z",
+  "alignmentPeriod": "3600s",
+  "perSeriesAligner": "ALIGN_SUM",
+  "crossSeriesReducer": "REDUCE_SUM",
+  "groupByFields": [
+    "resource.type",
+    "metric.label.module",
+    "metric.label.version"
+  ],
+  "pages": 1,
+  "units": [
+    "1"
+  ],
+  "executionErrors": [],
+  "unreachable": [],
+  "timeSeries": [
+    {
+      "metric": {
+        "labels": {
+          "module": "__unknown__",
+          "version": "__unknown__"
+        },
+        "type": "firestore.googleapis.com/document/delete_count"
+      },
+      "resource": {
+        "type": "firestore_instance",
+        "labels": {
+          "project_id": "daily-production-report-46b60"
+        }
+      },
+      "metricKind": "DELTA",
+      "valueType": "INT64",
+      "points": [
+        {
+          "interval": {
+            "startTime": "2026-10-27T18:00:00Z",
+            "endTime": "2026-10-27T19:00:00Z"
+          },
+          "value": {
+            "int64Value": "1"
+          }
+        }
+      ]
+    }
+  ]
+}

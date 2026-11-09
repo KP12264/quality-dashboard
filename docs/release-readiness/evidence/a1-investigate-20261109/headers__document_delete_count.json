@@ -1,0 +1,38 @@
+{
+  "name": "headers__document_delete_count",
+  "metric": "firestore.googleapis.com/document/delete_count",
+  "resourceType": "",
+  "filter": "metric.type=\"firestore.googleapis.com/document/delete_count\"",
+  "view": "HEADERS",
+  "startTime": "2026-10-26T00:00:00Z",
+  "endTime": "2026-10-31T00:00:00Z",
+  "alignmentPeriod": "",
+  "perSeriesAligner": "",
+  "crossSeriesReducer": "",
+  "groupByFields": [],
+  "pages": 1,
+  "units": [
+    "1"
+  ],
+  "executionErrors": [],
+  "unreachable": [],
+  "timeSeries": [
+    {
+      "metric": {
+        "labels": {
+          "version": "__unknown__",
+          "module": "__unknown__"
+        },
+        "type": "firestore.googleapis.com/document/delete_count"
+      },
+      "resource": {
+        "type": "firestore_instance",
+        "labels": {
+          "project_id": "daily-production-report-46b60"
+        }
+      },
+      "metricKind": "DELTA",
+      "valueType": "INT64"
+    }
+  ]
+}

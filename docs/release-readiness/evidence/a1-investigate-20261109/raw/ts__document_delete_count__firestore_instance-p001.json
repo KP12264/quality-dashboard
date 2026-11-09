@@ -1,0 +1,33 @@
+{
+  "timeSeries": [
+    {
+      "metric": {
+        "labels": {
+          "module": "__unknown__",
+          "version": "__unknown__"
+        },
+        "type": "firestore.googleapis.com/document/delete_count"
+      },
+      "resource": {
+        "type": "firestore_instance",
+        "labels": {
+          "project_id": "daily-production-report-46b60"
+        }
+      },
+      "metricKind": "DELTA",
+      "valueType": "INT64",
+      "points": [
+        {
+          "interval": {
+            "startTime": "2026-10-27T18:00:00Z",
+            "endTime": "2026-10-27T19:00:00Z"
+          },
+          "value": {
+            "int64Value": "1"
+          }
+        }
+      ]
+    }
+  ],
+  "unit": "1"
+}

@@ -1,0 +1,57 @@
+{
+  "name": "headers__network_active_connections",
+  "metric": "firestore.googleapis.com/network/active_connections",
+  "resourceType": "",
+  "filter": "metric.type=\"firestore.googleapis.com/network/active_connections\"",
+  "view": "HEADERS",
+  "startTime": "2026-10-26T00:00:00Z",
+  "endTime": "2026-10-31T00:00:00Z",
+  "alignmentPeriod": "",
+  "perSeriesAligner": "",
+  "crossSeriesReducer": "",
+  "groupByFields": [],
+  "pages": 1,
+  "units": [
+    "1"
+  ],
+  "executionErrors": [],
+  "unreachable": [],
+  "timeSeries": [
+    {
+      "metric": {
+        "labels": {
+          "version": "",
+          "module": ""
+        },
+        "type": "firestore.googleapis.com/network/active_connections"
+      },
+      "resource": {
+        "type": "firestore.googleapis.com/Database",
+        "labels": {
+          "database_id": "(default)",
+          "location": "asia-southeast1",
+          "project_id": "daily-production-report-46b60"
+        }
+      },
+      "metricKind": "GAUGE",
+      "valueType": "INT64"
+    },
+    {
+      "metric": {
+        "labels": {
+          "version": "__unknown__",
+          "module": "__unknown__"
+        },
+        "type": "firestore.googleapis.com/network/active_connections"
+      },
+      "resource": {
+        "type": "firestore_instance",
+        "labels": {
+          "project_id": "daily-production-report-46b60"
+        }
+      },
+      "metricKind": "GAUGE",
+      "valueType": "INT64"
+    }
+  ]
+}

@@ -1,0 +1,154 @@
+script  : a1-investigate.sh v1 (steps 1-2, read-only)
+project : daily-production-report-46b60
+window  : 2026-10-26T00:00:00Z -> 2026-10-31T00:00:00Z
+curl    : 8.5.0
+
+== Step 1: metricDescriptors.list (filter: metric.type starts_with firestore.googleapis.com/) ==
+Firestore metrics found: 31 (pages=1) -> metric-list.txt
+  firestore.googleapis.com/api/billable_read_units	DELTA	INT64	1	labels=[service,api_method]	resources=[firestore.googleapis.com/Database]
+  firestore.googleapis.com/api/billable_realtime_read_units	DELTA	INT64	1	labels=[service,api_method]	resources=[firestore.googleapis.com/Database]
+  firestore.googleapis.com/api/billable_write_units	DELTA	INT64	1	labels=[service,api_method]	resources=[firestore.googleapis.com/Database]
+  firestore.googleapis.com/api/request_count	DELTA	INT64	1	labels=[api_method,response_code]	resources=[datastore_request,firestore.googleapis.com/Database]
+  firestore.googleapis.com/api/request_latencies	DELTA	DISTRIBUTION	s	labels=[service,api_method,response_code]	resources=[firestore.googleapis.com/Database]
+  firestore.googleapis.com/composite_indexes_per_database	GAUGE	INT64	1	labels=[]	resources=[firestore.googleapis.com/Database]
+  firestore.googleapis.com/document/billable_managed_delete_write_units	DELTA	INT64	1	labels=[]	resources=[firestore.googleapis.com/Database]
+  firestore.googleapis.com/document/delete_count	DELTA	INT64	1	labels=[module,version]	resources=[firestore_instance]
+  firestore.googleapis.com/document/delete_ops_count	DELTA	INT64	1	labels=[]	resources=[firestore.googleapis.com/Database]
+  firestore.googleapis.com/document/read_count	DELTA	INT64	1	labels=[module,version,type]	resources=[firestore_instance]
+  firestore.googleapis.com/document/read_ops_count	DELTA	INT64	1	labels=[type]	resources=[firestore.googleapis.com/Database]
+  firestore.googleapis.com/document/ttl_deletion_count	DELTA	INT64	1	labels=[]	resources=[firestore.googleapis.com/Database,firestore_instance]
+  firestore.googleapis.com/document/ttl_expiration_to_deletion_delays	DELTA	DISTRIBUTION	s	labels=[]	resources=[firestore.googleapis.com/Database,firestore_instance]
+  firestore.googleapis.com/document/write_count	DELTA	INT64	1	labels=[module,version,op]	resources=[firestore_instance]
+  firestore.googleapis.com/document/write_ops_count	DELTA	INT64	1	labels=[op]	resources=[firestore.googleapis.com/Database]
+  firestore.googleapis.com/field_configurations_per_database	GAUGE	INT64	1	labels=[]	resources=[firestore.googleapis.com/Database]
+  firestore.googleapis.com/mcp/request_count	DELTA	INT64	1	labels=[tool_name,response_code]	resources=[firestore.googleapis.com/Database]
+  firestore.googleapis.com/mcp/request_latencies	DELTA	DISTRIBUTION	s	labels=[tool_name,response_code]	resources=[firestore.googleapis.com/Database]
+  firestore.googleapis.com/network/active_connections	GAUGE	INT64	1	labels=[module,version]	resources=[firestore.googleapis.com/Database,firestore_instance]
+  firestore.googleapis.com/network/active_ignite_connections	GAUGE	INT64	1	labels=[module,version]	resources=[firestore.googleapis.com/Database]
+  firestore.googleapis.com/network/snapshot_listeners	GAUGE	INT64	1	labels=[module,version]	resources=[firestore.googleapis.com/Database,firestore_instance]
+  firestore.googleapis.com/query_stat/per_query/result_counts	DELTA	DISTRIBUTION	{result}	labels=[service,method]	resources=[firestore.googleapis.com/Database]
+  firestore.googleapis.com/query_stat/per_query/scanned_documents_counts	DELTA	DISTRIBUTION	{document}	labels=[service,method]	resources=[firestore.googleapis.com/Database]
+  firestore.googleapis.com/query_stat/per_query/scanned_index_entries_counts	DELTA	DISTRIBUTION	{index entry}	labels=[service,method]	resources=[firestore.googleapis.com/Database]
+  firestore.googleapis.com/quota/composite_indexes_per_database/exceeded	DELTA	INT64	1	labels=[limit_name]	resources=[firestore.googleapis.com/Database]
+  firestore.googleapis.com/quota/composite_indexes_per_database/limit	GAUGE	INT64	1	labels=[limit_name]	resources=[firestore.googleapis.com/Database]
+  firestore.googleapis.com/quota/composite_indexes_per_database/usage	GAUGE	INT64	1	labels=[limit_name]	resources=[firestore.googleapis.com/Database]
+  firestore.googleapis.com/rules/evaluation_count	DELTA	INT64	1	labels=[request_method,ruleset_label,version,module,result]	resources=[firestore.googleapis.com/Database,firestore_instance]
+  firestore.googleapis.com/storage/backups_storage_bytes	GAUGE	INT64	By	labels=[]	resources=[firestore.googleapis.com/Database]
+  firestore.googleapis.com/storage/data_and_index_storage_bytes	GAUGE	INT64	By	labels=[]	resources=[firestore.googleapis.com/Database]
+  firestore.googleapis.com/storage/pitr_storage_bytes	GAUGE	INT64	By	labels=[]	resources=[firestore.googleapis.com/Database]
+selected: 3 core, 4 optional (pattern: listener|connection|/network/|/rules/|snapshot)
+  core	firestore.googleapis.com/document/read_count
+  core	firestore.googleapis.com/document/write_count
+  core	firestore.googleapis.com/document/delete_count
+  opt	firestore.googleapis.com/network/active_connections
+  opt	firestore.googleapis.com/network/active_ignite_connections
+  opt	firestore.googleapis.com/network/snapshot_listeners
+  opt	firestore.googleapis.com/rules/evaluation_count
+
+== Step 2: hourly data per metric and resource type (alignmentPeriod=3600s) ==
+headers__document_read_count: pages=1 rawSeries=2 executionErrors=0 unreachable=0 units=["1"]
+firestore.googleapis.com/document/read_count [firestore_instance] kind=DELTA value=INT64 aligner=ALIGN_SUM groupBy: resource.type metric.label.module metric.label.type metric.label.version
+ts__document_read_count__firestore_instance: pages=1 rawSeries=2 executionErrors=0 unreachable=0 units=["1"]
+headers__document_write_count: pages=1 rawSeries=3 executionErrors=0 unreachable=0 units=["1"]
+firestore.googleapis.com/document/write_count [firestore_instance] kind=DELTA value=INT64 aligner=ALIGN_SUM groupBy: resource.type metric.label.module metric.label.op metric.label.version
+ts__document_write_count__firestore_instance: pages=1 rawSeries=3 executionErrors=0 unreachable=0 units=["1"]
+headers__document_delete_count: pages=1 rawSeries=1 executionErrors=0 unreachable=0 units=["1"]
+firestore.googleapis.com/document/delete_count [firestore_instance] kind=DELTA value=INT64 aligner=ALIGN_SUM groupBy: resource.type metric.label.module metric.label.version
+ts__document_delete_count__firestore_instance: pages=1 rawSeries=1 executionErrors=0 unreachable=0 units=["1"]
+headers__network_active_connections: pages=1 rawSeries=2 executionErrors=0 unreachable=0 units=["1"]
+firestore.googleapis.com/network/active_connections [firestore.googleapis.com/Database] kind=GAUGE value=INT64 aligner=ALIGN_MAX groupBy: resource.type metric.label.module metric.label.version
+ts__network_active_connections__firestore.googleapis.com_Database: pages=1 rawSeries=1 executionErrors=0 unreachable=0 units=["1"]
+firestore.googleapis.com/network/active_connections [firestore_instance] kind=GAUGE value=INT64 aligner=ALIGN_MAX groupBy: resource.type metric.label.module metric.label.version
+ts__network_active_connections__firestore_instance: pages=1 rawSeries=1 executionErrors=0 unreachable=0 units=["1"]
+headers__network_active_ignite_connections: pages=1 rawSeries=0 executionErrors=0 unreachable=0 units=["1"]
+note: firestore.googleapis.com/network/active_ignite_connections has no series in the window (no data); not queried
+headers__network_snapshot_listeners: pages=1 rawSeries=2 executionErrors=0 unreachable=0 units=["1"]
+firestore.googleapis.com/network/snapshot_listeners [firestore.googleapis.com/Database] kind=GAUGE value=INT64 aligner=ALIGN_MAX groupBy: resource.type metric.label.module metric.label.version
+ts__network_snapshot_listeners__firestore.googleapis.com_Database: pages=1 rawSeries=1 executionErrors=0 unreachable=0 units=["1"]
+firestore.googleapis.com/network/snapshot_listeners [firestore_instance] kind=GAUGE value=INT64 aligner=ALIGN_MAX groupBy: resource.type metric.label.module metric.label.version
+ts__network_snapshot_listeners__firestore_instance: pages=1 rawSeries=1 executionErrors=0 unreachable=0 units=["1"]
+headers__rules_evaluation_count: pages=1 rawSeries=10 executionErrors=0 unreachable=0 units=["1"]
+firestore.googleapis.com/rules/evaluation_count [firestore.googleapis.com/Database] kind=DELTA value=INT64 aligner=ALIGN_SUM groupBy: resource.type metric.label.module metric.label.request_method metric.label.result metric.label.ruleset_label metric.label.version
+ts__rules_evaluation_count__firestore.googleapis.com_Database: pages=1 rawSeries=5 executionErrors=0 unreachable=0 units=["1"]
+firestore.googleapis.com/rules/evaluation_count [firestore_instance] kind=DELTA value=INT64 aligner=ALIGN_SUM groupBy: resource.type metric.label.module metric.label.request_method metric.label.result metric.label.ruleset_label metric.label.version
+ts__rules_evaluation_count__firestore_instance: pages=1 rawSeries=5 executionErrors=0 unreachable=0 units=["1"]
+
+== Step 3: verification and fact table ==
+metric with no series in window: firestore.googleapis.com/network/active_ignite_connections (opt)
+window 2026-10-26T00:00:00Z .. 2026-10-31T00:00:00Z = 120 hourly buckets; datasets = 9
+RULE: values are kept per metric and per resource type; nothing is added across them.
+## 1. read_count consistency with earlier evidence
+  hourly vs Update 2 evidence: hours differing = 0
+  2026-10-26: hourly-sum=5088 u1=5088 MATCH
+  2026-10-27: hourly-sum=49720 u1=49720 MATCH
+  2026-10-28: hourly-sum=5424 u1=5424 MATCH
+  2026-10-29: hourly-sum=21375 u1=21375 MATCH
+  2026-10-30: hourly-sum=6437 u1=6437 MATCH
+## 2. Per UTC day: total for DELTA/CUMULATIVE, maximum hourly value for GAUGE (per metric and resource type)
+  document/delete_count [firestore_instance] (DELTA/ALIGN_SUM): 26 Oct=0, 27 Oct=1, 28 Oct=0, 29 Oct=0, 30 Oct=0; hours with a point=1/120
+     {'module': '__unknown__', 'version': '__unknown__'}: total=1 hours=1
+  document/read_count [firestore_instance] (DELTA/ALIGN_SUM): 26 Oct=5088, 27 Oct=49720, 28 Oct=5424, 29 Oct=21375, 30 Oct=6437; hours with a point=68/120
+     {'module': '__unknown__', 'type': 'QUERY', 'version': '__unknown__'}: total=88044 hours=68
+     {'module': '__unknown__', 'type': 'LOOKUP', 'version': '__unknown__'}: total=0 hours=55
+  document/write_count [firestore_instance] (DELTA/ALIGN_SUM): 26 Oct=770, 27 Oct=911, 28 Oct=864, 29 Oct=692, 30 Oct=133; hours with a point=54/120
+     {'module': '__unknown__', 'op': 'UPDATE', 'version': '__unknown__'}: total=3075 hours=52
+     {'module': '__unknown__', 'op': 'CREATE', 'version': '__unknown__'}: total=282 hours=43
+     {'module': '__unknown__', 'op': 'UPDATE_NOOP', 'version': '__unknown__'}: total=13 hours=2
+  network/active_connections [firestore.googleapis.com/Database] (GAUGE/ALIGN_MAX): 26 Oct=6, 27 Oct=9, 28 Oct=5, 29 Oct=7, 30 Oct=5; hours with a point=64/120
+     {'module': '', 'version': ''}: total=138 hours=64
+  network/active_connections [firestore_instance] (GAUGE/ALIGN_MAX): 26 Oct=6, 27 Oct=9, 28 Oct=5, 29 Oct=7, 30 Oct=5; hours with a point=64/120
+     {'module': '__unknown__', 'version': '__unknown__'}: total=138 hours=64
+  network/snapshot_listeners [firestore.googleapis.com/Database] (GAUGE/ALIGN_MAX): 26 Oct=1, 27 Oct=8, 28 Oct=2, 29 Oct=29, 30 Oct=1; hours with a point=64/120
+     {'module': '', 'version': ''}: total=51 hours=64
+  network/snapshot_listeners [firestore_instance] (GAUGE/ALIGN_MAX): 26 Oct=1, 27 Oct=8, 28 Oct=2, 29 Oct=29, 30 Oct=1; hours with a point=64/120
+     {'module': '__unknown__', 'version': '__unknown__'}: total=51 hours=64
+  rules/evaluation_count [firestore.googleapis.com/Database] (DELTA/ALIGN_SUM): 26 Oct=1770, 27 Oct=5271, 28 Oct=1636, 29 Oct=14600, 30 Oct=6339; hours with a point=71/120
+     {'module': '', 'request_method': 'GET', 'result': 'ALLOW', 'ruleset_label': 'STABLE', 'version': ''}: total=21975 hours=65
+     {'module': '', 'request_method': 'LIST', 'result': 'ALLOW', 'ruleset_label': 'STABLE', 'version': ''}: total=4270 hours=67
+     {'module': '', 'request_method': 'UPDATE', 'result': 'ALLOW', 'ruleset_label': 'STABLE', 'version': ''}: total=3088 hours=52
+     {'module': '', 'request_method': 'CREATE', 'result': 'ALLOW', 'ruleset_label': 'STABLE', 'version': ''}: total=282 hours=43
+     {'module': '', 'request_method': 'DELETE', 'result': 'ALLOW', 'ruleset_label': 'STABLE', 'version': ''}: total=1 hours=1
+  rules/evaluation_count [firestore_instance] (DELTA/ALIGN_SUM): 26 Oct=1770, 27 Oct=5271, 28 Oct=1636, 29 Oct=14600, 30 Oct=6339; hours with a point=71/120
+     {'module': '__unknown__', 'request_method': 'GET', 'result': 'ALLOW', 'ruleset_label': 'STABLE', 'version': '__unknown__'}: total=21975 hours=65
+     {'module': '__unknown__', 'request_method': 'LIST', 'result': 'ALLOW', 'ruleset_label': 'STABLE', 'version': '__unknown__'}: total=4270 hours=67
+     {'module': '__unknown__', 'request_method': 'UPDATE', 'result': 'ALLOW', 'ruleset_label': 'STABLE', 'version': '__unknown__'}: total=3088 hours=52
+     {'module': '__unknown__', 'request_method': 'CREATE', 'result': 'ALLOW', 'ruleset_label': 'STABLE', 'version': '__unknown__'}: total=282 hours=43
+     {'module': '__unknown__', 'request_method': 'DELETE', 'result': 'ALLOW', 'ruleset_label': 'STABLE', 'version': '__unknown__'}: total=1 hours=1
+## 3. Fact table: flagged hours (Update 2 list + reads >= 1000); UTC bucket end and Thailand time
+  legend: '0?' = no point in that hour (treated as 0, NOT verified); GAUGE columns are the sum of per-series hourly maxima
+  UTC hour ending | Thailand | reads | document/write_count[firestore_instance] | document/delete_count[firestore_instance] | network/active_connections[firestore.googleapis.com/Database] | network/active_connections[firestore_instance] | network/snapshot_listeners[firestore.googleapis.com/Database] | network/snapshot_listeners[firestore_instance] | rules/evaluation_count[firestore.googleapis.com/Database] | rules/evaluation_count[firestore_instance] | pattern
+  2026-10-26T05:00:00Z | 26 Oct 11:00-12:00 | 1450 | 4 | 0? | 6 | 6 | 0 | 0 | 98 | 98 | reads+writes (deletes 0? unverified)
+  2026-10-27T02:00:00Z | 27 Oct 08:00-09:00 | 1308 | 301 | 0? | 3 | 3 | 1 | 1 | 446 | 446 | reads+writes (deletes 0? unverified)
+  2026-10-27T03:00:00Z | 27 Oct 09:00-10:00 | 1131 | 169 | 0? | 5 | 5 | 0 | 0 | 283 | 283 | reads+writes (deletes 0? unverified)
+  2026-10-27T05:00:00Z | 27 Oct 11:00-12:00 | 22636 | 136 | 0? | 9 | 9 | 8 | 8 | 1584 | 1584 | reads+writes (deletes 0? unverified)
+  2026-10-27T18:00:00Z | 28 Oct 00:00-01:00 | 9316 | 61 | 0? | 2 | 2 | 0 | 0 | 467 | 467 | reads+writes (deletes 0? unverified)
+  2026-10-27T19:00:00Z | 28 Oct 01:00-02:00 | 13701 | 53 | 1 | 6 | 6 | 1 | 1 | 1552 | 1552 | reads+writes+deletes
+  2026-10-28T02:00:00Z | 28 Oct 08:00-09:00 | 1439 | 297 | 0? | 3 | 3 | 0 | 0 | 426 | 426 | reads+writes (deletes 0? unverified)
+  2026-10-28T09:00:00Z | 28 Oct 15:00-16:00 | 1091 | 60 | 0? | 3 | 3 | 0 | 0 | 191 | 191 | reads+writes (deletes 0? unverified)
+  2026-10-29T02:00:00Z | 29 Oct 08:00-09:00 | 1546 | 165 | 0? | 1 | 1 | 0 | 0 | 1904 | 1904 | reads+writes (deletes 0? unverified)
+  2026-10-29T03:00:00Z | 29 Oct 09:00-10:00 | 7408 | 279 | 0? | 7 | 7 | 0 | 0 | 704 | 704 | reads+writes (deletes 0? unverified)
+  2026-10-29T21:00:00Z | 30 Oct 03:00-04:00 | 2764 | 0? | 0? | 3 | 3 | 7 | 7 | 2364 | 2364 | reads (writes/deletes 0? unverified)
+  2026-10-29T22:00:00Z | 30 Oct 04:00-05:00 | 1878 | 0? | 0? | 3 | 3 | 0 | 0 | 2308 | 2308 | reads (writes/deletes 0? unverified)
+  2026-10-29T23:00:00Z | 30 Oct 05:00-06:00 | 3187 | 0? | 0? | 4 | 4 | 0 | 0 | 4631 | 4631 | reads (writes/deletes 0? unverified)
+  2026-10-30T00:00:00Z | 30 Oct 06:00-07:00 | 1269 | 0? | 0? | 4 | 4 | 0 | 0 | 1252 | 1252 | reads (writes/deletes 0? unverified)
+  2026-10-30T02:00:00Z | 30 Oct 08:00-09:00 | 4169 | 82 | 0? | 5 | 5 | 1 | 1 | 4229 | 4229 | reads+writes (deletes 0? unverified)
+  2026-10-30T15:00:00Z | 30 Oct 21:00-22:00 | 1136 | 0? | 0? | 1 | 1 | 0 | 0 | 1507 | 1507 | reads (writes/deletes 0? unverified)
+## 4. Hypotheses to test per pattern (NOT conclusions)
+  - reads only: viewing/reporting, a reading script or export-like job, or listener traffic; needs owner records.
+  - reads+writes: import, migration, bulk edit or a sync job; compare with owners' import logs.
+  - reads+deletes: cleanup or data reset job.
+  - listener/connection metrics high in the same hour (if collected): supports long-lived listeners (QD has none in code).
+  - rules metrics high in the same hour (if collected): supports protected reads/writes (rules get()/exists()).
+## 5. Interpretation limits
+  - Cloud Monitoring values, not the Spark quota ledger. No app/client/user/collection labels unless listed in collect-log.txt.
+  - '0?' cells are hours with no point: Cloud Monitoring omits empty buckets, so they are most likely 0 but not verified.
+  - GAUGE values are hourly maxima summed across series: an approximation, not a count.
+
+WARNINGS:
+  none
+INCOMPLETE-EVIDENCE NOTES:
+  none
+FAILURES:
+  none
+VERIFY STATUS: PASS
+token check: no token or token-like string in output

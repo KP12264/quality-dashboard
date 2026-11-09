@@ -398,3 +398,80 @@ Hypotheses (each to be checked; none assumed):
 2. Hourly reads vs writes vs deletes for 26–30 Oct; listener / connection and rules-evaluation metrics if they exist.
 3. Read existing **Admin Activity** audit logs (always on; reading changes nothing) for import, export, index or database changes.
 4. Owners: who or what runs at 01:00 Thailand daily, and what happened at the hours in the table above.
+
+---
+
+## Update 3, 2026-11-09: what the reads were (metric list, writes, deletes, listeners, connections, rules)
+
+Collected read-only by the Firebase owner in Cloud Shell with `a1-investigate.sh` v1, steps 1-2 only (only GET calls to the Cloud Monitoring API; no audit logs). Evidence and hashes: [`evidence/a1-investigate-20261109/`](evidence/a1-investigate-20261109/README.md). Package SHA-256 `405b323f…0648` (matches the owner's value).
+
+### Data check
+
+- Collector exit 0 = **PASS**; warnings none; failures none. `verify.py` was re-run here on a copy of the data: identical report, byte for byte.
+- Window 2026-10-26T00:00Z → 2026-10-31T00:00Z (120 hours), one query per (metric, resource type).
+- `read_count` equals the Update 2 evidence in **all 120 hours**, and U1 on all 5 days.
+- The API lists **31 Firestore metrics** (`metric-list.txt`). Collected: `document/read_count`, `write_count`, `delete_count`, `network/active_connections`, `network/snapshot_listeners`, `rules/evaluation_count`. `network/active_ignite_connections` exists but has no data in the window.
+- Connections, listeners and rules evaluations are reported under both `firestore_instance` and `firestore.googleapis.com/Database` with **identical values in every hour**: one copy is used, nothing is added.
+
+### Totals, 26-30 Oct (UTC)
+
+| Metric | Total / max | Facts |
+|---|---|---|
+| Reads | 88,044 | all `type=QUERY`; `LOOKUP` = 0 |
+| Writes | 3,370 | UPDATE 3,075 · CREATE 282 · UPDATE_NOOP 13; per day 770 / 911 / 864 / 692 / 133; highest hour 301 |
+| Deletes | **1** | 28 Oct 01:00-02:00 Thailand |
+| Active connections (gauge, max) | 5-9 per day | |
+| Snapshot listeners (gauge, max) | 1 / **8** / 2 / **29** / 1 per day | |
+| Rules evaluations | 26,617, all ALLOW, ruleset `STABLE` | GET 21,975 · LIST 4,270 · UPDATE 3,088 · CREATE 282 · DELETE 1 |
+
+Every hour with reads also has rules evaluations.
+
+### Two read patterns (reads ÷ rules GET+LIST evaluations)
+
+**Pattern A: many documents per evaluation (about 9-23)**
+
+| Thailand | Reads | Rules GET / LIST | Writes upd / create | Listeners max |
+|---|---|---|---|---|
+| **27 Oct 11-12** | **22,636** | 592 / 856 | 130 / 0 | **8** |
+| 28 Oct 00-01 | 9,316 | 69 / 337 | 12 / 49 | 0 |
+| 28 Oct 01-02 | 13,701 | 998 / 500 | 27 / 19 (+1 delete) | 1 |
+| 29 Oct 09-10 | 7,408 | 139 / 286 | 272 / 7 | 0 |
+| 26 Oct 11-12 | 1,450 | 23 / 71 | 4 / 0 | 0 |
+
+**Pattern B: about 1 read per GET evaluation (0.7-1.2), i.e. many single-document reads**
+
+| Thailand | Reads | Rules GET / LIST | Writes | Listeners max |
+|---|---|---|---|---|
+| 29 Oct 08-09 | 1,546 | 1,564 / 175 | 165 | 0 |
+| **30 Oct 03-07** (4 h) | 9,098 | 10,198 / 357 | 0 | 0-7 |
+| 30 Oct 08-09 | 4,169 | 3,956 / 191 | 82 | 1 |
+| 30 Oct 21-22 | 1,136 | 1,476 / 31 | 0 | 0 |
+
+### Facts
+
+- **No unusual hour looks like an import:** at most 130 UPDATE and 0-49 CREATE in the spike hours.
+- **Snapshot listeners are in use on this project:** 8 at the same time during the 22,636-read hour, 29 at 29 Oct 14:00-15:00 Thailand (only 187 reads that hour).
+- **QD has no `onSnapshot`** in `main` or V5 (code search), so those listeners belong to another client.
+- QD `main` reads PV2 production documents **one by one** with `doc(docId).get()` per date × line × shift (`js/data-adapter.js` lines 223, 244), which counts as GET.
+- The QD `main` deploy was 30 Oct 02:25-03:25 Thailand. `js/verify-after-deploy.js` only checks file sizes in the browser; it does not read Firestore.
+- In some Pattern B hours there are more GET evaluations than reads (e.g. 30 Oct 05-06: 4,550 vs 3,187). Not explained by this data.
+
+### Hypotheses (each to be tested; none assumed)
+
+1. Pattern B matches how QD reads production documents (a 31-day view is about 186 GETs). If 30 Oct 03:00-09:00 was QD, it would be about 70 such views (estimate), possibly post-deploy checking. PV2 may read documents the same way, so this is **not attributed**.
+2. Pattern A is queries returning many documents. A listener-using client (PV2, legacy, or the Firebase console data viewer) was active during the 22,636-read hour; that does **not** prove it caused the reads.
+3. The midnight activity (28 Oct 00:00-02:00) with a few creates could be night-shift entry, a script or console use.
+
+### Risk of QD V5 to PV2 (shared quota)
+
+- Daily use: V5 costs about the same as `main` to open (+1 read) and removes the filter re-reads (188 → 0), so the QD share should **fall**. Candidate rules add rule reads (A2: +1 per protected read, about +7 per save / close).
+- **Largest new V5 read event:** the bridge tools in `js/ops-console.js` (one Baseline cycle reads about 2-3 × N_L + N_S + I, estimate, within one hour). N_L is not known yet (U3).
+- **Main risk is cutover day:** migration plus post-deploy checking, stacking on an unexplained spike like 27 Oct. A1 stays **HIGH**.
+
+### Next (each approved separately)
+
+- Read-only: `api/billable_read_units` and `api/billable_realtime_read_units` by `api_method` / `service` (both confirmed to exist) to tell queries, batch gets and listeners apart.
+- U3 document counts (method and cost to be proposed first; no Production query without approval).
+- Code plan for P0: Q1 (bridge Gate reads) and Q2a/b (`improvements`); no code change without approval.
+
+**Status: A1 = HIGH. G2 = NOT APPROVED.**
