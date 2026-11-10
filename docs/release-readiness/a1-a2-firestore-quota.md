@@ -930,3 +930,54 @@ The filter re-read on live `main` was **not measured**.
 **Unknowns remain those of Update 11:** the owner of the 01:00 job and the cause of the spikes.
 
 **A1 = HIGH. G2 = NOT APPROVED.**
+
+## Update 13, 2026-11-10: O1 (PV2 Assembly) emulator results and owner index check
+
+### O1 emulator test (evidence commit `1cacb24`)
+
+Evidence: [`evidence/o1-assembly-20261110/`](evidence/o1-assembly-20261110/README.md) (14 files, `MANIFEST.sha256`). Local Firestore emulator only (`demo-quality-dashboard`), synthetic data, no Production access.
+
+The PV2 change tested was **local copies only**: `production-v2/js/assembly.js` @ `431836a`, line 100 changed from a whole-collection read to `where("date","==",date)`. The browser filter is unchanged.
+
+| Check | Result |
+|---|---|
+| O1 Before / After tests (`o1-assembly.test.js`) | **13 / 13 pass** |
+| PV2 rules compatibility (`tests/rules/pv2-compat.test.js`, unchanged) | **7 / 7 pass** |
+| Output identical (totals, matched count, HTML, status) | **363 / 363** date × shift cases |
+| Edge cases E1–E19 | same result in Before and After |
+| Triggers | page open, Date, Shift, Load: 1 load each in both versions; Model filter and empty date: 0 reads in both |
+| Four rules files, unchanged (`production` snapshot, `repoPv2`, `candidate`, `bridge`) | query allowed for anonymous and signed-in users; same documents as the browser filter |
+| Reads per load (emulator, 745 synthetic documents) | **745 → 1–14**; sum over 363 cases **270,435 → 2,202 (−99.2 %)** |
+
+### Owner index check (owner-reported, Firebase Console, 2026-11-10, view only)
+
+Project `daily-production-report-46b60`, database `(default)`, Indexes → Automatic:
+
+- Ascending: **Enabled**
+- Descending: **Enabled**
+- Arrays: **Enabled**
+- Exemptions: **none listed**
+
+**Fact (owner-reported):** there is no single-field index exemption for `prodV2_actualLogs.date`. The automatic settings are the defaults, so the O1 query (one equality filter, no `orderBy`) is served by the automatic single-field index. **No new index is needed.** No screenshot was received in this session; this is recorded as owner-reported.
+
+### O1 readiness
+
+The test-plan pass criteria are all met, including requirement 6 (no rules change, no new index). The readiness checklist is in the [P0 plan, Revision 4](p0-read-reduction-plan.md).
+
+Remaining before any real O1 change:
+
+1. Approval of the code change. O1 code change is **NOT APPROVED**.
+2. Agreement of the PV2 repository owner.
+3. A cache-busting version bump of `js/assembly.js?v=` in `production-v2/assembly.html:22`, so browsers load the new file. This is an HTML-only change, not part of the tested diff.
+4. A PV2 release / deploy path decided by its owner.
+5. A rollback plan: revert the one line and bump the version again.
+6. A post-change check.
+
+Limits that remain:
+
+- SDK 10.13.0 in Node was tested, not 9.23.0 in the browser.
+- A fake DOM was used.
+- Data was synthetic; the Production size of `prodV2_actualLogs` is unknown (U3 not approved). The saving per load is (all documents − documents of the selected date).
+- The O1 change reduces Assembly reads only. It does **not** explain or fix the W1–W6 spikes or the 01:00 job.
+
+**A1 = HIGH. G2 = NOT APPROVED.**

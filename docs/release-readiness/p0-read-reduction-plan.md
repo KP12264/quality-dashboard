@@ -1,5 +1,7 @@
 # P0 read-reduction plan: Q1 (migration gate), Q2a / Q2b (`improvements`)
 
+> **Revision 4, 2026-11-10:** O1 readiness checklist after the emulator test (evidence `1cacb24`: 13 / 13 and pv2-compat 7 / 7) and the owner index check (no exemption). **O1 code change NOT APPROVED.** See "Revision 4" at the end.
+>
 > **Revision 3, 2026-11-10:** optimization plan O1–O10 for QD and PV2, ranked by read risk, from the static analysis in the A1/A2 report, Update 12. **Plan only: no code changed, no tests run.** See "Revision 3" at the end.
 >
 > **Revision 2, 2026-11-09:** Q1 (redesigned gate) is implemented and committed (`8959c3f`, branch only; old path kept as fallback; emulator gate reads 364 → 184). See the A1/A2 report, Update 6.
@@ -327,3 +329,33 @@ No change proposed. First ask the owners whether the legacy root page is still d
 2. O2 waits for G2.
 3. Then O5, O6, and O7–O9.
 4. Every PV2 change belongs to the PV2 repository and its owner; this repository only holds the plans and test evidence.
+
+---
+
+## Revision 4, 2026-11-10: O1 readiness checklist (PV2 Assembly)
+
+Sources:
+
+- emulator evidence [`evidence/o1-assembly-20261110/`](evidence/o1-assembly-20261110/README.md) (commit `1cacb24`);
+- owner index check (owner-reported, A1/A2 report, Update 13).
+
+**The O1 code change is NOT APPROVED.** Nothing here changes QD, PV2, rules, indexes, keys, Billing or any deploy. **A1 = HIGH. G2 = NOT APPROVED.**
+
+| # | Requirement | Status | Basis |
+|---|---|---|---|
+| R1 | Reads before / after measured | **Done** | 745 → 1–14 per load; 270,435 → 2,202 over 363 cases (emulator, synthetic) |
+| R2 | Totals and display identical in 100 % of cases | **Done** | 363 / 363 identical; matched set = independent expectation 363 / 363 |
+| R3 | Date / Shift / Model filtering correct | **Done** | date × shift cases; 11 Model groups, 0 reads, same HTML |
+| R4 | Malformed / missing data (E1–E19) | **Done** | same result in Before and After |
+| R5 | No effect on other PV2 pages | **Done** | one line in one file; 34 PV2 file hashes unchanged; `assembly.js` loaded only by `assembly.html`; pv2-compat 7 / 7 |
+| R6a | No rules change | **Done** | four rules files unchanged; query allowed (anonymous and signed in) |
+| R6b | No new Production index | **Done (owner-reported)** | Automatic: Ascending / Descending / Arrays enabled; no exemptions (2026-11-10) |
+| N1 | Approval of the O1 code change | **Open** | not approved |
+| N2 | PV2 repository owner agreement; change made in the PV2 repository by its owner's process | **Open** | QD holds plans and evidence only |
+| N3 | Cache-busting: bump `js/assembly.js?v=20260902-fix5` in `production-v2/assembly.html:22` | **Open** | HTML-only; not in the tested diff; without it browsers may keep the old file |
+| N4 | Release / deploy path of PV2 and who performs it | **Open** | not known from this repository |
+| N5 | Rollback | **Prepared (plan)** | revert line 100 and bump `?v=` again; no data or schema involved |
+| N6 | Post-change check | **Open** | open Assembly for one date and shift; compare totals with the previous version, the same day, before any new entries; Monitoring `document/read_count` for the hour should fall by about all-documents − that date's documents per page load (attribution limited: the key is shared) |
+| N7 | Browser SDK 9.23.0 | **Residual risk (low)** | tested with 10.13.0 in Node; `where ==` semantics are the same; check in N6 |
+
+**Readiness:** technically ready for a decision on the O1 code change (R1–R6 met). Open items N1–N4 and N6 need decisions by the approvers and the PV2 owner. O1 reduces Assembly reads only; it does not resolve the cause of W1–W6 or the 01:00 job.

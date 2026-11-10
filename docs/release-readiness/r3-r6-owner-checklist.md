@@ -192,6 +192,10 @@ Remaining for Part B: B5 (owners: scripts, sheets, tools using the web key); B1a
 
 Useful owner question for R6 Q1: **which PV2 pages (Assembly, Dashboard Range, Exec Trend 30, Order) were open in W1, W5 and W6?**
 
+**O1 index check (2026-11-10, owner-reported, Update 13):** Indexes → Automatic shows Ascending / Descending / Arrays
+enabled and **no exemptions**, so `prodV2_actualLogs.date` has its automatic index; O1 needs no new index. Done; no further
+Console step needed for O1.
+
 Not to do without a separate decision: editing, restricting, rotating or deleting the key (it may be used by the
 web apps; changing it could break PV2), enabling audit logs.
 
