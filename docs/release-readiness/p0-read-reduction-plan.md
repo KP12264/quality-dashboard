@@ -1,5 +1,7 @@
 # P0 read-reduction plan: Q1 (migration gate), Q2a / Q2b (`improvements`)
 
+> **Revision 3, 2026-11-10:** optimization plan O1–O10 for QD and PV2, ranked by read risk, from the static analysis in the A1/A2 report, Update 12. **Plan only: no code changed, no tests run.** See "Revision 3" at the end.
+>
 > **Revision 2, 2026-11-09:** Q1 (redesigned gate) is implemented and committed (`8959c3f`, branch only; old path kept as fallback; emulator gate reads 364 → 184). See the A1/A2 report, Update 6.
 >
 > **Revision 1, 2026-11-09:** Q2b is implemented and committed (`f6f83fd`, branch only; not merged or deployed). Q2a is **on hold for redesign**: the tried approach added reads. Q1 is **redesigned** without `count()` (the compat SDK 10.13.0 used by QD has no aggregate `count()`; checked in the bundle). See "Revision 1" at the end. The sections below are kept as written for the record.
@@ -150,3 +152,178 @@ Fact: `ShiftClose.loadSlot` = one slot `get` + one log query `date == / line == 
 | Tests (emulator) | `tests/rules/migration-gate.test.js`, e2e rehearsal S7 unchanged; new: same problems as the old gate on (a) log added around the ledger, (b) log in a new slot, (c) log without timestamps, (d) move between planned slots, (e) swap, (f) model / defect edit (newly caught), (g) excluded log edited into a slot, (h) write during the gate; read counts measured |
 
 Alternatives considered and not recommended: Firestore REST `runAggregationQuery` from the browser with the user's ID token (works only if the browser call path is proven, e.g. CORS, and adds a second API surface); loading the modular SDK next to compat for `getCountFromServer` (two SDK copies, cross-bundle objects; fragile). Both need extra proof and save no more than the redesign above.
+
+---
+
+## Revision 3, 2026-11-10: optimization plan O1–O10 (QD and PV2)
+
+**Status: PLAN ONLY.** No QD or PV2 code has been changed and no test has been run. Each item needs its own approval for:
+
+1. a test branch with emulator tests;
+2. a commit;
+3. any change to the PV2 repository, which also needs that repository owner's approval.
+
+Nothing here changes Production, Firebase Rules, API keys, Billing or any deploy. **A1 = HIGH. G2 = NOT APPROVED.**
+
+**Sources and labels.** Code references and read counts come from the A1/A2 report, Update 12:
+
+- [CODE] = seen in the code.
+- [EMU] = local emulator measurement (R1).
+- [EST] = estimate assuming 3 active lines (L = 3) and 2 shifts.
+
+PV2 file paths refer to `KP12264/daily-production-report` `main` `431836a`. QD "live" = `origin/main` `b118f93`.
+
+**Rules shared by every item:**
+
+- **Test method.** Local Firestore emulator only, with synthetic data sized like the real system (3 lines × 2 shifts × 120 days, plus orders and master collections).
+  - Reads are counted with a wrapper around the database (GET, LIST, billed = max(1, documents) per query), as in the Q1 test.
+  - The same scenario runs on the old and the new code, and the data each page computes is compared, along with the rendered HTML where practical.
+- **Pass criteria shared by every item:**
+  - the displayed output is identical in every scenario;
+  - reads fall to the target stated for the item;
+  - the Load / Refresh button always reads fresh data;
+  - no Rules change, no new index, no deploy needed;
+  - the existing test suites pass.
+
+### Ranking
+
+| Rank | Item | Reads per action today | Expected after | Risk of wrong or stale output |
+|---|---|---|---|---|
+| 1 | O1 PV2 Assembly | all `prodV2_actualLogs` [CODE]; grows about 2L per day [EST] | that date's documents (≤ 2L) | low (no cache) |
+| 2 | O2 QD Dashboard filters (live `main`) | 405–580 per click [EMU, page open] | 0 per filter click (V5 reuse) | medium (5-minute reuse) |
+| 3 | O3 PV2 Dashboard Range / Other Lines / Trend | ≈ 279 per 31-day load [EST], up to 3 loads per range set-up | without duplicates and repeat loads | medium (cache) |
+| 4 | O4 PV2 Exec | open ≈ 105, Trend 30 ≈ 360 [EST] | open −12; repeat views of the same days 0 | low–medium |
+| 5 | O5 PV2 Order Tracking | all orders + every order day × 2 [CODE] | that line's orders; repeat Load only new days | medium |
+| 6 | O6 QD Scrap Detail / Improvement / Executive | 250–382 per open [EMU] | minus mapping size from the second open | low |
+| 7 | O7 PV2 Master Merge Preview | all actual + plan documents of a line [CODE] | that date's documents when a date is given | low |
+| 8 | O8 PV2 Cabinet Coverage | 3 whole masters per date change [CODE] | masters once per page session | medium (intent is "live mapping") |
+| 9 | O9 PV2 Plan / Loss | whole `prodV2_shiftMaster` (+ `prodV2_jigLayouts`) per change [CODE] | once per session + each Load | medium (Plan saves data) |
+| 10 | O10 Legacy root `onSnapshot` | 1 + 1 per remote change [CODE] | no change proposed | — |
+
+### O1. PV2 Assembly (`production-v2/js/assembly.js`)
+
+1. **Code / collection.** `load()` `:95-110`, called on page open (`:165`), Date / Shift change (`:159`) and the Load button (`:156`). It reads `all("prodV2_actualLogs")` and then filters `x.date===date && (!shift || x.shift===shift)`. Collection: `prodV2_actualLogs`.
+2. **Repeated reads.** Every document in the collection is read to use one date. Each Date / Shift change repeats the full read, and the cost grows every day.
+3. **Fix.**
+   - **Recommended:** `where("date","==",date)` (one equality filter, served by the automatic single-field index), with the shift filter and every other line of code kept as they are in the browser.
+   - **Alternative:** add `where("shift","==",shift)` when a shift is chosen (two equality filters).
+   - **Alternative:** 2L document gets by id. **Not** recommended: documents with non-standard ids would be missed.
+4. **Risk of wrong or stale output.**
+   - No cache, so nothing can go stale.
+   - The client filter `===` and Firestore `==` are both type-strict, so the matched set should be identical.
+   - Edge cases (date not a string, missing fields, unusual ids, `actualByCell` missing) are covered by the test plan.
+5. **Before / After test.** Emulator, synthetic data; see the O1 test plan (prepared separately, not run).
+6. **Pass criteria.**
+   - totals and `matched.length` identical in 100 % of date × shift cases, edge cases included;
+   - reads ≤ that date's documents + 1;
+   - the rules snapshot (`emulator/production.firestore.rules.snapshot`) allows the query unchanged;
+   - no new index;
+   - no other PV2 file changed.
+
+### O2. QD Dashboard filter re-read (live `main`)
+
+1. **Code / collection.**
+   - `origin/main` `js/dashboard.js:1207-1240`: Date, Line, Shift and Refresh call `render()`, which reads again (`:160-161`).
+   - Collections: `prodV2_actualLogs`, `prodV2_dailyPlans`, `scrapLogs`, target and improvement collections.
+2. **Repeated reads.** Line / Shift clicks re-read data already loaded.
+3. **Fix.** Already on the V5 branch: 5-minute reuse (`js/dashboard.js:57-58, 163-166`). No new code is needed, but release depends on **G2 (not approved)**.
+4. **Risk.** Data entered by others appears after a Date change, Refresh or 5 minutes.
+5. **Test.** R1 harness on `main` and on V5: open → 5 filter clicks → Refresh → write data → Refresh.
+6. **Pass criteria.** Filter clicks 0 reads; Refresh reads fresh; new data visible after Refresh; output identical.
+
+### O3. PV2 Dashboard (`production-v2/js/dashboard.js`)
+
+1. **Code / collection.**
+   - `load()` `:722-775`, `trendCompare` `:780-815`, `otherLinesToday` `:817-846`, triggers `:852-866`.
+   - Collections: `prodV2_dailyPlans`, `prodV2_actualLogs`, `prodV2_lossLogs`.
+2. **Repeated reads.**
+   - The current line is read twice: 2 per day, so 62 on a 31-day range.
+   - A Line change re-reads every line in `otherLinesToday`.
+   - `trendCompare` re-reads 7 days on every Day load.
+   - Setting up a range (ViewMode → start → end) loads up to 3 times.
+3. **Fix.**
+   - (a) Pass the documents `load()` already holds into `otherLinesToday`.
+   - (b) Add an in-memory page-session cache keyed by (date, line, shift), which Refresh and Date changes bypass.
+   - (c) Debounce `load()` by about 300 ms.
+4. **Risk.** Values can be stale until Refresh or a Date change. The debounce delays the first render by up to 300 ms.
+5. **Test.** Day, Week, Range 31, Line change, Refresh, write data then Refresh, a fast Mode → start → end sequence. Compare `S.multiDay`, `S.plan` / `S.actual` and the Other Lines / Trend HTML.
+6. **Pass criteria.**
+   - output identical;
+   - Range 31 ≤ 31 × 3 + 31 × (L − 1) × 2;
+   - returning to a line already viewed adds no reads until Refresh;
+   - a fast range set-up causes exactly 1 load.
+
+### O4. PV2 Exec (`production-v2/js/exec.js`)
+
+1. **Code / collection.** `fetchDay` / `fetchLoss` `:22-41`, `loadTrend` `:130-138`, `init` `:147-157`; same three collections.
+2. **Repeated reads.** Today is read by `loadToday` and again by `loadTrend` (i = 0). Switching Trend 7 → 30 re-reads 7 days.
+3. **Fix.** A per-date page-session cache in `fetchDay`. `loadTrend` reuses today. The Load button clears the cache.
+4. **Risk.** Past days edited later stay stale until the Load button is pressed.
+5. **Test.** Open → Trend 30 → Trend 7 → Trend 30 → Load. Compare chart `labels` / `ach` and the today cards.
+6. **Pass criteria.** Identical values; open −12 reads; the second Trend 30 ≤ 23 × 12 reads; Load reads fresh.
+
+### O5. PV2 Order Tracking (`production-v2/js/order.js:58-81`)
+
+1. **Code / collection.** `prodV2_orders` (whole), plus `prodV2_actualLogs` documents for each order's dates.
+2. **Repeated reads.** All orders, including finished ones, and all their days are re-read on every Load.
+3. **Fix.**
+   - (a) With a line filter, `where("lineId","==",lineFilter)` (equals today's client filter).
+   - (b) A page-session cache of actual documents for past dates.
+   - Hiding finished orders is **not** proposed, because it would change the display.
+4. **Risk.** With (b), later edits to past actuals appear only after reopening the page.
+5. **Test.** 20 synthetic orders (past, current, future, crossing month ends); compare `rows` for every line filter.
+6. **Pass criteria.** Identical rows; filtered Load reads ≤ that line's orders; a repeat Load reads only today's documents.
+
+### O6. QD Scrap Detail / Improvement / Executive Report
+
+1. **Code / collection.**
+   - `js/improvement-adapter.js:74` (whole `improvements`)
+   - `js/scrap-model-mapping-adapter.js:32` (whole `scrapModelMappings`)
+   - `js/scrap-adapter.js:108-110` (range query)
+   - `js/target-evaluator.js:105`
+2. **Repeated reads.** Whole collections on every open; the mapping collection rarely changes.
+3. **Fix.**
+   - A page-session cache for mappings.
+   - `improvements` stays under Q2a (on hold, needs a new design).
+   - Q2b is done (`f6f83fd`).
+4. **Risk.** Mapping edits appear after reopening the page.
+5. **Test.** R1 harness on the Scrap Detail, Executive and Improvement pages; compare the rendered DOM.
+6. **Pass criteria.** DOM identical; second open in a session reads fewer by the mapping size; QD suite passes.
+
+### O7. PV2 Master Merge Preview (`production-v2/js/master.js:900-930`)
+
+1. **Code / collection.** QUERY `where('lineId','==',lineId)` on `prodV2_actualLogs` and `prodV2_dailyPlans`; the date is filtered in the browser.
+2. **Repeated reads.** The whole history of the line is read even when a date is given.
+3. **Fix.** When a date is given, add `where('date','==',date)`.
+4. **Risk.** Low. The result is the same as the browser filter. Two equality filters may need the single-field index merge; verify this in the emulator and confirm read-only in Production that no single-field exemption exists for `date` / `lineId`.
+5. **Test.** Compare `actualDocs` / `planDocs` with and without a date.
+6. **Pass criteria.** Identical; with a date, reads ≤ that date's documents of the line.
+
+### O8. PV2 Cabinet Coverage (`production-v2/js/cabinet-coverage.js:10-26`)
+
+1. **Code / collection.** Whole `prodV2_doorMapping`, `prodV2_models`, `prodV2_jigLayouts` on every open and Date change.
+2. **Repeated reads.** The masters are re-read on every Date change.
+3. **Fix.** A page-session cache plus a Reload button, or a short time limit.
+4. **Risk.** The code comment states the intent "live mapping, re-evaluated every time". **The owner must agree** to any cache.
+5. **Test.** Open → 3 Date changes → edit mapping → Reload; compare the coverage result.
+6. **Pass criteria.** Identical; a Date change reads only the plan document + 2L actual documents.
+
+### O9. PV2 Plan / Loss (`production-v2/js/plan.js:269-277`, `production-v2/js/loss.js:149-151`)
+
+1. **Code / collection.** Whole `prodV2_shiftMaster` (+ `prodV2_jigLayouts` in Plan) on every Date / Line / Shift change.
+2. **Repeated reads.** The masters are re-read on every change.
+3. **Fix.** A page-session cache; the Load button reads fresh; Plan reads the masters fresh again just before Save.
+4. **Risk.** Plan **saves** data, so a stale shift master must never reach a saved document.
+5. **Test.** Change Date / Line / Shift 5 times → edit shift master → Load → Save; compare `S.shift` and the saved document.
+6. **Pass criteria.** Saved documents identical to today's code; masters read once per session plus each Load; Save always uses the latest master.
+
+### O10. Legacy root `onSnapshot` (`index.html:760`)
+
+No change proposed. First ask the owners whether the legacy root page is still deployed and used (R6 Q1 / Q5). It is a candidate source of the listeners seen in W1 / W4 [HYP].
+
+### Order and gates (Revision 3)
+
+1. O1, O3 and O4 (PV2, biggest effect, lowest risk) first, each as its own approved emulator test and, if it passes, a proposal to the PV2 owner.
+2. O2 waits for G2.
+3. Then O5, O6, and O7–O9.
+4. Every PV2 change belongs to the PV2 repository and its owner; this repository only holds the plans and test evidence.
