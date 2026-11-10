@@ -135,6 +135,16 @@ Send the screenshots with: the page's time zone, the date range used, and "yes /
 
 ---
 
+### S1 result (2026-11-10, owner-reported; see A1/A2 report Update 8)
+
+- Facts: Methods and Credentials filters **exist**; time zone UTC+7; range 30 days. `production-dashboard`: no data.
+  `New Browser key`: `GetOrListDocuments` 60 requests, `ListCollectionIds` 2 requests; `ListDocuments` (v1, v1beta1): no data.
+- Hypothesis H5: the 60 requests (= 2 per day × 30 days) are the 01:00 job (Part B); time of day not yet shown.
+- Not identified: the source of W1–W6; the owner of the 01:00 job.
+- Limits: request counts, not document reads; method names differ from the Firestore metric labels; traffic without an
+  attributable credential may not appear; no hourly view yet; no screenshots stored.
+- Next (needs approval): hourly view of `GetOrListDocuments` for `New Browser key` on one day; B2 / B3 for that key.
+
 ## 7. Evidence to keep (all steps)
 
 Screenshot file name with step and date, the page's time zone, the exact date range selected, and a note of anything

@@ -635,3 +635,46 @@ v2 never accepts `{not_a_unit}` as a unit: mixed units or a descriptor mismatch 
 - **R2 = INCOMPLETE. R2 does not identify the cause of the read spikes**, and does not show whether they were large queries or many small ones. The open question stays open.
 
 **Status: A1 = HIGH. G2 = NOT APPROVED.**
+
+---
+
+## Update 8, 2026-11-10: R3 / S1 — Cloud Firestore API metrics (Google Cloud Console, view only)
+
+Done by the owner in Google Cloud Console (APIs & Services → Cloud Firestore API → Metrics), project `daily-production-report-46b60`, following the [R3/R6 checklist](r3-r6-owner-checklist.md) §6. **Owner-reported results; no screenshots are stored in this repository.** Nothing was changed; no other step (S2–S8) was done.
+
+### Facts (as reported from the page)
+
+| Item | Result |
+|---|---|
+| Capability check (step 4) | The page **does** offer **Methods** and **Credentials** filters |
+| Page time zone | UTC+7 |
+| Range used | "30 days" (relative to the day of the check, 10 Nov 2026; it covers 26–31 Oct) |
+| Credential `production-dashboard` | **no data** |
+| Credential `New Browser key` | `GetOrListDocuments`: **60 requests**; `ListCollectionIds`: **2 requests** (over the 30 days) |
+| Method `ListDocuments` (v1 and v1beta1) under `New Browser key` | **no data** |
+| Conclusion of the check | the source of the read spikes and the owner of the 01:00 job **could not be identified** |
+
+### Hypotheses (NOT verified)
+
+- H5 The 60 `GetOrListDocuments` requests of `New Browser key` are the daily 01:00 job: 60 over 30 days equals the 2 per day seen in Updates 2 and 7, and a REST `GET` on a collection path is a list call that this page may report under `GetOrListDocuments` rather than `ListDocuments`. Not shown: the time of day of these 60 requests.
+- H6 The apps' traffic (about 88,000 reads in 26–30 Oct) is not attributed to any credential this page lists (e.g. the web SDK's channel is reported differently or without a credential).
+- H7 The 2 `ListCollectionIds` came from a tool that lists collections (e.g. a console or a script); source unknown.
+
+### Unknowns
+
+- Which app, credential or person caused W1–W6.
+- Whether the 60 requests happen at 01:00 Thailand time, and who holds `New Browser key`.
+- Whether the page counts the web SDK's streaming / channel traffic at all, and under which method or credential.
+- Hourly values: the result above is a 30-day view; hours of W1–W6 were not isolated.
+
+### Limits of the API metrics page (for this question)
+
+- It counts **API requests**, not documents read; it cannot be compared one-to-one with `document/read_count`.
+- Its method names (`GetOrListDocuments`) differ from the Firestore metrics' labels (`ListDocuments`), so "no `ListDocuments`" does not mean "no list calls".
+- The credential filter shows only credentials the page can attribute; traffic without such a credential may not appear under any of them.
+- The totals seen (62 requests in 30 days for one key, none for the other) are far below the read volumes of W1–W6, so **this view does not explain the spikes**.
+- Owner-reported, without stored screenshots: the evidence level is lower than for Updates 2–7.
+
+### Status
+
+R3/S1 **does not identify** the cause of the read spikes or the owner of the 01:00 job. A possible lead for the 01:00 job (H5) needs a separate, approved check (e.g. the hourly view of `GetOrListDocuments` for `New Browser key` on one day, and who manages that key — steps B2/B3 of the checklist). **A1 = HIGH. G2 = NOT APPROVED.**
