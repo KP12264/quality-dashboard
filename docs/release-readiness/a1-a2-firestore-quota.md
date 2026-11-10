@@ -802,3 +802,131 @@ Public repository `KP12264/daily-production-report`, cloned read-only (no code f
 - Which `dashboard.js` copy the live PV2 serves (`production-v2/dashboard.js` or `production-v2/js/dashboard.js`); collection sizes (U3, not approved).
 
 **A1 = HIGH. G2 = NOT APPROVED.**
+
+## Update 12, 2026-11-10: static read-pattern analysis of QD and PV2 (code only)
+
+Method: static reading of the code. PV2 is `KP12264/daily-production-report` `main` `431836a`, cloned read-only; none of its code was run. QD is `origin/main` `b118f93` (live) plus this branch. **No Production access and no Firestore reads or writes. No code was changed.** Keys are shown only by their last 4 characters.
+
+Each statement below is labelled by how it is known:
+
+- **[CODE]**: seen in the code.
+- **[EMU]**: measured in the local emulator with synthetic data (R1, Update 5).
+- **[EST]**: estimated from the code with the assumptions in 12.3.
+- **[HYP]**: hypothesis, not verified.
+
+### 12.1 Verified from the code [CODE]
+
+**Which PV2 dashboard is live.** `production-v2/index.html:102` loads `js/dashboard.js?v=20261005-01`, so the live file is **`production-v2/js/dashboard.js`** (last changed 5 Oct). This resolves the open question in Update 11.
+
+- `production-v2/dashboard.js` is referenced by no page. It is an orphan last changed 19 Sep.
+- `production-v2/js/index.html` points to `js/dashboard.js?v=20260902-fix49` relative to its own folder, a path that does not exist.
+
+**Read sites per PV2 page.**
+
+- DOC = single-document get.
+- QUERY = where-query.
+- WHOLE = `collection(n).get()`, directly or through the helper `all(n)`.
+- L = number of active lines.
+
+| Page (file:line) | Trigger | Reads |
+|---|---|---|
+| Dashboard, Day (`js/dashboard.js:722-742`) | page open (if context is set, `:873`), change of Date / Line / Shift / ViewMode (`:852-858`), Refresh button (`:866`) | DOC `prodV2_dailyPlans` + DOC `prodV2_actualLogs` + QUERY `prodV2_lossLogs` (date, lineId, shift)<br>**`trendCompare`** (`:780-815`): 7 past days × (2 DOC + 1 QUERY)<br>**`otherLinesToday`** (`:817-846`): L × 2 DOC |
+| Dashboard, page open only (`:873`) | page open | WHOLE `prodV2_lines` |
+| Dashboard, Week / Range (`:744-775`) | same triggers; range up to 31 days | days × (2 DOC + 1 QUERY), then `otherLinesToday` over **days × L × 2 DOC** |
+| Dashboard, Model / Door / Hourly filters (`:849, 865`) | change | no reads (`render` / `hourlySummary` only) |
+| Exec (`js/exec.js:147-157`) | page open | WHOLE `prodV2_lines`<br>`loadToday` = `fetchDay` (L × 2 shifts × 2 DOC) + `fetchLoss` (L × 2 QUERY)<br>`loadTrend` (7 days × `fetchDay`, one day at a time, `:130-138`) |
+| Exec, Load button (`:149`) | click | `loadToday` |
+| Exec, Trend 7 / Trend 30 buttons (`:150-151`) | click | `loadTrend` over 7 / 30 days |
+| Assembly (`js/assembly.js:95-101, 154-165`) | page open, Date / Shift change, Load button | **WHOLE `prodV2_actualLogs`**, then filtered by date / shift in the browser |
+| Order (`js/order.js:58-81, 130`) | Load button | WHOLE `prodV2_orders`, then one DOC `prodV2_actualLogs` for every (date × line × shift) from each order's start date to min(due date, today), in chunks of 25 |
+| Cabinet Coverage (`js/cabinet-coverage.js:10-26, 128-136, 291-309`) | page open, Date change | DOC `prodV2_cabinetPlan`<br>WHOLE `prodV2_doorMapping`, `prodV2_models`, `prodV2_jigLayouts`<br>2 DOC `prodV2_actualLogs` per line needed |
+| Plan (`js/plan.js:269-277, 330-334`) | page open (if context is set), Date / Line / Shift change, Load; again after Save and Delete (`:325`) | WHOLE `prodV2_shiftMaster` + WHOLE `prodV2_jigLayouts` + DOC `prodV2_dailyPlans` |
+| Plan, Copy (`:329`) | Copy button | 1 DOC |
+| Loss (`js/loss.js:22-27, 149-151, 213-223`) | page open | WHOLE `prodV2_lossCategories` + WHOLE `prodV2_lossDetailCauses` + WHOLE `prodV2_lines` |
+| Loss, each load | Date / Line / Shift change, Load | DOC `prodV2_dailyPlans` + QUERY `prodV2_lossLogs` + **WHOLE `prodV2_shiftMaster`** |
+| Entry (`js/entry.js:219-245`) | Date / Line / Shift change, Load | 2 DOC, + 1 DOC `prodV2_modelOrderPrefs` if the day has no saved order |
+| Entry, page open | page open | WHOLE `prodV2_lines` |
+| Entry timer (`:261-262`) | `setInterval` 30 s, `visibilitychange` | **no Firestore call** |
+| Master (`js/master.js`) | page open: QUERY lines (`:35, 205`)<br>opening each tab (`:12-17, 410, 889`): models QUERY, loss categories WHOLE, door mapping WHOLE, layouts, shift master<br>reload after each save / delete | per tab |
+| Master, Merge Preview (`:908-918, 931-936`) | button | QUERY **all** `prodV2_actualLogs` and `prodV2_dailyPlans` of one line (every date) |
+| Cabinet Import (`js/cabinet-import.js:326`) | preview | 1 DOC |
+| Legacy root app (`index.html:689, 701, 760`) | open / choosing a document | DOC ×2 and **`onSnapshot` on one `productionLogs` document** |
+
+- The shared scripts (`firebase-v2.js`, `auth-v2.js`, `context-v2.js`, `nav.js`, `theme.js`) contain no reads. Context is kept in `localStorage`.
+- Neither app enables offline persistence (no `enablePersistence` / `persistentLocalCache`), so every `.get()` goes to the server.
+
+**Repeated reads seen in the code.**
+
+1. PV2 Dashboard: `otherLinesToday` reads the current line's plan and actual again right after `load()` read them. That is 2 extra DOC per Day load, and days × 2 per Range load.
+2. PV2 Dashboard: on a Line change, `otherLinesToday` re-reads every line's documents, which do not depend on the selected line. `trendCompare` re-reads 7 past days on every Day load.
+3. PV2 Dashboard: changing ViewMode, then the start date, then the end date calls `load()` each time (`:852-858`), so setting up one range can load up to 3 times.
+4. PV2 Exec: `loadTrend` includes today (i = 0), which `loadToday` has just read. Switching Trend 7 → 30 re-reads the 7 days already read.
+5. PV2 Plan / Loss: `prodV2_shiftMaster` (and in Plan, `prodV2_jigLayouts`) is read whole on every Date / Line / Shift change.
+6. PV2 Cabinet Coverage: three whole master collections are re-read on every Date change.
+7. PV2 Assembly: reads the whole `prodV2_actualLogs` to use one date.
+8. PV2 Order: re-reads the actual documents of finished orders on every Load.
+9. QD live `main` (`js/dashboard.js:1207-1240`): Date, Line and Shift changes and the Refresh button all call `render()`, which reads everything again (`:160-161`). On this branch (V5), the 5-minute reuse (`js/dashboard.js:57-58, 163-166`) avoids the re-read for filters.
+
+QD has no `onSnapshot`. Its timers (`js/dashboard.js:1519`, `js/weekly-plan-page.js:431`) make no reads (Update 10).
+
+### 12.2 Numbers from the local emulator [EMU]
+
+These are the QD read signatures from R1 (Update 5), measured on synthetic data and **not Production sizes**:
+
+| Action | Reads |
+|---|---|
+| Dashboard 1 day | 6 LIST / 6 GET / 405 reads |
+| Dashboard 31 days | 3 / 186 / 580 |
+| Weekly Plan | 146 |
+| Scrap Detail | 334–382 |
+| Improvement list | 250 |
+| Improvement edit, after Q2b | 251 |
+| Executive Report | 258 |
+| Q1 migration gate | 184 |
+| Filters on the V5 branch | 0 |
+
+The filter re-read on live `main` was **not measured**.
+
+### 12.3 Estimates [EST]
+
+**Assumptions:**
+- L = 3 active lines and 2 shifts.
+- A query that returns no documents still costs 1 read.
+- A get of a missing document costs 1 read.
+- Collection sizes are unknown (U3 not approved), so sizes stay as symbols.
+
+| # | Point | Reads per action [EST] | How often / growth |
+|---|---|---|---|
+| 1 | PV2 Assembly | N(`prodV2_actualLogs`), about 2L = 6 new documents per day of use (about 600 after 100 days) | every open and Date / Shift change; grows without limit |
+| 2 | QD Dashboard on live `main` | similar to page open (405 for 1 day, 580 for 31 days, from [EMU]) | every Line / Shift / Refresh click |
+| 3 | PV2 Dashboard Range 31 days | 31 × 3 + 31 × L × 2 ≈ 93 + 186 = **≈ 279** + loss documents (up to about 3 × while setting up a range) | every filter change and Refresh |
+| 3b | PV2 Dashboard Day | L + 3 + 21 + 2L ≈ 33 + loss documents | — |
+| 4 | PV2 Exec page open | 3 + 12 + 6 + 7 × 12 ≈ **105** | every open |
+| 4b | PV2 Exec Trend 30 | 30 × 12 ≈ **360** | every click |
+| 5 | PV2 Order Load | N(`prodV2_orders`) + unique(date × line × 2 shifts) over all orders | grows with order history |
+| 6 | QD Scrap Detail / Improvement / Executive | 250–382 (from [EMU]) | every open |
+| 7 | PV2 Master Merge Preview | N(actual) + N(plans) of one line | admin, rare |
+| 8 | PV2 Cabinet Coverage | N(`doorMapping`) + N(`models`) + N(`jigLayouts`) + about 7 | every open and Date change |
+| 9 | PV2 Plan / Loss | N(`shiftMaster`) (+ N(`jigLayouts`)) + 1–2 | every Date / Line / Shift change |
+| 10 | PV2 Entry / legacy listener | 2–3 / 1 + 1 per remote change | frequent but small |
+
+### 12.4 Hypotheses (NOT verified) [HYP]
+
+- **P-H2 (refined).**
+  - Pattern A (about 9–23 reads per LIST) fits frequent whole reads of medium-sized masters: Plan / Loss / Cabinet Coverage, possibly mixed with Assembly.
+  - Pattern B (about 1 read per GET; W5 / W6) fits pages made mostly of document gets: PV2 Dashboard Range / `otherLinesToday`, Exec Trend, Order, and the QD Dashboard after the 30 Oct deploy.
+  - Which one actually happened is not shown by any data.
+- **P-H1 (unchanged).** The listeners in W1 / W4 come from the legacy root app's `onSnapshot` or from the console data viewer. Whether the legacy root app is still deployed or used is **not confirmed**.
+- **P-H4 (new).** The QD filter re-read on live `main` adds reads in proportion to how often people click filters while the Dashboard is open.
+
+### Limits
+
+- Static analysis only.
+- Collection sizes and real usage per page are unknown.
+- The [EMU] numbers use synthetic data.
+- L = 3 is assumed.
+- The code cannot tell which page was used in which window.
+
+**Unknowns remain those of Update 11:** the owner of the 01:00 job and the cause of the spikes.
+
+**A1 = HIGH. G2 = NOT APPROVED.**

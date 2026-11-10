@@ -177,6 +177,21 @@ job; one `onSnapshot` in the legacy root app (`index.html:760`); whole-collectio
 line-wide scans exist (see Update 11). **Owner of the 01:00 job and cause of the spikes still unknown.**
 Remaining for Part B: B5 (owners: scripts, sheets, tools using the web key); B1a / B1b.
 
+**Static read-pattern analysis (2026-11-10, Update 12; code only, no Production access):**
+
+- **[CODE]** The live PV2 dashboard is `production-v2/js/dashboard.js`; `production-v2/dashboard.js` is an orphan.
+- **[CODE]** Highest-read code:
+  - PV2 Assembly reads the whole `prodV2_actualLogs` on every open and every Date / Shift change.
+  - PV2 Dashboard Range reads up to 31 days and, in `otherLinesToday`, days × lines again.
+  - PV2 Exec Trend 30.
+  - PV2 Order reads every order's full date range.
+  - On live QD `main`, every Line / Shift filter click and Refresh re-reads all data.
+- **[EMU]** QD 1 day 405, 31 days 580 (R1).
+- **[EST]** PV2 Range 31 days ≈ 279 per load; Exec Trend 30 ≈ 360 (3 lines assumed).
+- **[HYP]** Which page caused W1–W6 is not shown.
+
+Useful owner question for R6 Q1: **which PV2 pages (Assembly, Dashboard Range, Exec Trend 30, Order) were open in W1, W5 and W6?**
+
 Not to do without a separate decision: editing, restricting, rotating or deleting the key (it may be used by the
 web apps; changing it could break PV2), enabling audit logs.
 
