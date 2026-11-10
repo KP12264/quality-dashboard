@@ -756,3 +756,49 @@ Searched (no code changed): the working branch `claude/vigilant-pasteur-l91qt3` 
 B2 / B2b (compare the last 4 characters of `New Browser key` with `…J53c`, view only); B6 for PV2 and other repositories by their owners; B5 owner questions; B1a / B1b (per-day view for 26–31 Oct).
 
 **A1 = HIGH. G2 = NOT APPROVED.**
+
+---
+
+## Update 11, 2026-11-10: B2 / B2b (key identity) and B6 for the PV2 repository
+
+### B2 / B2b (owner-confirmed, Google Cloud Console, view only)
+
+`New Browser key` currently **ends in `J53c`**, the same last 4 characters as the QD Firebase web key (`js/config.js:26`). Only the last 4 characters were compared; the full key is not recorded anywhere in this repository.
+
+### B6 for PV2 (read-only search)
+
+Public repository `KP12264/daily-production-report`, cloned read-only (no code from it was run): `main` at `431836a` (2026-10-28 03:05 +0700), full history (287 commits). Keys shown only as their last 4 characters.
+
+| # | Searched for | Result | File / line |
+|---|---|---|---|
+| 1 | Firebase web config / API key | **Same key `AIza…J53c`** as QD, in **two** places: PV2 and the legacy root app | `production-v2/js/firebase-v2.js:2`; `index.html:655` |
+| 2 | Firestore access | **Firebase SDK only** (compat 9.23.0 in `production-v2/*.html`; compat 10.13.0 in the root `index.html`). **No** REST call, `fetch`, `XMLHttpRequest`, `listDocuments`, `listCollectionIds`, `GetOrList` | e.g. `production-v2/entry.html:8-10`, `index.html:10-11` |
+| 3 | Scheduled jobs | **None**: no `.github/workflows`, cron, Apps Script, Cloud Functions, now or ever added in history. `01:00` appears only as shift time-block data | `production-v2/js/master.js:484-485` (data rows) |
+| 3b | Timers | `setInterval(refreshCurrentBlock, 30000)`; lines 250–256 of that function contain no Firestore call. Other timers are save debounces (`setTimeout`) | `production-v2/js/entry.js:261`; `index.html:1014, 1020, 1179` |
+| 4a | Snapshot listeners | **One `onSnapshot`**, in the legacy root app, on one document of `productionLogs` | `index.html:760` (collection `index.html:671`) |
+| 4b | Whole-collection reads | `all(collection)` = `collection(n).get()` in 8 files, plus direct whole reads of master collections | `production-v2/js/{dashboard,entry,exec,loss,order,plan,assembly}.js` (`all` at line 6–13), `production-v2/dashboard.js:13`, `cabinet-coverage.js:17,25-26`, `master.js:1088,1273-1274,1327,1470` |
+| 4c | Range reads | Dashboard week / custom range up to **31 days**: per day 2 document gets (`prodV2_dailyPlans`, `prodV2_actualLogs`) + 1 `prodV2_lossLogs` query; multi-line variants loop over lines × dates | `production-v2/js/dashboard.js:746-756, 788, 824-827` (copy in `production-v2/dashboard.js:693-695, 715-717`) |
+| 4d | Line-wide scans | Model merge (admin): reads **all** `prodV2_actualLogs` and `prodV2_dailyPlans` of a line (every date) | `production-v2/js/master.js:908, 918` |
+| 4e | Combination loops | Exec page: queries per line × shift combination | `production-v2/js/exec.js:24, 33-34` |
+| – | Commits 26–31 Oct (+0700) | only `297f0e8` 28 Oct 03:04 and `431836a` 28 Oct 03:05, "Add files via upload" | git history |
+
+### Facts
+
+- **QD, PV2 and the legacy root app all use the same web key `…J53c`** (QD `js/config.js:26`; PV2 `production-v2/js/firebase-v2.js:2`; legacy `index.html:655`). A request made with `New Browser key` therefore **cannot be attributed to one app** by the key.
+- Neither repository contains a scheduled job or a direct Firestore REST call.
+- The only `onSnapshot` in either repository is in the legacy root app (`index.html:760`).
+- PV2 has read patterns that can produce many reads: whole-collection reads, 31-day ranges with per-day document reads, line-wide scans.
+
+### Hypotheses (NOT verified)
+
+- P-H1 The snapshot listeners seen in W1 (8) and W4 (29) come from the legacy root app's `onSnapshot` (or the Firebase console data viewer).
+- P-H2 PV2 range views (per-day gets of plans / actuals) can produce Pattern B (many single-document reads); PV2 whole-collection reads or line-wide scans can produce Pattern A (many documents per query).
+- P-H3 The 01:00 job is outside all three apps' code (a script, sheet or tool using the public web key).
+
+### Unknowns
+
+- **The owner of the 01:00 job** (not in QD or PV2 code; the key is shared by all three apps).
+- **The cause of the read spikes (W1–W6)**: QD, PV2 and the legacy app can each produce such reads; which one did is not shown.
+- Which `dashboard.js` copy the live PV2 serves (`production-v2/dashboard.js` or `production-v2/js/dashboard.js`); collection sizes (U3, not approved).
+
+**A1 = HIGH. G2 = NOT APPROVED.**

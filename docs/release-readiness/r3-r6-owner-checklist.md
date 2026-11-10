@@ -170,6 +170,13 @@ git history: **no scheduled job, no direct Firestore REST call, no `ListDocument
 (a browser with QD open reads through the SDK); **owner of the 01:00 job unknown; cause of the spikes unknown.**
 Still open: B6 for PV2 and other repositories (their owners), B2 / B2b (is `New Browser key` = `…J53c`?).
 
+**B2 / B2b and B6 for PV2 (2026-11-10, Update 11):** `New Browser key` ends in `J53c`, the same key as QD
+(`js/config.js:26`), PV2 (`production-v2/js/firebase-v2.js:2`) and the legacy root app (`index.html:655`), so the key
+cannot attribute a request to one app. PV2 repository (`431836a`, full history): SDK only, no REST call, no scheduled
+job; one `onSnapshot` in the legacy root app (`index.html:760`); whole-collection reads, 31-day range reads and
+line-wide scans exist (see Update 11). **Owner of the 01:00 job and cause of the spikes still unknown.**
+Remaining for Part B: B5 (owners: scripts, sheets, tools using the web key); B1a / B1b.
+
 Not to do without a separate decision: editing, restricting, rotating or deleting the key (it may be used by the
 web apps; changing it could break PV2), enabling audit logs.
 
