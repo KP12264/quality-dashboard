@@ -1,0 +1,8039 @@
+{
+ "meta": {
+  "emulatorHost": "127.0.0.1:8080",
+  "project": "demo-quality-dashboard",
+  "compatSdk": "10.13.0",
+  "node": "v22.22.0",
+  "today": "2026-11-10",
+  "baseDays": 120,
+  "firstDay": "2026-07-01",
+  "lastDay": "2026-10-28",
+  "actualDocs": 745,
+  "pairsFromPools": 52
+ },
+ "cases": [
+  {
+   "date": "2026-07-01",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-01",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-01",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-02",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-02",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-02",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-03",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-03",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-03",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-04",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-04",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-04",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-05",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-05",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-05",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-06",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-06",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-06",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-07",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-07",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-07",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-08",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-08",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-08",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-09",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-09",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-09",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-10",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-10",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-10",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-11",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-11",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-11",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-12",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-12",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-12",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-13",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-13",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-13",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-14",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-14",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-14",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-15",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-15",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-15",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-16",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-16",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-16",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-17",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-17",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-17",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-18",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-18",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-18",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-19",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-19",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-19",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-20",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-20",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-20",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-21",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-21",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-21",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-22",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-22",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-22",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-23",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-23",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-23",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-24",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-24",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-24",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-25",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-25",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-25",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-26",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-26",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-26",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-27",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-27",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-27",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-28",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-28",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-28",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-29",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-29",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-29",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-30",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-30",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-30",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-31",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-31",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-07-31",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-01",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-01",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-01",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-02",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-02",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-02",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-03",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-03",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-03",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-04",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-04",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-04",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-05",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-05",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-05",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-06",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-06",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-06",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-07",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-07",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-07",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-08",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-08",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-08",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-09",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-09",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-09",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-10",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-10",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-10",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-11",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-11",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-11",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-12",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-12",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-12",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-13",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-13",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-13",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-14",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-14",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-14",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-15",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-15",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-15",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-16",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-16",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-16",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-17",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-17",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-17",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-18",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-18",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-18",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-19",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-19",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-19",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-20",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-20",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-20",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-21",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-21",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-21",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-22",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-22",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-22",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-23",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-23",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-23",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-24",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-24",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-24",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-25",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-25",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-25",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-26",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-26",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-26",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-27",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-27",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-27",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-28",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-28",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-28",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-29",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-29",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-29",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-30",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-30",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-30",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-31",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-31",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-08-31",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-01",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-01",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-01",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-02",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-02",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-02",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-03",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-03",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-03",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-04",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-04",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-04",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-05",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-05",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-05",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-06",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-06",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-06",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-07",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-07",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-07",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-08",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-08",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-08",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-09",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-09",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-09",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-10",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-10",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-10",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-11",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-11",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-11",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-12",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-12",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-12",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-13",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-13",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-13",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-14",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-14",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-14",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-15",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-15",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-15",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-16",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-16",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-16",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-17",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-17",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-17",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-18",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-18",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-18",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-19",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-19",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-19",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-20",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-20",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-20",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-21",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-21",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-21",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-22",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-22",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-22",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-23",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-23",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-23",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-24",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-24",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-24",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-25",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-25",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-25",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-26",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-26",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-26",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-27",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-27",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-27",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-28",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-28",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-28",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-29",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-29",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-29",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-30",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-30",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-09-30",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-01",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-01",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-01",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-02",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-02",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-02",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-03",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-03",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-03",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-04",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-04",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-04",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-05",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 14
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 14,
+   "expected": 14,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-05",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 14
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 7,
+   "expected": 7,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-05",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 14
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 4,
+   "expected": 4,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-06",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 11
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 11,
+   "expected": 11,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-06",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 11
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-06",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 11
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 5,
+   "expected": 5,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-07",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-07",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-07",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-08",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-08",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-08",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-09",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-09",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-09",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-10",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-10",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-10",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-11",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-11",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-11",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-12",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-12",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-12",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-13",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-13",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-13",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-14",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-14",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-14",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-15",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-15",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-15",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-16",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-16",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-16",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-17",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-17",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-17",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-18",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-18",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-18",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-19",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-19",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-19",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-20",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-20",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-20",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-21",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-21",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-21",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-22",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-22",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-22",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-23",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-23",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-23",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-24",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-24",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-24",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-25",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-25",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-25",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-26",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-26",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-26",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-27",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-27",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-27",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-28",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 6,
+   "expected": 6,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-28",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-10-28",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 6
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 3,
+   "expected": 3,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-11-30",
+   "shift": "ALL",
+   "trigger": "date change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 1
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 0,
+   "expected": 0,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-11-30",
+   "shift": "DAY",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 1
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 0,
+   "expected": 0,
+   "same": true,
+   "setOk": true
+  },
+  {
+   "date": "2026-11-30",
+   "shift": "NIGHT",
+   "trigger": "shift change",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 1
+   },
+   "loadsBefore": 1,
+   "loadsAfter": 1,
+   "matched": 0,
+   "expected": 0,
+   "same": true,
+   "setOk": true
+  }
+ ],
+ "triggers": [
+  {
+   "trigger": "page open",
+   "date": "2026-11-10",
+   "before": {
+    "reads": {
+     "GET": 0,
+     "LIST": 1,
+     "billed": 745
+    },
+    "loads": 1
+   },
+   "after": {
+    "reads": {
+     "GET": 0,
+     "LIST": 1,
+     "billed": 6
+    },
+    "loads": 1
+   },
+   "same": true
+  },
+  {
+   "trigger": "Load button",
+   "date": "2026-10-05",
+   "shift": "ALL",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 14
+   },
+   "loads": [
+    1,
+    1
+   ],
+   "matched": 14,
+   "expected": 14,
+   "markedIds": [
+    "actual_2026-10-05_A_DAY",
+    "actual_2026-10-05_A_NIGHT",
+    "actual_2026-10-05_B_DAY",
+    "actual_2026-10-05_B_NIGHT",
+    "actual_2026-10-05_C_DAY",
+    "actual_2026-10-05_C_NIGHT",
+    "e07_noshift",
+    "e08_lower",
+    "e09_morning",
+    "e17_text"
+   ]
+  },
+  {
+   "trigger": "Load button",
+   "date": "2026-10-05",
+   "shift": "DAY",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 14
+   },
+   "loads": [
+    1,
+    1
+   ],
+   "matched": 7,
+   "expected": 7,
+   "markedIds": [
+    "actual_2026-10-05_A_DAY",
+    "actual_2026-10-05_B_DAY",
+    "actual_2026-10-05_C_DAY"
+   ]
+  },
+  {
+   "trigger": "Load button",
+   "date": "2026-10-05",
+   "shift": "NIGHT",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 14
+   },
+   "loads": [
+    1,
+    1
+   ],
+   "matched": 4,
+   "expected": 4,
+   "markedIds": [
+    "actual_2026-10-05_A_NIGHT",
+    "actual_2026-10-05_B_NIGHT",
+    "actual_2026-10-05_C_NIGHT",
+    "e17_text"
+   ]
+  },
+  {
+   "trigger": "Load button",
+   "date": "2026-10-06",
+   "shift": "ALL",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 11
+   },
+   "loads": [
+    1,
+    1
+   ],
+   "matched": 11,
+   "expected": 11,
+   "markedIds": [
+    "Xk9r2QpL7mNz",
+    "actual_2026-10-06_A_DAY",
+    "actual_2026-10-06_A_DAY_dup",
+    "actual_2026-10-06_A_NIGHT",
+    "actual_2026-10-06_B_DAY",
+    "actual_2026-10-06_B_NIGHT",
+    "actual_2026-10-06_C_DAY",
+    "actual_2026-10-06_C_NIGHT",
+    "e11_short",
+    "e12_values",
+    "e16_big"
+   ]
+  },
+  {
+   "trigger": "Load button",
+   "date": "2026-10-06",
+   "shift": "DAY",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 11
+   },
+   "loads": [
+    1,
+    1
+   ],
+   "matched": 6,
+   "expected": 6,
+   "markedIds": [
+    "Xk9r2QpL7mNz",
+    "actual_2026-10-06_A_DAY",
+    "actual_2026-10-06_A_DAY_dup",
+    "actual_2026-10-06_B_DAY",
+    "actual_2026-10-06_C_DAY",
+    "e11_short"
+   ]
+  },
+  {
+   "trigger": "Load button",
+   "date": "2026-10-06",
+   "shift": "NIGHT",
+   "before": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 745
+   },
+   "after": {
+    "GET": 0,
+    "LIST": 1,
+    "billed": 11
+   },
+   "loads": [
+    1,
+    1
+   ],
+   "matched": 5,
+   "expected": 5,
+   "markedIds": [
+    "actual_2026-10-06_A_NIGHT",
+    "actual_2026-10-06_B_NIGHT",
+    "actual_2026-10-06_C_NIGHT",
+    "e12_values",
+    "e16_big"
+   ]
+  },
+  {
+   "trigger": "empty date",
+   "before": {
+    "reads": 0,
+    "loads": 0,
+    "msg": "เลือกวันที่ก่อน",
+    "cls": "notice info-notice plan-warn"
+   },
+   "after": {
+    "reads": 0,
+    "loads": 0,
+    "msg": "เลือกวันที่ก่อน",
+    "cls": "notice info-notice plan-warn"
+   }
+  },
+  {
+   "trigger": "read failure",
+   "before": {
+    "status": "Load failed",
+    "cls": "hero-status err",
+    "msg": "simulated read failure"
+   },
+   "after": {
+    "status": "Load failed",
+    "cls": "hero-status err",
+    "msg": "simulated read failure"
+   }
+  }
+ ],
+ "filters": [
+  {
+   "group": "ALL",
+   "readsBefore": 0,
+   "readsAfter": 0,
+   "same": true
+  },
+  {
+   "group": "BM (Common RR/RL)",
+   "readsBefore": 0,
+   "readsAfter": 0,
+   "same": true
+  },
+  {
+   "group": "BM Glass (Common RR/RL)",
+   "readsBefore": 0,
+   "readsAfter": 0,
+   "same": true
+  },
+  {
+   "group": "FUF",
+   "readsBefore": 0,
+   "readsAfter": 0,
+   "same": true
+  },
+  {
+   "group": "TM14 / TM19-21 / TM10-12",
+   "readsBefore": 0,
+   "readsAfter": 0,
+   "same": true
+  },
+  {
+   "group": "EHRT",
+   "readsBefore": 0,
+   "readsAfter": 0,
+   "same": true
+  },
+  {
+   "group": "Door 5.3 / 6.6 Cu",
+   "readsBefore": 0,
+   "readsAfter": 0,
+   "same": true
+  },
+  {
+   "group": "620/550 (Common F=636)",
+   "readsBefore": 0,
+   "readsAfter": 0,
+   "same": true
+  },
+  {
+   "group": "520 + T-Door Horizontal (Common FR/FL ทั้ง 4 / RL เฉพาะ 520)",
+   "readsBefore": 0,
+   "readsAfter": 0,
+   "same": true
+  },
+  {
+   "group": "T-Door US (ไม่ Common กับใคร)",
+   "readsBefore": 0,
+   "readsAfter": 0,
+   "same": true
+  },
+  {
+   "group": "G3",
+   "readsBefore": 0,
+   "readsAfter": 0,
+   "same": true
+  }
+ ],
+ "rules": [
+  {
+   "rules": "production",
+   "who": "anonymous",
+   "wholeOk": true,
+   "queryOk": true,
+   "queryDocs": 14,
+   "matchesClientFilter": true
+  },
+  {
+   "rules": "production",
+   "who": "signedInListed",
+   "wholeOk": true,
+   "queryOk": true,
+   "queryDocs": 14,
+   "matchesClientFilter": true
+  },
+  {
+   "rules": "production",
+   "who": "signedInOther",
+   "wholeOk": true,
+   "queryOk": true,
+   "queryDocs": 14,
+   "matchesClientFilter": true
+  },
+  {
+   "rules": "repoPv2",
+   "who": "anonymous",
+   "wholeOk": true,
+   "queryOk": true,
+   "queryDocs": 14,
+   "matchesClientFilter": true
+  },
+  {
+   "rules": "repoPv2",
+   "who": "signedInListed",
+   "wholeOk": true,
+   "queryOk": true,
+   "queryDocs": 14,
+   "matchesClientFilter": true
+  },
+  {
+   "rules": "repoPv2",
+   "who": "signedInOther",
+   "wholeOk": true,
+   "queryOk": true,
+   "queryDocs": 14,
+   "matchesClientFilter": true
+  },
+  {
+   "rules": "candidate",
+   "who": "anonymous",
+   "wholeOk": true,
+   "queryOk": true,
+   "queryDocs": 14,
+   "matchesClientFilter": true
+  },
+  {
+   "rules": "candidate",
+   "who": "signedInListed",
+   "wholeOk": true,
+   "queryOk": true,
+   "queryDocs": 14,
+   "matchesClientFilter": true
+  },
+  {
+   "rules": "candidate",
+   "who": "signedInOther",
+   "wholeOk": true,
+   "queryOk": true,
+   "queryDocs": 14,
+   "matchesClientFilter": true
+  },
+  {
+   "rules": "bridge",
+   "who": "anonymous",
+   "wholeOk": true,
+   "queryOk": true,
+   "queryDocs": 14,
+   "matchesClientFilter": true
+  },
+  {
+   "rules": "bridge",
+   "who": "signedInListed",
+   "wholeOk": true,
+   "queryOk": true,
+   "queryDocs": 14,
+   "matchesClientFilter": true
+  },
+  {
+   "rules": "bridge",
+   "who": "signedInOther",
+   "wholeOk": true,
+   "queryOk": true,
+   "queryDocs": 14,
+   "matchesClientFilter": true
+  }
+ ],
+ "summary": {
+  "cases": 363,
+  "caseDiffs": 0,
+  "keyOrderDiffs": 0,
+  "e12NaNInTotals": false
+ }
+}

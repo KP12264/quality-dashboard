@@ -1,0 +1,239 @@
+⚠  Unable to fetch the CLI MOTD and remote config. This is not a fatal error, but may indicate an issue with your network connection.
+i  emulators: Starting emulators: firestore
+i  emulators: Detected demo project ID "demo-quality-dashboard", emulated services will use a demo configuration and attempts to access non-emulated services for this project will fail.
+⚠  hub: Error when trying to check port 4400 on ::1: Error: listen EAFNOSUPPORT: address family not supported ::1:4400
+⚠  hub: Port 4400 is available on 127.0.0.1 but not ::1. This may cause issues with some clients.
+⚠  hub: If you encounter connectivity issues, consider switching to a different port or explicitly specifying "host": "<ip address>" instead of hostname in firebase.json
+⚠  logging: Error when trying to check port 4500 on ::1: Error: listen EAFNOSUPPORT: address family not supported ::1:4500
+⚠  logging: Port 4500 is available on 127.0.0.1 but not ::1. This may cause issues with some clients.
+⚠  logging: If you encounter connectivity issues, consider switching to a different port or explicitly specifying "host": "<ip address>" instead of hostname in firebase.json
+i  firestore: Firestore Emulator logging to firestore-debug.log
+✔  firestore: Firestore Emulator was started in standard edition.
+✔  firestore: Firestore Emulator UI websocket is running on 9150.
+i  Running script: node --test --test-concurrency=1 <WORK>/o1-assembly.test.js
+TAP version 13
+# Subtest: O1 Assembly: Before vs After (emulator, synthetic data)
+    # Subtest: S5: the two copies differ in exactly one line (line 100)
+    ok 1 - S5: the two copies differ in exactly one line (line 100)
+      ---
+      duration_ms: 2.460809
+      type: 'test'
+      ...
+    # Subtest: page open (init → load for today): same output, After reads only today
+    not ok 2 - page open (init → load for today): same output, After reads only today
+      ---
+      duration_ms: 621.359233
+      type: 'test'
+      location: '<WORK>/o1-assembly.test.js:160:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly deep-equal:
+        + actual - expected
+        
+        + []
+        - [
+        -   'actual_2026-11-10_A_DAY',
+        -   'actual_2026-11-10_A_NIGHT',
+        -   'actual_2026-11-10_B_DAY',
+        -   'actual_2026-11-10_B_NIGHT',
+        -   'actual_2026-11-10_C_DAY',
+        -   'actual_2026-11-10_C_NIGHT'
+        - ]
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        0: 'actual_2026-11-10_A_DAY'
+        1: 'actual_2026-11-10_A_NIGHT'
+        2: 'actual_2026-11-10_B_DAY'
+        3: 'actual_2026-11-10_B_NIGHT'
+        4: 'actual_2026-11-10_C_DAY'
+        5: 'actual_2026-11-10_C_NIGHT'
+      actual:
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (<WORK>/o1-assembly.test.js:169:48)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: S1–S3: every date × shift (Date change, Shift change): identical output, matched set = seed, reads
+    not ok 3 - S1–S3: every date × shift (Date change, Shift change): identical output, matched set = seed, reads
+      ---
+      duration_ms: 325.492483
+      type: 'test'
+      location: '<WORK>/o1-assembly.test.js:172:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        matched set 2026-07-01 
+        + actual - expected
+        
+        + []
+        - [
+        -   'actual_2026-07-01_A_DAY',
+        -   'actual_2026-07-01_A_NIGHT',
+        -   'actual_2026-07-01_B_DAY',
+        -   'actual_2026-07-01_B_NIGHT',
+        -   'actual_2026-07-01_C_DAY',
+        -   'actual_2026-07-01_C_NIGHT'
+        - ]
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        0: 'actual_2026-07-01_A_DAY'
+        1: 'actual_2026-07-01_A_NIGHT'
+        2: 'actual_2026-07-01_B_DAY'
+        3: 'actual_2026-07-01_B_NIGHT'
+        4: 'actual_2026-07-01_C_DAY'
+        5: 'actual_2026-07-01_C_NIGHT'
+      actual:
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (<WORK>/o1-assembly.test.js:183:86)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: E1–E17 edge dates in detail (D1, D2) incl. shift "", DAY, NIGHT: identical and as expected
+    not ok 4 - E1–E17 edge dates in detail (D1, D2) incl. shift "", DAY, NIGHT: identical and as expected
+      ---
+      duration_ms: 302.790858
+      type: 'test'
+      location: '<WORK>/o1-assembly.test.js:192:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly deep-equal:
+        + actual - expected
+        
+        + []
+        - [
+        -   'actual_2026-10-05_A_DAY',
+        -   'actual_2026-10-05_A_NIGHT',
+        -   'actual_2026-10-05_B_DAY',
+        -   'actual_2026-10-05_B_NIGHT',
+        -   'actual_2026-10-05_C_DAY',
+        -   'actual_2026-10-05_C_NIGHT',
+        -   'e07_noshift',
+        -   'e08_lower',
+        -   'e09_morning',
+        -   'e17_text'
+        - ]
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        0: 'actual_2026-10-05_A_DAY'
+        1: 'actual_2026-10-05_A_NIGHT'
+        2: 'actual_2026-10-05_B_DAY'
+        3: 'actual_2026-10-05_B_NIGHT'
+        4: 'actual_2026-10-05_C_DAY'
+        5: 'actual_2026-10-05_C_NIGHT'
+        6: 'e07_noshift'
+        7: 'e08_lower'
+        8: 'e09_morning'
+        9: 'e17_text'
+      actual:
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (<WORK>/o1-assembly.test.js:198:50)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: E12 values and E17 text: NaN / strings / negatives give the same totals and escaped HTML
+    not ok 5 - E12 values and E17 text: NaN / strings / negatives give the same totals and escaped HTML
+      ---
+      duration_ms: 507.891379
+      type: 'test'
+      location: '<WORK>/o1-assembly.test.js:210:3'
+      failureType: 'testCodeFailure'
+      error: 'E12 produces NaN in both'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (<WORK>/o1-assembly.test.js:215:31)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: E18 / E19: subcollection and other collections never counted
+    ok 6 - E18 / E19: subcollection and other collections never counted
+      ---
+      duration_ms: 0.961281
+      type: 'test'
+      ...
+    # Subtest: Model filter change: 0 reads, same HTML for every group
+    ok 7 - Model filter change: 0 reads, same HTML for every group
+      ---
+      duration_ms: 260.926099
+      type: 'test'
+      ...
+    # Subtest: empty date: early return, 0 reads, same message in both
+    ok 8 - empty date: early return, 0 reads, same message in both
+      ---
+      duration_ms: 0.570049
+      type: 'test'
+      ...
+    # Subtest: read failure: both show the same "Load failed" path
+    ok 9 - read failure: both show the same "Load failed" path
+      ---
+      duration_ms: 5.26548
+      type: 'test'
+      ...
+    1..9
+not ok 1 - O1 Assembly: Before vs After (emulator, synthetic data)
+  ---
+  duration_ms: 7231.678281
+  type: 'suite'
+  location: '<WORK>/o1-assembly.test.js:151:1'
+  failureType: 'subtestsFailed'
+  error: '4 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: S6: the After query under the four rules files (unchanged), anonymous and signed in
+    # Subtest: production: whole collection (Before) and where date== (After) both allowed; same documents for the date
+    ok 1 - production: whole collection (Before) and where date== (After) both allowed; same documents for the date
+      ---
+      duration_ms: 463.145162
+      type: 'test'
+      ...
+    # Subtest: repoPv2: whole collection (Before) and where date== (After) both allowed; same documents for the date
+    ok 2 - repoPv2: whole collection (Before) and where date== (After) both allowed; same documents for the date
+      ---
+      duration_ms: 286.547561
+      type: 'test'
+      ...
+    # Subtest: candidate: whole collection (Before) and where date== (After) both allowed; same documents for the date
+    ok 3 - candidate: whole collection (Before) and where date== (After) both allowed; same documents for the date
+      ---
+      duration_ms: 786.79718
+      type: 'test'
+      ...
+    # Subtest: bridge: whole collection (Before) and where date== (After) both allowed; same documents for the date
+    ok 4 - bridge: whole collection (Before) and where date== (After) both allowed; same documents for the date
+      ---
+      duration_ms: 859.328023
+      type: 'test'
+      ...
+    1..4
+ok 2 - S6: the After query under the four rules files (unchanged), anonymous and signed in
+  ---
+  duration_ms: 2396.570317
+  type: 'suite'
+  ...
+1..2
+# tests 13
+# suites 2
+# pass 9
+# fail 4
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 10003.601104
+⚠  Script exited unsuccessfully (code 1)
+i  emulators: Shutting down emulators.
+i  firestore: Stopping Firestore Emulator
+i  hub: Stopping emulator hub
+i  logging: Stopping Logging Emulator
+
+Error: Script "node --test --test-concurrency=1 <WORK>/o1-assembly.test.js" exited with code 1

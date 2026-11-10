@@ -1,0 +1,4 @@
+100c100
+<   const logs=await all("prodV2_actualLogs");
+---
+>   const logs=(await ProdV2DB.collection("prodV2_actualLogs").where("date","==",date).get()).docs.map(d=>({id:d.id,...d.data()}));

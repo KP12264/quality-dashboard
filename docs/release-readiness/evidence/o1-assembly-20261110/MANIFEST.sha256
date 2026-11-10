@@ -1,0 +1,13 @@
+e1add65559d2e4a36528d9c121f9f5002d4c705fcd62d212105327b0fe1056ae  ./README.md
+2f315af66ec32ea4452bd1ae1e6c7ad8d4cc1cb516c8a7b524a3beefc5f154fa  ./index-check-view-only.md
+0fc65cdca1bf64960912ff021e354b926bdea5e7e555b283ec009c099665add0  ./o1-assembly-test-plan.md
+3f597f93a9d3a2a9d8c5b8fd898911282711cdabf61d66fa4c12d589a8b5856e  ./o1-assembly.test.js
+6592b3633aba75ad42c88f0357b104785bcbc4a462e89d1a02e2f92e74ceed75  ./out/MANIFEST.as-run.sha256
+4a010160f0bf29bc7d9ad39264d2411ad7aec12ef6459562bb3c38dfd3203818  ./out/o1-after.diff
+5078e31ff77fa2b64b11f090ea01333260b610622afc9b2753d3cac2da6449a4  ./out/o1-results.json
+bbbf9b0f831282750bf2b16825965b47bd1a01cd80c1dbf5b73f1a3a4f52502c  ./out/pv2-compat.log
+d4829c2e76ad45f4efaba72c66370966d0e2018ce9b6ac88cf4da7b7e28ec760  ./out/pv2-hashes-after.txt
+d4829c2e76ad45f4efaba72c66370966d0e2018ce9b6ac88cf4da7b7e28ec760  ./out/pv2-hashes-before.txt
+603decdeb3e9cbd4bd271badbee8526ecb6add4c447430a171f62f69039c6db5  ./out/run1.log
+0a0a8ed05efac53a49b3c717edd32c256503e84dcd8a2a0ee338e832b0321b0c  ./out/run2.log
+8863aa0a58d10e97121479dc33cf0b5558c937b32083acb152d4210649827aea  ./out/run3.log
