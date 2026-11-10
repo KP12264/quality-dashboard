@@ -145,6 +145,27 @@ Send the screenshots with: the page's time zone, the date range used, and "yes /
   attributable credential may not appear; no hourly view yet; no screenshots stored.
 - Next (needs approval): hourly view of `GetOrListDocuments` for `New Browser key` on one day; B2 / B3 for that key.
 
+### S1 follow-up (2026-11-10, owner-reported; see Update 9)
+
+- Facts: `New Browser key`, 1 day, `google.firestore.v1.Firestore.GetOrListDocuments`: 2 requests, 0 % errors,
+  average latency 0.104 s, activity at about 01:00 UTC+7. 2 screenshots kept by the owner (not stored here).
+- H5 better supported (count, time, method family consistent) but not proven: same job as 26–30 Oct not shown;
+  `GetOrListDocuments` = `ListDocuments` is an inference; holder of the key unknown. Not linked to W1–W6.
+
+### Part B next steps (proposed, read-only, each needs approval)
+
+| # | Step | What to record | Masking |
+|---|---|---|---|
+| B1a | S1 page, `New Browser key`, `GetOrListDocuments`, **custom range 26–31 Oct**, per day / hour | 2 requests per day at about 01:00 on each of those days, or not | none needed |
+| B1b | S1 page, `New Browser key`, `ListCollectionIds` | date and time of the 2 requests | none needed |
+| B2 | APIs & Services → Credentials → `New Browser key` (open, **do not edit**) | creation date; application restrictions (HTTP referrers / none) and API restrictions as shown; **last 4 characters** of the key only | never the full key |
+| B2b | Compare those 4 characters with the web config of QD and PV2 (already in G1 evidence R3 / R4) | same key or not | 4 characters only |
+| B6 | Read-only code search in the repositories the owners control for REST calls to `firestore.googleapis.com/v1/projects/daily-production-report-46b60` (QD repository: can be searched here on approval; PV2 and others: by their owners) | file and line, schedule if any | none |
+| B5 | Owners (R6 Q3), with the clue: a REST list call with the browser key, twice a day at 01:00 Thailand time: Apps Script trigger, GitHub Actions cron `0 18 * * *` UTC, Google Sheets import, cron on a machine / server, backup or uptime tool | the tool and its owner | no personal data in notes |
+
+Not to do without a separate decision: editing, restricting, rotating or deleting the key (it may be used by the
+web apps; changing it could break PV2), enabling audit logs.
+
 ## 7. Evidence to keep (all steps)
 
 Screenshot file name with step and date, the page's time zone, the exact date range selected, and a note of anything

@@ -678,3 +678,45 @@ Done by the owner in Google Cloud Console (APIs & Services → Cloud Firestore A
 ### Status
 
 R3/S1 **does not identify** the cause of the read spikes or the owner of the 01:00 job. A possible lead for the 01:00 job (H5) needs a separate, approved check (e.g. the hourly view of `GetOrListDocuments` for `New Browser key` on one day, and who manages that key — steps B2/B3 of the checklist). **A1 = HIGH. G2 = NOT APPROVED.**
+
+---
+
+## Update 9, 2026-11-10: S1 follow-up — hourly view of `New Browser key` (owner-reported)
+
+Google Cloud Console → Cloud Firestore API → Metrics, done by the owner on 10 Nov 2026 (view only). The owner holds 2 screenshots; **they were not received in this session and are not stored here**, so the values below are as reported.
+
+### Facts (as reported)
+
+| Item | Value |
+|---|---|
+| Credential | `New Browser key` |
+| Time range | 1 day (the day before the check, page time zone UTC+7) |
+| Method | `google.firestore.v1.Firestore.GetOrListDocuments` |
+| Requests | **2** |
+| Errors | 0 % |
+| Average latency | 0.104 s |
+| Time on the chart | activity at about **01:00 UTC+7** |
+
+### What this adds to H5 (H5: the 01:00 job is `New Browser key` calling `GetOrListDocuments`)
+
+Consistent with H5, each point independent of the others:
+- **count**: 2 requests in one day, as in the 60 requests / 30 days of Update 8 and the 2 per day of Updates 2 and 7;
+- **time**: about 01:00 Thailand time, the hour of the daily job in Updates 2 and 7;
+- **method family**: a get-or-list call, which fits a list of documents.
+
+H5 is therefore **better supported** than in Update 8, but still **not proven**:
+- The day seen is in November, not 26–30 Oct. That it is **the same job** as on 26–30 Oct is **not shown** (no per-day view of 26–30 Oct for this key yet).
+- That `GetOrListDocuments` here is the `ListDocuments` of the Firestore metrics is an **inference** from naming, not shown on one page.
+- The number of documents per request (about 166 in October) is not visible on this page.
+- **Who holds or uses** `New Browser key` is unknown. A browser API key identifies a key, not a person or a program; a web app's key is public by design and may be used by any caller that has it.
+
+### Not concluded
+
+- **Not** concluded that this is the same job as 26–30 Oct.
+- **Not** concluded that it relates to the read spikes. For scale only (fact): the job is 2 requests ≈ 333 reads a day, while W1 alone had 22,636 reads in one hour.
+
+### Unknowns
+
+Owner of the 01:00 job; whether `New Browser key` is the key in the QD / PV2 web configuration; the source of W1–W6.
+
+**A1 = HIGH. G2 = NOT APPROVED.**
