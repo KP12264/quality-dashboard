@@ -1,0 +1,3 @@
+#!/bin/bash
+printf "%s\n" "$*" >> "$HOME/../curl-argv.log"
+exec /usr/bin/curl "$@"

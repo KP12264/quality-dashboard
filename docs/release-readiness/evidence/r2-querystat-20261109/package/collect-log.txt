@@ -1,0 +1,119 @@
+script  : a1-querystat.sh v1 (R2, read-only)
+project : daily-production-report-46b60
+window  : 2026-10-26T00:00:00Z -> 2026-10-31T00:00:00Z
+curl    : 8.5.0
+
+== Step 1: metricDescriptors.list (filter: metric.type starts_with firestore.googleapis.com/) ==
+Firestore metrics found: 31 (pages=1) -> metric-list.txt
+  firestore.googleapis.com/api/billable_read_units	DELTA	INT64	1	labels=[service,api_method]	resources=[firestore.googleapis.com/Database]
+  firestore.googleapis.com/api/billable_realtime_read_units	DELTA	INT64	1	labels=[service,api_method]	resources=[firestore.googleapis.com/Database]
+  firestore.googleapis.com/api/billable_write_units	DELTA	INT64	1	labels=[service,api_method]	resources=[firestore.googleapis.com/Database]
+  firestore.googleapis.com/api/request_count	DELTA	INT64	1	labels=[api_method,response_code]	resources=[datastore_request,firestore.googleapis.com/Database]
+  firestore.googleapis.com/api/request_latencies	DELTA	DISTRIBUTION	s	labels=[service,api_method,response_code]	resources=[firestore.googleapis.com/Database]
+  firestore.googleapis.com/composite_indexes_per_database	GAUGE	INT64	1	labels=[]	resources=[firestore.googleapis.com/Database]
+  firestore.googleapis.com/document/billable_managed_delete_write_units	DELTA	INT64	1	labels=[]	resources=[firestore.googleapis.com/Database]
+  firestore.googleapis.com/document/delete_count	DELTA	INT64	1	labels=[module,version]	resources=[firestore_instance]
+  firestore.googleapis.com/document/delete_ops_count	DELTA	INT64	1	labels=[]	resources=[firestore.googleapis.com/Database]
+  firestore.googleapis.com/document/read_count	DELTA	INT64	1	labels=[module,version,type]	resources=[firestore_instance]
+  firestore.googleapis.com/document/read_ops_count	DELTA	INT64	1	labels=[type]	resources=[firestore.googleapis.com/Database]
+  firestore.googleapis.com/document/ttl_deletion_count	DELTA	INT64	1	labels=[]	resources=[firestore.googleapis.com/Database,firestore_instance]
+  firestore.googleapis.com/document/ttl_expiration_to_deletion_delays	DELTA	DISTRIBUTION	s	labels=[]	resources=[firestore.googleapis.com/Database,firestore_instance]
+  firestore.googleapis.com/document/write_count	DELTA	INT64	1	labels=[module,version,op]	resources=[firestore_instance]
+  firestore.googleapis.com/document/write_ops_count	DELTA	INT64	1	labels=[op]	resources=[firestore.googleapis.com/Database]
+  firestore.googleapis.com/field_configurations_per_database	GAUGE	INT64	1	labels=[]	resources=[firestore.googleapis.com/Database]
+  firestore.googleapis.com/mcp/request_count	DELTA	INT64	1	labels=[tool_name,response_code]	resources=[firestore.googleapis.com/Database]
+  firestore.googleapis.com/mcp/request_latencies	DELTA	DISTRIBUTION	s	labels=[tool_name,response_code]	resources=[firestore.googleapis.com/Database]
+  firestore.googleapis.com/network/active_connections	GAUGE	INT64	1	labels=[module,version]	resources=[firestore.googleapis.com/Database,firestore_instance]
+  firestore.googleapis.com/network/active_ignite_connections	GAUGE	INT64	1	labels=[module,version]	resources=[firestore.googleapis.com/Database]
+  firestore.googleapis.com/network/snapshot_listeners	GAUGE	INT64	1	labels=[module,version]	resources=[firestore.googleapis.com/Database,firestore_instance]
+  firestore.googleapis.com/query_stat/per_query/result_counts	DELTA	DISTRIBUTION	{result}	labels=[service,method]	resources=[firestore.googleapis.com/Database]
+  firestore.googleapis.com/query_stat/per_query/scanned_documents_counts	DELTA	DISTRIBUTION	{document}	labels=[service,method]	resources=[firestore.googleapis.com/Database]
+  firestore.googleapis.com/query_stat/per_query/scanned_index_entries_counts	DELTA	DISTRIBUTION	{index entry}	labels=[service,method]	resources=[firestore.googleapis.com/Database]
+  firestore.googleapis.com/quota/composite_indexes_per_database/exceeded	DELTA	INT64	1	labels=[limit_name]	resources=[firestore.googleapis.com/Database]
+  firestore.googleapis.com/quota/composite_indexes_per_database/limit	GAUGE	INT64	1	labels=[limit_name]	resources=[firestore.googleapis.com/Database]
+  firestore.googleapis.com/quota/composite_indexes_per_database/usage	GAUGE	INT64	1	labels=[limit_name]	resources=[firestore.googleapis.com/Database]
+  firestore.googleapis.com/rules/evaluation_count	DELTA	INT64	1	labels=[request_method,ruleset_label,version,module,result]	resources=[firestore.googleapis.com/Database,firestore_instance]
+  firestore.googleapis.com/storage/backups_storage_bytes	GAUGE	INT64	By	labels=[]	resources=[firestore.googleapis.com/Database]
+  firestore.googleapis.com/storage/data_and_index_storage_bytes	GAUGE	INT64	By	labels=[]	resources=[firestore.googleapis.com/Database]
+  firestore.googleapis.com/storage/pitr_storage_bytes	GAUGE	INT64	By	labels=[]	resources=[firestore.googleapis.com/Database]
+selected:
+  anchor	firestore.googleapis.com/document/read_count
+  target	firestore.googleapis.com/document/read_ops_count
+  target	firestore.googleapis.com/query_stat/per_query/result_counts
+  target	firestore.googleapis.com/query_stat/per_query/scanned_documents_counts
+  target	firestore.googleapis.com/query_stat/per_query/scanned_index_entries_counts
+
+== Step 2: hourly data per metric and resource type (alignmentPeriod=3600s) ==
+headers__document_read_count: pages=1 rawSeries=2 executionErrors=0 unreachable=0 units=["1"]
+firestore.googleapis.com/document/read_count [firestore_instance] kind=DELTA value=INT64 aligner=ALIGN_SUM groupBy: resource.type metric.label.module metric.label.type metric.label.version
+ts__document_read_count__firestore_instance: pages=1 rawSeries=2 executionErrors=0 unreachable=0 units=["1"]
+headers__document_read_ops_count: pages=1 rawSeries=2 executionErrors=0 unreachable=0 units=["1"]
+firestore.googleapis.com/document/read_ops_count [firestore.googleapis.com/Database] kind=DELTA value=INT64 aligner=ALIGN_SUM groupBy: resource.type metric.label.type
+ts__document_read_ops_count__firestore.googleapis.com_Database: pages=1 rawSeries=2 executionErrors=0 unreachable=0 units=["1"]
+headers__query_stat_per_query_result_counts: pages=1 rawSeries=1 executionErrors=0 unreachable=0 units=["{result}"]
+firestore.googleapis.com/query_stat/per_query/result_counts [firestore.googleapis.com/Database] kind=DELTA value=DISTRIBUTION aligner=ALIGN_SUM groupBy: resource.type metric.label.method metric.label.service
+ts__query_stat_per_query_result_counts__firestore.googleapis.com_Database: pages=1 rawSeries=1 executionErrors=0 unreachable=0 units=["{result}"]
+headers__query_stat_per_query_scanned_documents_counts: pages=1 rawSeries=1 executionErrors=0 unreachable=0 units=["{document}"]
+firestore.googleapis.com/query_stat/per_query/scanned_documents_counts [firestore.googleapis.com/Database] kind=DELTA value=DISTRIBUTION aligner=ALIGN_SUM groupBy: resource.type metric.label.method metric.label.service
+ts__query_stat_per_query_scanned_documents_counts__firestore.googleapis.com_Database: pages=1 rawSeries=1 executionErrors=0 unreachable=0 units=["{document}"]
+headers__query_stat_per_query_scanned_index_entries_counts: pages=1 rawSeries=1 executionErrors=0 unreachable=0 units=["{not_a_unit}"]
+firestore.googleapis.com/query_stat/per_query/scanned_index_entries_counts [firestore.googleapis.com/Database] kind=DELTA value=DISTRIBUTION aligner=ALIGN_SUM groupBy: resource.type metric.label.method metric.label.service
+ts__query_stat_per_query_scanned_index_entries_counts__firestore.googleapis.com_Database: pages=1 rawSeries=1 executionErrors=0 unreachable=0 units=["{not_a_unit}"]
+
+== Step 3: verification and fact table ==
+window 2026-10-26T00:00:00Z .. 2026-10-31T00:00:00Z = 120 hourly buckets; datasets = 5
+RULE: values are kept per metric and per resource type; nothing is added across them.
+## 1. read_count consistency with earlier evidence
+  hourly vs Update 2 evidence: hours differing = 0
+  2026-10-26: hourly-sum=5088 u1=5088 MATCH
+  2026-10-27: hourly-sum=49720 u1=49720 MATCH
+  2026-10-28: hourly-sum=5424 u1=5424 MATCH
+  2026-10-29: hourly-sum=21375 u1=21375 MATCH
+  2026-10-30: hourly-sum=6437 u1=6437 MATCH
+## 2. Per UTC day, per metric and label (nothing added across resource types or metrics)
+  document/read_ops_count [firestore.googleapis.com/Database]: 26 Oct=5088, 27 Oct=49720, 28 Oct=5424, 29 Oct=21375, 30 Oct=6437; total=88044
+     by type QUERY [Database]: total=88044 hours=68
+     by type LOOKUP [Database]: total=0 hours=55
+  query_stat/per_query/result_counts [firestore.googleapis.com/Database] queries per day: 26 Oct=2, 27 Oct=2, 28 Oct=2, 29 Oct=2, 30 Oct=2; mean per query per day: 26 Oct=162.5, 27 Oct=166.5, 28 Oct=167.5, 29 Oct=167.5, 30 Oct=167.5
+     by method ListDocuments [Database]: total=10 hours=5 mean=166.3
+  query_stat/per_query/scanned_documents_counts [firestore.googleapis.com/Database] queries per day: 26 Oct=2, 27 Oct=2, 28 Oct=2, 29 Oct=2, 30 Oct=2; mean per query per day: 26 Oct=162.5, 27 Oct=166.5, 28 Oct=167.5, 29 Oct=167.5, 30 Oct=167.5
+     by method ListDocuments [Database]: total=10 hours=5 mean=166.3
+  query_stat/per_query/scanned_index_entries_counts [firestore.googleapis.com/Database] queries per day: 26 Oct=2, 27 Oct=2, 28 Oct=2, 29 Oct=2, 30 Oct=2; mean per query per day: 26 Oct=163.0, 27 Oct=167.0, 28 Oct=168.0, 29 Oct=168.0, 30 Oct=168.0
+     by method ListDocuments [Database]: total=10 hours=5 mean=166.8
+## 3. read_ops_count vs read_count per hour (information; not expected to be equal)
+  read_ops_count[firestore.googleapis.com/Database] total=88044 vs read_count=88044; hours equal=120/120
+## 4. Fact table: flagged hours (Updates 2/3 + reads >= 1000); UTC bucket end and Thailand time
+  legend: 'no data' = the metric has no series at all; '0?' = the metric has series but no point this hour (NOT verified zero)
+  2026-10-26T05:00:00Z | 26 Oct 11:00-12:00 | reads=1450 | read_ops: QUERY [Database]: 1450 | results/query: 0? | scanned/query: 0?
+  2026-10-27T02:00:00Z | 27 Oct 08:00-09:00 | reads=1308 | read_ops: QUERY [Database]: 1308 | results/query: 0? | scanned/query: 0?
+  2026-10-27T03:00:00Z | 27 Oct 09:00-10:00 | reads=1131 | read_ops: QUERY [Database]: 1131 | results/query: 0? | scanned/query: 0?
+  2026-10-27T05:00:00Z | 27 Oct 11:00-12:00 | reads=22636 | read_ops: QUERY [Database]: 22636 | results/query: 0? | scanned/query: 0?
+  2026-10-27T18:00:00Z | 28 Oct 00:00-01:00 | reads=9316 | read_ops: QUERY [Database]: 9316 | results/query: 0? | scanned/query: 0?
+  2026-10-27T19:00:00Z | 28 Oct 01:00-02:00 | reads=13701 | read_ops: QUERY [Database]: 13701 | results/query: ListDocuments [Database]: 2 q, mean 166.5 | scanned/query: ListDocuments [Database]: 2 q, mean 166.5
+  2026-10-28T02:00:00Z | 28 Oct 08:00-09:00 | reads=1439 | read_ops: QUERY [Database]: 1439 | results/query: 0? | scanned/query: 0?
+  2026-10-28T09:00:00Z | 28 Oct 15:00-16:00 | reads=1091 | read_ops: QUERY [Database]: 1091 | results/query: 0? | scanned/query: 0?
+  2026-10-29T02:00:00Z | 29 Oct 08:00-09:00 | reads=1546 | read_ops: QUERY [Database]: 1546 | results/query: 0? | scanned/query: 0?
+  2026-10-29T03:00:00Z | 29 Oct 09:00-10:00 | reads=7408 | read_ops: QUERY [Database]: 7408 | results/query: 0? | scanned/query: 0?
+  2026-10-29T21:00:00Z | 30 Oct 03:00-04:00 | reads=2764 | read_ops: QUERY [Database]: 2764 | results/query: 0? | scanned/query: 0?
+  2026-10-29T22:00:00Z | 30 Oct 04:00-05:00 | reads=1878 | read_ops: QUERY [Database]: 1878 | results/query: 0? | scanned/query: 0?
+  2026-10-29T23:00:00Z | 30 Oct 05:00-06:00 | reads=3187 | read_ops: QUERY [Database]: 3187 | results/query: 0? | scanned/query: 0?
+  2026-10-30T00:00:00Z | 30 Oct 06:00-07:00 | reads=1269 | read_ops: QUERY [Database]: 1269 | results/query: 0? | scanned/query: 0?
+  2026-10-30T02:00:00Z | 30 Oct 08:00-09:00 | reads=4169 | read_ops: QUERY [Database]: 4169 | results/query: 0? | scanned/query: 0?
+  2026-10-30T15:00:00Z | 30 Oct 21:00-22:00 | reads=1136 | read_ops: QUERY [Database]: 1136 | results/query: 0? | scanned/query: 0?
+## 5. What each result would support (hypotheses, NOT conclusions)
+  - many queries per hour with a small mean result: many small reads (e.g. repeated page opens).
+  - few queries with a large mean result: large queries (Pattern A in Update 3: many documents per rules evaluation).
+  - scanned documents per query much larger than results per query: queries that scan more than they return.
+  - 'service' / 'method' labels show the API surface; they do not identify the app, user or collection.
+## 6. Interpretation limits
+  - Cloud Monitoring values, not the Spark quota ledger. No metric here identifies the app, user or collection.
+  - Distribution means are hourly averages per query; they do not show single large queries inside an hour.
+
+WARNINGS:
+  none
+INCOMPLETE-EVIDENCE NOTES:
+  none
+FAILURES:
+  - ts__query_stat_per_query_scanned_index_entries_counts__firestore.googleapis.com_Database: API reported unit {not_a_unit}
+VERIFY STATUS: FAIL
+token check: no token or token-like string in output

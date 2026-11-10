@@ -601,3 +601,37 @@ Saved as [`r3-r6-owner-checklist.md`](r3-r6-owner-checklist.md): the 7 time wind
 R2 run by the owner (approved; result pending), U3 (not approved), Q2a redesign (on hold).
 
 **Status: A1 = HIGH. G2 = NOT APPROVED.**
+
+---
+
+## Update 7, 2026-11-10: R2 (read_ops_count + query_stat): INCOMPLETE
+
+Collected read-only by the Firebase owner in Cloud Shell with `a1-querystat.sh` v1 (GET calls to Cloud Monitoring only). Package SHA-256 `3da2715b1683bbcae03d6c72808230f5c079455e6c2cf6451edfc3cb51a00b7c`, **confirmed by the owner from Cloud Shell**. Evidence: [`evidence/r2-querystat-20261109/`](evidence/r2-querystat-20261109/README.md). R2 was **not** run again; the re-verification below was done offline on copies of the package.
+
+### Why the original run said FAIL
+
+- The descriptor of `query_stat/per_query/scanned_index_entries_counts` declares the unit `"{index entry}"` (with a space). The API returned `unit: "{not_a_unit}"` even in the unaggregated HEADERS response, which has **one series of one metric**; the two other distribution metrics (`{result}`, `{document}`) returned their units normally. Why the API does this (e.g. the space) is a hypothesis.
+- Verifier v1 failed on any `{not_a_unit}`. That rule was meant to catch mixed units, which cannot happen with one series of one metric. The data itself showed no fault.
+
+### Verifier v2 (offline on the same data)
+
+| | Verifier v1 (`6427aae8…0efa`) | Verifier v2 (`55c40d30…cca8`) |
+|---|---|---|
+| Status | FAIL (exit 2) | **INCOMPLETE (exit 3)** |
+| `scanned_index_entries_counts` | FAIL: `{not_a_unit}` | **WARNING**: descriptor unit `{index entry}`, one series, **unit NOT verified**; its query counts equal `result_counts` in all 120 hours |
+| query_stat coverage | not checked | **INCOMPLETE**: 15 of 16 flagged hours have reads but no query_stat point |
+
+v2 never accepts `{not_a_unit}` as a unit: mixed units or a descriptor mismatch → FAIL; no descriptor unit, more than one series, or counts that disagree with `result_counts` → INCOMPLETE; one series of one metric with a descriptor unit → WARNING. Collector `a1-querystat.sh` v1.1 (`217ffb70…c228`) embeds v2; mock tests: 29 scenarios, all as expected (WARNING, INCOMPLETE, FAIL, STOP, token and argv checks). v1.1 has not been run against Google Cloud.
+
+### What R2 shows (facts)
+
+- `document/read_count` equals the Update 2 evidence in all 120 hours; `document/read_ops_count` equals `read_count` in all 120 hours (88,044, all `type=QUERY`; `LOOKUP` 0).
+- `query_stat/per_query/*` recorded **only 10 queries in 5 days, all `ListDocuments`**, 2 per day at 01:00 Thailand time, about 166 documents each (2 × 166 ≈ the 333–335 reads of that hour). This is the daily job seen in Update 2; its owner is still unknown (R6 Q3).
+- **15 of 16 flagged hours** (including 27 Oct 11:00–12:00 Thailand, 22,636 reads) have reads but **no query_stat point**.
+
+### Limits of query_stat and conclusion
+
+- Like `api/request_count` (Update 2), `query_stat` does **not** capture the applications' queries in this project; it only shows the `ListDocuments` calls. Why (e.g. the web SDK's streaming channel is not covered) is a hypothesis, not checked.
+- **R2 = INCOMPLETE. R2 does not identify the cause of the read spikes**, and does not show whether they were large queries or many small ones. The open question stays open.
+
+**Status: A1 = HIGH. G2 = NOT APPROVED.**
