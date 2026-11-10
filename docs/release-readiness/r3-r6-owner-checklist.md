@@ -163,6 +163,13 @@ Send the screenshots with: the page's time zone, the date range used, and "yes /
 | B6 | Read-only code search in the repositories the owners control for REST calls to `firestore.googleapis.com/v1/projects/daily-production-report-46b60` (QD repository: can be searched here on approval; PV2 and others: by their owners) | file and line, schedule if any | none |
 | B5 | Owners (R6 Q3), with the clue: a REST list call with the browser key, twice a day at 01:00 Thailand time: Apps Script trigger, GitHub Actions cron `0 18 * * *` UTC, Google Sheets import, cron on a machine / server, backup or uptime tool | the tool and its owner | no personal data in notes |
 
+**B6 result for the QD repository (2026-11-10, Update 10):** working branch `c265e7d`, `origin/main` `b118f93` and the
+git history: **no scheduled job, no direct Firestore REST call, no `ListDocuments` / `GetOrListDocuments` /
+`listCollectionIds`**, no `fetch` in application code; timers only `js/dashboard.js:1519` and
+`js/weekly-plan-page.js:431` (no reads); one API key `AIza…J53c` (`js/config.js:26`). **QD is not fully excluded**
+(a browser with QD open reads through the SDK); **owner of the 01:00 job unknown; cause of the spikes unknown.**
+Still open: B6 for PV2 and other repositories (their owners), B2 / B2b (is `New Browser key` = `…J53c`?).
+
 Not to do without a separate decision: editing, restricting, rotating or deleting the key (it may be used by the
 web apps; changing it could break PV2), enabling audit logs.
 

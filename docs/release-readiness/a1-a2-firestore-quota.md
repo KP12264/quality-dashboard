@@ -720,3 +720,39 @@ H5 is therefore **better supported** than in Update 8, but still **not proven**:
 Owner of the 01:00 job; whether `New Browser key` is the key in the QD / PV2 web configuration; the source of W1–W6.
 
 **A1 = HIGH. G2 = NOT APPROVED.**
+
+---
+
+## Update 10, 2026-11-10: B6 — read-only search of the QD repository
+
+Searched (no code changed): the working branch `claude/vigilant-pasteur-l91qt3` at `c265e7d`, `origin/main` at `b118f93` (the live site), and the git history of all branches (files ever added). `tests/node_modules` excluded; `docs/` checked separately. The API key is shown only as its last 4 characters.
+
+### Results (facts)
+
+| # | Searched for | Result | File / line |
+|---|---|---|---|
+| 1 | Direct REST calls to Firestore (`firestore.googleapis.com`, `/v1/projects/`, `:listDocuments`, `documents/`) | **None in application code** on either branch. Matches only in tests, all against the **local emulator** (`127.0.0.1`, `/emulator/v1/…`, emulator `identitytoolkit`) | e.g. `tests/tools/seed-emulator.js:25`; account setup in `tests/e2e/*.test.js` |
+| 2 | `GetOrListDocuments`, `ListDocuments`, `listCollectionIds`, `listCollections` | **None** on either branch | – |
+| 2b | `fetch`, `XMLHttpRequest`, `axios`, `sendBeacon` in `js/` and `*.html` | **None** on either branch; QD reaches Firestore only through the Firebase SDK | – |
+| 3 | Scheduled jobs: `.github/workflows`, cron, Apps Script (`.gs`), Cloud Functions, scheduler, crontab | **None** on either branch and **none ever added** in the git history | only `emulator/firebase.json` (emulator settings) |
+| 4 | Time-of-day code (01:00, `getHours()==1`, `getUTCHours()==18`) and timers | **No time-of-day code.** Timers: 2 `setInterval`, working branch only, neither reads Firestore | `js/dashboard.js:1519` (stale-data hint every 30 s; code comment "no new fetch, no new adapter call"); `js/weekly-plan-page.js:431` (clock only, "no reads") |
+| 5 | API keys | **One key** in the repository, the Firebase web configuration, same on both branches: `AIza…J53c`. Emulator mode uses `"demo-api-key"` | `js/config.js:26`; `js/firebase-init.js:48` |
+| – | Scripts in `docs/` | The A1 evidence collectors call Cloud Monitoring only (GET), are run by hand in Cloud Shell, and contain no schedule | `docs/release-readiness/evidence/*/a1-*.sh` |
+
+### What this means
+
+- **No scheduled job and no direct Firestore REST call exist in the QD repository** (branch, `main`, history).
+- **QD cannot be fully excluded.** The search covers code, not use: a browser with QD open at 01:00 would read through the Firebase SDK, and which API methods the SDK's traffic is reported under on the server side is not shown by this search. Whether `New Browser key` is the `…J53c` key is not known; a web key is public by design and can be used by any caller that has it.
+- **The owner of the 01:00 job is still unknown.** PV2 and other repositories, Apps Script, Google Sheets, and cron or tools on any machine were not searched (outside this repository).
+- **The cause of the read spikes (W1–W6) is still unknown.** B6 does not explain them.
+
+### Hypotheses (NOT verified)
+
+- Q-H1 The 01:00 job does not come from QD code (no code here makes a scheduled REST list call).
+- Q-H2 `New Browser key` may or may not be the `…J53c` key (to be checked by its last 4 characters, step B2 / B2b).
+
+### Next (each needs approval)
+
+B2 / B2b (compare the last 4 characters of `New Browser key` with `…J53c`, view only); B6 for PV2 and other repositories by their owners; B5 owner questions; B1a / B1b (per-day view for 26–31 Oct).
+
+**A1 = HIGH. G2 = NOT APPROVED.**
