@@ -49,7 +49,7 @@
   }
   const opts = () => {
     const st = QDAuth.getState();
-    return { email: st.email, serverTimestamp: () => firebase.firestore.FieldValue.serverTimestamp() };
+    return { email: st.email, role: st.profile ? st.profile.role : undefined, slots: st.profile ? st.profile.slots : undefined, serverTimestamp: () => firebase.firestore.FieldValue.serverTimestamp() };
   };
   function errorText(e) {
     const c = e && e.code ? String(e.code) : "";

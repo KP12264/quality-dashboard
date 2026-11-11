@@ -1,0 +1,394 @@
+TAP version 13
+# Subtest: static: only scrap-adapter.js and scrap-ledger.js touch scrapLogs for writing
+ok 1 - static: only scrap-adapter.js and scrap-ledger.js touch scrapLogs for writing
+  ---
+  duration_ms: 7.519907
+  type: 'test'
+  ...
+# Subtest: dynamic: in enforce mode every scrap write of the adapter goes through ScrapLedger.applyOps
+ok 2 - dynamic: in enforce mode every scrap write of the adapter goes through ScrapLedger.applyOps
+  ---
+  duration_ms: 8.986438
+  type: 'test'
+  ...
+# Subtest: every page that can write loads sign-in, or is retired (never connects)
+ok 3 - every page that can write loads sign-in, or is retired (never connects)
+  ---
+  duration_ms: 0.898593
+  type: 'test'
+  ...
+# Subtest: scrap is saved only on pages that load the ledger
+ok 4 - scrap is saved only on pages that load the ledger
+  ---
+  duration_ms: 0.262649
+  type: 'test'
+  ...
+# Subtest: no inline script writes to Firestore
+ok 5 - no inline script writes to Firestore
+  ---
+  duration_ms: 0.153313
+  type: 'test'
+  ...
+# Subtest: the old copies are retired and point to the current pages (Weekly Plan V5: the two old plan pages too)
+ok 6 - the old copies are retired and point to the current pages (Weekly Plan V5: the two old plan pages too)
+  ---
+  duration_ms: 1.069499
+  type: 'test'
+  ...
+# Subtest: employee code becomes the Production V2 sign-in address
+ok 7 - employee code becomes the Production V2 sign-in address
+  ---
+  duration_ms: 1.120941
+  type: 'test'
+  ...
+# Subtest: admin may do every action
+ok 8 - admin may do every action
+  ---
+  duration_ms: 0.400083
+  type: 'test'
+  ...
+# Subtest: viewer may not write anything
+ok 9 - viewer may not write anything
+  ---
+  duration_ms: 0.162042
+  type: 'test'
+  ...
+# Subtest: leader writes scrap only on assigned Line/Shift
+ok 10 - leader writes scrap only on assigned Line/Shift
+  ---
+  duration_ms: 0.251922
+  type: 'test'
+  ...
+# Subtest: leader moving a record needs both the old and the new slot
+ok 11 - leader moving a record needs both the old and the new slot
+  ---
+  duration_ms: 1.442469
+  type: 'test'
+  ...
+# Subtest: leader without any slot cannot write scrap at all
+ok 12 - leader without any slot cannot write scrap at all
+  ---
+  duration_ms: 0.210435
+  type: 'test'
+  ...
+# Subtest: leader writes nothing but scrap: improvements, weekly plans, import, mappings, targets, users are read-only
+ok 13 - leader writes nothing but scrap: improvements, weekly plans, import, mappings, targets, users are read-only
+  ---
+  duration_ms: 0.243704
+  type: 'test'
+  ...
+# Subtest: disabled, missing or unknown profiles get nothing
+ok 14 - disabled, missing or unknown profiles get nothing
+  ---
+  duration_ms: 0.164992
+  type: 'test'
+  ...
+# Subtest: six slots per day: Door A/B/C x Day/Night
+ok 15 - six slots per day: Door A/B/C x Day/Night
+  ---
+  duration_ms: 0.936228
+  type: 'test'
+  ...
+# Subtest: profile description shown in the sign-in box
+ok 16 - profile description shown in the sign-in box
+  ---
+  duration_ms: 0.51952
+  type: 'test'
+  ...
+# Subtest: no slot / no close document is PENDING, never zero
+ok 17 - no slot / no close document is PENDING, never zero
+  ---
+  duration_ms: 1.726143
+  type: 'test'
+  ...
+# Subtest: closed and unchanged keeps its close state
+ok 18 - closed and unchanged keeps its close state
+  ---
+  duration_ms: 2.2175
+  type: 'test'
+  ...
+# Subtest: a ledger write after the close is CHANGED and needs reconfirm
+ok 19 - a ledger write after the close is CHANGED and needs reconfirm
+  ---
+  duration_ms: 0.398713
+  type: 'test'
+  ...
+# Subtest: logs changed without a version change are CONFLICT
+ok 20 - logs changed without a version change are CONFLICT
+  ---
+  duration_ms: 0.341444
+  type: 'test'
+  ...
+# Subtest: ledger count mismatch (writes outside the ledger) is CONFLICT, even when not closed
+ok 21 - ledger count mismatch (writes outside the ledger) is CONFLICT, even when not closed
+  ---
+  duration_ms: 0.386129
+  type: 'test'
+  ...
+# Subtest: an unfinished import marker is CONFLICT
+ok 22 - an unfinished import marker is CONFLICT
+  ---
+  duration_ms: 1.025723
+  type: 'test'
+  ...
+# Subtest: fingerprint depends on ids and quantities, not order
+ok 23 - fingerprint depends on ids and quantities, not order
+  ---
+  duration_ms: 0.421847
+  type: 'test'
+  ...
+# Subtest: shift end (Thailand time): DAY same evening, NIGHT next morning, whatever the device time zone
+ok 24 - shift end (Thailand time): DAY same evening, NIGHT next morning, whatever the device time zone
+  ---
+  duration_ms: 0.411632
+  type: 'test'
+  ...
+# Subtest: leader close window: 7 days back yes, 8 no; nobody closes the future
+ok 25 - leader close window: 7 days back yes, 8 no; nobody closes the future
+  ---
+  duration_ms: 0.863028
+  type: 'test'
+  ...
+# Subtest: config window and rules window are the same number
+ok 26 - config window and rules window are the same number
+  ---
+  duration_ms: 1.255005
+  type: 'test'
+  ...
+# Subtest: QD_AUTH_MODE is still off
+ok 27 - QD_AUTH_MODE is still off
+  ---
+  duration_ms: 0.696147
+  type: 'test'
+  ...
+# Subtest: OVER although closes are missing (scrap > 50 is certain)
+ok 28 - OVER although closes are missing (scrap > 50 is certain)
+  ---
+  duration_ms: 3.005536
+  type: 'test'
+  ...
+# Subtest: WITHIN only when all 6 closed and <= 50
+ok 29 - WITHIN only when all 6 closed and <= 50
+  ---
+  duration_ms: 1.592539
+  type: 'test'
+  ...
+# Subtest: Pending, Changed and Conflict never count as closed
+ok 30 - Pending, Changed and Conflict never count as closed
+  ---
+  duration_ms: 3.538666
+  type: 'test'
+  ...
+# Subtest: status is checked against the real scrap logs, not closedScrapQty / counters
+ok 31 - status is checked against the real scrap logs, not closedScrapQty / counters
+  ---
+  duration_ms: 0.744225
+  type: 'test'
+  ...
+# Subtest: Confirmed Zero on every shift: WITHIN with a known 0
+ok 32 - Confirmed Zero on every shift: WITHIN with a known 0
+  ---
+  duration_ms: 0.722405
+  type: 'test'
+  ...
+# Subtest: No Production on every shift: NO PRODUCTION; mixed with Zero: WITHIN
+ok 33 - No Production on every shift: NO PRODUCTION; mixed with Zero: WITHIN
+  ---
+  duration_ms: 0.469552
+  type: 'test'
+  ...
+# Subtest: READ ERROR: scrap or close status unreadable; never 0 or WITHIN, even over 50
+ok 34 - READ ERROR: scrap or close status unreadable; never 0 or WITHIN, even over 50
+  ---
+  duration_ms: 0.460574
+  type: 'test'
+  ...
+# Subtest: NO DATA only when there is nothing at all
+ok 35 - NO DATA only when there is nothing at all
+  ---
+  duration_ms: 0.343137
+  type: 'test'
+  ...
+# Subtest: day priority when several statuses meet: READ ERROR > OVER > CONFLICT > INCOMPLETE > NO PRODUCTION / WITHIN
+ok 36 - day priority when several statuses meet: READ ERROR > OVER > CONFLICT > INCOMPLETE > NO PRODUCTION / WITHIN
+  ---
+  duration_ms: 0.869251
+  type: 'test'
+  ...
+# Subtest: range priority: OVER > READ ERROR > CONFLICT > INCOMPLETE > WITHIN > NO PRODUCTION > NO DATA
+ok 37 - range priority: OVER > READ ERROR > CONFLICT > INCOMPLETE > WITHIN > NO PRODUCTION > NO DATA
+  ---
+  duration_ms: 0.728375
+  type: 'test'
+  ...
+# Subtest: Line / Shift filter never changes the day: all 6 slots are always judged
+ok 38 - Line / Shift filter never changes the day: all 6 slots are always judged
+  ---
+  duration_ms: 0.533497
+  type: 'test'
+  ...
+# Subtest: before QD_CLOSE_REQUIRED_FROM the previous rules apply; null = nothing changes
+ok 39 - before QD_CLOSE_REQUIRED_FROM the previous rules apply; null = nothing changes
+  ---
+  duration_ms: 0.710484
+  type: 'test'
+  ...
+# Subtest: config: QD_CLOSE_REQUIRED_FROM is null and QD_AUTH_MODE "off"
+ok 40 - config: QD_CLOSE_REQUIRED_FROM is null and QD_AUTH_MODE "off"
+  ---
+  duration_ms: 0.410651
+  type: 'test'
+  ...
+# Subtest: shift end and Thailand time agree with the rules
+ok 41 - shift end and Thailand time agree with the rules
+  ---
+  duration_ms: 4.501808
+  type: 'test'
+  ...
+# Subtest: public mirror carries no e-mail, note or reason
+ok 42 - public mirror carries no e-mail, note or reason
+  ---
+  duration_ms: 0.308361
+  type: 'test'
+  ...
+# Subtest: dates: Thailand day boundary (UTC+7)
+ok 43 - dates: Thailand day boundary (UTC+7)
+  ---
+  duration_ms: 1.546769
+  type: 'test'
+  ...
+# Subtest: dates: leader window matches the rules (Thailand-now < date + 8 days)
+ok 44 - dates: leader window matches the rules (Thailand-now < date + 8 days)
+  ---
+  duration_ms: 0.260999
+  type: 'test'
+  ...
+# Subtest: dates: relative test dates stay valid with the clock 0 / 30 / 365 days ahead
+ok 45 - dates: relative test dates stay valid with the clock 0 / 30 / 365 days ahead
+  ---
+  duration_ms: 0.423455
+  type: 'test'
+  ...
+# Subtest: guard: no hard-coded YYYY-MM-DD in Rules / E2E tests (except fixed-date-ok and shift-time)
+ok 46 - guard: no hard-coded YYYY-MM-DD in Rules / E2E tests (except fixed-date-ok and shift-time)
+  ---
+  duration_ms: 10.128615
+  type: 'test'
+  ...
+# Subtest: KI-1: only refused commits are retried
+ok 47 - KI-1: only refused commits are retried
+  ---
+  duration_ms: 0.907715
+  type: 'test'
+  ...
+# Subtest: weeks: Mon–Sun clipped to the month, every day in exactly one week, months of 28/29/30/31 days
+ok 48 - weeks: Mon–Sun clipped to the month, every day in exactly one week, months of 28/29/30/31 days
+  ---
+  duration_ms: 4.280726
+  type: 'test'
+  ...
+# Subtest: a week across a month end is split: no day counted in two months
+ok 49 - a week across a month end is split: no day counted in two months
+  ---
+  duration_ms: 2.500853
+  type: 'test'
+  ...
+# Subtest: plan: base = 50 × days; override (0 … base) replaces it; monthly budget = sum of weekly plans
+ok 50 - plan: base = 50 × days; override (0 … base) replaces it; monthly budget = sum of weekly plans
+  ---
+  duration_ms: 3.791495
+  type: 'test'
+  ...
+# Subtest: an override above 50/day, negative, fractional or not a number is not applied (warning)
+ok 51 - an override above 50/day, negative, fractional or not a number is not applied (warning)
+  ---
+  duration_ms: 1.087532
+  type: 'test'
+  ...
+# Subtest: actual / remaining / used / plan to date; scope = Door A/B/C × DAY/NIGHT only
+ok 52 - actual / remaining / used / plan to date; scope = Door A/B/C × DAY/NIGHT only
+  ---
+  duration_ms: 0.69928
+  type: 'test'
+  ...
+# Subtest: Line × Shift detail always adds up to the Door A+B+C total
+ok 53 - Line × Shift detail always adds up to the Door A+B+C total
+  ---
+  duration_ms: 0.695043
+  type: 'test'
+  ...
+# Subtest: no data is never 0: a day without any log is NO_DATA (qty unknown), the week is NOT_FINAL
+ok 54 - no data is never 0: a day without any log is NO_DATA (qty unknown), the week is NOT_FINAL
+  ---
+  duration_ms: 0.751007
+  type: 'test'
+  ...
+# Subtest: scrap read failure: no number at all (READ_ERROR), never 0
+ok 55 - scrap read failure: no number at all (READ_ERROR), never 0
+  ---
+  duration_ms: 0.679509
+  type: 'test'
+  ...
+# Subtest: Shift Close decides finality: all 6 closed → days FINAL; the week is FINAL only when it has ended; pending / changed / conflict → not final
+ok 56 - Shift Close decides finality: all 6 closed → days FINAL; the week is FINAL only when it has ended; pending / changed / conflict → not final
+  ---
+  duration_ms: 5.324932
+  type: 'test'
+  ...
+# Subtest: OVER is certain even when days are not final; over the daily 50 is flagged per day
+ok 57 - OVER is certain even when days are not final; over the daily 50 is flagged per day
+  ---
+  duration_ms: 1.642803
+  type: 'test'
+  ...
+# Subtest: reduction goal: −50 % of the previous month, CONFIRMED only when every previous day is final
+ok 58 - reduction goal: −50 % of the previous month, CONFIRMED only when every previous day is final
+  ---
+  duration_ms: 7.433211
+  type: 'test'
+  ...
+# Subtest: Improve: Top 5 by defect only (all lines in one row), qty per Door A/B/C and sub-causes inside
+ok 59 - Improve: Top 5 by defect only (all lines in one row), qty per Door A/B/C and sub-causes inside
+  ---
+  duration_ms: 8.203244
+  type: 'test'
+  ...
+# Subtest: card window: as of the Dashboard To date, never after today; month of that date
+ok 60 - card window: as of the Dashboard To date, never after today; month of that date
+  ---
+  duration_ms: 0.166988
+  type: 'test'
+  ...
+# Subtest: config: weekly plan constants
+ok 61 - config: weekly plan constants
+  ---
+  duration_ms: 0.581936
+  type: 'test'
+  ...
+# Subtest: plan source: no document = DEFAULT (not set), Admin default = ADMIN_DEFAULT, override, unreadable = UNAVAILABLE — a default is never "confirmed"
+ok 62 - plan source: no document = DEFAULT (not set), Admin default = ADMIN_DEFAULT, override, unreadable = UNAVAILABLE — a default is never "confirmed"
+  ---
+  duration_ms: 2.231758
+  type: 'test'
+  ...
+# Subtest: D1: budget status, daily compliance and data completeness are separate — a day over 50 inside the budget = Within plan + Daily limit breached
+ok 63 - D1: budget status, daily compliance and data completeness are separate — a day over 50 inside the budget = Within plan + Daily limit breached
+  ---
+  duration_ms: 3.48127
+  type: 'test'
+  ...
+# Subtest: monthly No data: no log at all = noLog (shown "No log", never 0); every shift confirmed zero = a known 0, FINAL; partly confirmed = so far / Not final
+ok 64 - monthly No data: no log at all = noLog (shown "No log", never 0); every shift confirmed zero = a known 0, FINAL; partly confirmed = so far / Not final
+  ---
+  duration_ms: 4.865039
+  type: 'test'
+  ...
+1..64
+# tests 64
+# suites 0
+# pass 64
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 287.639885

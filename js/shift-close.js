@@ -140,13 +140,24 @@
 
   // ---- closing ------------------------------------------------------------------------------
   function fail(code, message) { const e = new Error(message); e.code = code; return e; }
+  // True only for an active Leader on an assigned slot whose date is inside the Leader window with at
+  // least one hour to spare by this device's clock (the rules use the server clock).
+  function onlyAdminMayReconfirm(req, opts) {
+    if (!opts || opts.role !== "leader" || !Array.isArray(opts.slots)) return false;
+    if (!opts.slots.includes(`${req.line}_${req.shift}`)) return false;
+    const days = typeof QD_LEADER_EDIT_WINDOW_DAYS === "number" ? QD_LEADER_EDIT_WINDOW_DAYS : 7;
+    const start = Date.parse(String(req.date) + "T00:00:00Z");
+    if (!isFinite(start)) return false;
+    const bkkNow = Date.now() + 7 * 3600000;
+    return bkkNow >= start && bkkNow < start + (days + 1) * 86400000 - 3600000;
+  }
 
   /**
    * closeSlot(db, req, opts)
    *   req:  { date, line, shift, state, note, reason, expectedVersion, expectedRevision, reconfirm }
    *         expectedVersion / expectedRevision = what the person was looking at when they pressed
    *         the button; if the slot moved since, nothing is written (qd/changed-while-closing).
-   *   opts: { email, serverTimestamp }
+   *   opts: { email, serverTimestamp, role?, slots? }   the signed-in role / assigned slots, if known (KI-2)
    * → { slotId, revision, version, verified }
    */
   async function closeSlot(db, req, opts) {
@@ -161,6 +172,15 @@
     if (pre.slot && pre.slot.importPending) throw fail("qd/import-pending", REASONS["import-incomplete"]);
     if (st.status === STATUS.CONFLICT) throw fail("qd/conflict", st.reasons.map(r => REASONS[r] || r).join(" "));
     if ((st.status === req.state || CLOSE_STATES.includes(st.status)) && !req.reconfirm) throw fail("qd/already-closed", "This shift is already closed at this version.");
+    // KI-2: confirming again a shift that is already closed at its CURRENT version is Admin-only (rules:
+    // scrapSlots update (c)). Say so, instead of attempting a write the rules would refuse with a raw
+    // permission-denied, but ONLY when that is the one reason left: the caller states it is a Leader with
+    // this Line/Shift assigned, the date is clearly inside the Leader window, and the slot just read is
+    // closed at its current version. In every other case (no role given, not assigned, near or outside
+    // the window, viewer…) nothing changes and the rules decide; their denial is passed on as it is.
+    if (req.reconfirm && CLOSE_STATES.includes(st.status) && onlyAdminMayReconfirm(req, opts)) {
+      throw fail("qd/already-closed", "This shift is already confirmed at its current version. Only an Admin can confirm it again.");
+    }
     if (req.state === STATUS.SUBMITTED && !(st.count > 0 && st.qty > 0)) throw fail("qd/invalid", "There is no scrap to submit. Use Confirm zero scrap or No production.");
     if (req.state !== STATUS.SUBMITTED && st.count > 0) throw fail("qd/invalid", "This shift has scrap records, so it cannot be confirmed as zero / no production.");
     const reason = (req.reason || "").trim();

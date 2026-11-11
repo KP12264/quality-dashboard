@@ -1,0 +1,10 @@
+0c715fc283d314e3272b2330ad3edf141e358ee62a921240d22f7b82b5ddf122  ./README.md
+b8f471623c872d2951d5cbf9423d3b8cc4feb711cb8b0f3e726ffb3b617bf3b0  ./diag-after.json
+58debcc617a05cd70753f9c4f86cf20aeb79d89d7e33ee824e6b2647c8c44412  ./diag-before.json
+b41790749824fceabdcf3b77c04f2af8cb806e32d9e44de66ebfbcca94a8eed6  ./diag-ki1.test.js
+7c94c2432e131d93e5e608e8b5dbf377a8dc11b47fa0d57e2dfeef63da44d152  ./full-e2e.log
+39bbd62f86208ca0581b012fc76f896745296ed6c879c28df6fb5a885c0cbcdc  ./full-regression.log
+fc57b9ebbe75d5ce405d9f965220218543320ea615ce8bbd3cafbd9f78e93706  ./full-rules.log
+df854532bd6a5658a6a6f8aa8a7b4afbbf0d6c6fa77ba6d83db0ae0f31058ac8  ./full-unit.log
+d1752d1086984d6541544e2326d4d42309223b0a69ccc97b4e8a55e45f1a8a4a  ./loops-10-rounds.txt
+894cb068f5555a9da9ba7741a1ec8e46abe6c03bb007ee4dddacb7c50e0c1f50  ./loops-status.txt

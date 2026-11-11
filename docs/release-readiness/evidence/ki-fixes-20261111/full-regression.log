@@ -1,0 +1,114 @@
+TAP version 13
+# Subtest: Dashboard V5 vs oracle (sign-in off)
+    # Subtest: sign-in is off and adds nothing to the page
+    ok 1 - sign-in is off and adds nothing to the page
+      ---
+      duration_ms: 10.624004
+      type: 'test'
+      ...
+    # Subtest: range 1d-today (2026-10-29 → 2026-10-29)
+    ok 2 - range 1d-today (2026-10-29 → 2026-10-29)
+      ---
+      duration_ms: 30338.705308
+      type: 'test'
+      ...
+    # Subtest: range 1d-50 (2026-10-05 → 2026-10-05)
+    ok 3 - range 1d-50 (2026-10-05 → 2026-10-05)
+      ---
+      duration_ms: 30413.594147
+      type: 'test'
+      ...
+    # Subtest: range 1d-51 (2026-10-06 → 2026-10-06)
+    ok 4 - range 1d-51 (2026-10-06 → 2026-10-06)
+      ---
+      duration_ms: 30406.706406
+      type: 'test'
+      ...
+    # Subtest: range 1d-nolog (2026-10-08 → 2026-10-08)
+    ok 5 - range 1d-nolog (2026-10-08 → 2026-10-08)
+      ---
+      duration_ms: 30017.954554
+      type: 'test'
+      ...
+    # Subtest: range 1d-nodata (2026-10-10 → 2026-10-10)
+    ok 6 - range 1d-nodata (2026-10-10 → 2026-10-10)
+      ---
+      duration_ms: 39580.797631
+      type: 'test'
+      ...
+    # Subtest: range 1d-nightmissing (2026-10-11 → 2026-10-11)
+    ok 7 - range 1d-nightmissing (2026-10-11 → 2026-10-11)
+      ---
+      duration_ms: 30350.451481
+      type: 'test'
+      ...
+    # Subtest: range 7d (2026-10-23 → 2026-10-29)
+    ok 8 - range 7d (2026-10-23 → 2026-10-29)
+      ---
+      duration_ms: 30598.67343
+      type: 'test'
+      ...
+    # Subtest: range 15d (2026-10-15 → 2026-10-29)
+    ok 9 - range 15d (2026-10-15 → 2026-10-29)
+      ---
+      duration_ms: 30735.619396
+      type: 'test'
+      ...
+    # Subtest: range 30d (2026-09-30 → 2026-10-29)
+    ok 10 - range 30d (2026-09-30 → 2026-10-29)
+      ---
+      duration_ms: 30864.207743
+      type: 'test'
+      ...
+    # Subtest: range cross (2026-09-25 → 2026-10-06)
+    ok 11 - range cross (2026-09-25 → 2026-10-06)
+      ---
+      duration_ms: 40767.444499
+      type: 'test'
+      ...
+    # Subtest: range pre-only (2026-09-20 → 2026-09-28)
+    ok 12 - range pre-only (2026-09-20 → 2026-09-28)
+      ---
+      duration_ms: 30741.807167
+      type: 'test'
+      ...
+    # Subtest: range edge12 (2026-10-01 → 2026-10-12)
+    ok 13 - range edge12 (2026-10-01 → 2026-10-12)
+      ---
+      duration_ms: 30599.209344
+      type: 'test'
+      ...
+    # Subtest: no console errors on the Dashboard
+    ok 14 - no console errors on the Dashboard
+      ---
+      duration_ms: 0.232696
+      type: 'test'
+      ...
+    1..14
+ok 1 - Dashboard V5 vs oracle (sign-in off)
+  ---
+  duration_ms: 387531.279019
+  type: 'suite'
+  ...
+# Subtest: Executive Report (sign-in off)
+    # Subtest: loads, matches the oracle total for the default period, writes nothing
+    ok 1 - loads, matches the oracle total for the default period, writes nothing
+      ---
+      duration_ms: 2609.705847
+      type: 'test'
+      ...
+    1..1
+ok 2 - Executive Report (sign-in off)
+  ---
+  duration_ms: 2609.964604
+  type: 'suite'
+  ...
+1..2
+# tests 15
+# suites 2
+# pass 15
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 390835.541552

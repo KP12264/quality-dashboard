@@ -1,0 +1,116 @@
+{
+ "rounds": [
+  {
+   "r": 0,
+   "date": "2026-11-10",
+   "d2": "2026-11-07",
+   "ms": 24070,
+   "diffSlots": {
+    "ok": 6,
+    "rejected": []
+   },
+   "sameSlot": {
+    "ok": 15,
+    "rejected": []
+   }
+  },
+  {
+   "r": 1,
+   "date": "2026-11-09",
+   "d2": "2026-11-06",
+   "ms": 23705,
+   "diffSlots": {
+    "ok": 6,
+    "rejected": []
+   },
+   "sameSlot": {
+    "ok": 15,
+    "rejected": []
+   }
+  },
+  {
+   "r": 2,
+   "date": "2026-11-08",
+   "d2": "2026-11-05",
+   "ms": 22733,
+   "diffSlots": {
+    "ok": 6,
+    "rejected": []
+   },
+   "sameSlot": {
+    "ok": 15,
+    "rejected": []
+   }
+  },
+  {
+   "r": 3,
+   "date": "2026-11-07",
+   "d2": "2026-11-10",
+   "ms": 23829,
+   "diffSlots": {
+    "ok": 6,
+    "rejected": []
+   },
+   "sameSlot": {
+    "ok": 15,
+    "rejected": []
+   }
+  },
+  {
+   "r": 4,
+   "date": "2026-11-06",
+   "d2": "2026-11-09",
+   "ms": 21674,
+   "diffSlots": {
+    "ok": 6,
+    "rejected": []
+   },
+   "sameSlot": {
+    "ok": 15,
+    "rejected": []
+   }
+  },
+  {
+   "r": 5,
+   "date": "2026-11-05",
+   "d2": "2026-11-08",
+   "ms": 21914,
+   "diffSlots": {
+    "ok": 6,
+    "rejected": []
+   },
+   "sameSlot": {
+    "ok": 15,
+    "rejected": []
+   }
+  },
+  {
+   "r": 6,
+   "date": "2026-11-10",
+   "d2": "2026-11-07",
+   "ms": 25253,
+   "diffSlots": {
+    "ok": 6,
+    "rejected": []
+   },
+   "sameSlot": {
+    "ok": 15,
+    "rejected": []
+   }
+  },
+  {
+   "r": 7,
+   "date": "2026-11-09",
+   "d2": "2026-11-06",
+   "ms": 21176,
+   "diffSlots": {
+    "ok": 6,
+    "rejected": []
+   },
+   "sameSlot": {
+    "ok": 15,
+    "rejected": []
+   }
+  }
+ ]
+}

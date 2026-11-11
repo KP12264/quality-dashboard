@@ -1,0 +1,906 @@
+i  emulators: Starting emulators: auth, firestore
+i  emulators: Detected demo project ID "demo-quality-dashboard", emulated services will use a demo configuration and attempts to access non-emulated services for this project will fail.
+⚠  hub: Error when trying to check port 4400 on ::1: Error: listen EAFNOSUPPORT: address family not supported ::1:4400
+⚠  hub: Port 4400 is available on 127.0.0.1 but not ::1. This may cause issues with some clients.
+⚠  hub: If you encounter connectivity issues, consider switching to a different port or explicitly specifying "host": "<ip address>" instead of hostname in firebase.json
+⚠  logging: Error when trying to check port 4500 on ::1: Error: listen EAFNOSUPPORT: address family not supported ::1:4500
+⚠  logging: Port 4500 is available on 127.0.0.1 but not ::1. This may cause issues with some clients.
+⚠  logging: If you encounter connectivity issues, consider switching to a different port or explicitly specifying "host": "<ip address>" instead of hostname in firebase.json
+i  firestore: Firestore Emulator logging to firestore-debug.log
+⚠  Unable to fetch the CLI MOTD and remote config. This is not a fatal error, but may indicate an issue with your network connection.
+✔  firestore: Firestore Emulator was started in standard edition.
+✔  firestore: Firestore Emulator UI websocket is running on 9150.
+i  Running script: node --test --test-concurrency=1 --test-reporter=tap e2e/*.test.js
+TAP version 13
+# Subtest: sign-in and roles in the browser (emulator)
+    # Subtest: test mode really uses the demo project and the emulator
+    ok 1 - test mode really uses the demo project and the emulator
+      ---
+      duration_ms: 338.999276
+      type: 'test'
+      ...
+    # Subtest: public dashboard and Executive Report still load without signing in
+    ok 2 - public dashboard and Executive Report still load without signing in
+      ---
+      duration_ms: 3478.892213
+      type: 'test'
+      ...
+    # Subtest: not signed in: saving scrap is refused with a clear message
+    ok 3 - not signed in: saving scrap is refused with a clear message
+      ---
+      duration_ms: 591.127094
+      type: 'test'
+      ...
+    # Subtest: leader saves on the assigned Line only; the rules block a direct write to another Line
+    ok 4 - leader saves on the assigned Line only; the rules block a direct write to another Line
+      ---
+      duration_ms: 1546.546301
+      type: 'test'
+      ...
+    # Subtest: viewer and a Production V2 user without a QD role cannot write
+    ok 5 - viewer and a Production V2 user without a QD role cannot write
+      ---
+      duration_ms: 1504.948415
+      type: 'test'
+      ...
+    # Subtest: admin manages roles on the Admin page; a leader cannot
+    ok 6 - admin manages roles on the Admin page; a leader cannot
+      ---
+      duration_ms: 1227.490479
+      type: 'test'
+      ...
+    # Subtest: sign out returns to read-only
+    ok 7 - sign out returns to read-only
+      ---
+      duration_ms: 843.825591
+      type: 'test'
+      ...
+    # Subtest: sign-in box works at phone width without horizontal page scroll
+    ok 8 - sign-in box works at phone width without horizontal page scroll
+      ---
+      duration_ms: 3324.60027
+      type: 'test'
+      ...
+    1..8
+ok 1 - sign-in and roles in the browser (emulator)
+  ---
+  duration_ms: 17047.253918
+  type: 'suite'
+  ...
+# Subtest: slot ledger through the pages (emulator)
+    # Subtest: Scrap Entry: a leader save creates the ledger version and audit event
+    ok 1 - Scrap Entry: a leader save creates the ledger version and audit event
+      ---
+      duration_ms: 975.660708
+      type: 'test'
+      ...
+    # Subtest: Scrap Detail: an edit that keeps the quantity, then a delete, each add a version
+    ok 2 - Scrap Detail: an edit that keeps the quantity, then a delete, each add a version
+      ---
+      duration_ms: 995.168367
+      type: 'test'
+      ...
+    # Subtest: Excel import path: admin imports 30 rows over 3 slots; a leader is refused
+    ok 3 - Excel import path: admin imports 30 rows over 3 slots; a leader is refused
+      ---
+      duration_ms: 1841.645835
+      type: 'test'
+      ...
+    # Subtest: a page without the ledger module refuses scrap writes while sign-in is on
+    ok 4 - a page without the ledger module refuses scrap writes while sign-in is on
+      ---
+      duration_ms: 456.908889
+      type: 'test'
+      ...
+    1..4
+ok 2 - slot ledger through the pages (emulator)
+  ---
+  duration_ms: 4400.917305
+  type: 'suite'
+  ...
+# Subtest: sign-in off (the live default)
+    # Subtest: without ?qdEmulator=1 the page stays in "off" mode: no sign-in box, no auth instance
+    ok 1 - without ?qdEmulator=1 the page stays in "off" mode: no sign-in box, no auth instance
+      ---
+      duration_ms: 1387.117394
+      type: 'test'
+      ...
+    1..1
+ok 3 - sign-in off (the live default)
+  ---
+  duration_ms: 1387.332573
+  type: 'suite'
+  ...
+# Subtest: Operations tab
+    # Subtest: hidden with sign-in off, and for a Leader
+    ok 1 - hidden with sign-in off, and for a Leader
+      ---
+      duration_ms: 1955.130426
+      type: 'test'
+      ...
+    # Subtest: read only by default: audit, post-candidate audit and dry runs write nothing; writes are locked
+    ok 2 - read only by default: audit, post-candidate audit and dry runs write nothing; writes are locked
+      ---
+      duration_ms: 1165.283299
+      type: 'test'
+      ...
+    # Subtest: unlocked (emulator only): wrong confirmation refused; correct one reconciles and is logged
+    ok 3 - unlocked (emulator only): wrong confirmation refused; correct one reconciles and is logged
+      ---
+      duration_ms: 1208.692383
+      type: 'test'
+      ...
+    # Subtest: baseline: dry run, apply, gate → baselineComplete; each write step logged
+    ok 4 - baseline: dry run, apply, gate → baselineComplete; each write step logged
+      ---
+      duration_ms: 1101.283799
+      type: 'test'
+      ...
+    # Subtest: privacy migration: dry run, apply refused until the backup is downloaded, then apply + verify
+    ok 5 - privacy migration: dry run, apply refused until the backup is downloaded, then apply + verify
+      ---
+      duration_ms: 1215.475287
+      type: 'test'
+      ...
+# [2026-11-11T13:59:05.267Z]  @firebase/firestore: Firestore (13.1.0): GrpcConnection RPC 'Write' stream 0x295d8e36 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L51, evaluation error at L572:24 for 'create' @ L572, false for 'create' @ L646, false for 'create' @ L51, false for 'create' @ L572, false for 'create' @ L646
+# [2026-11-11T13:59:05.336Z]  @firebase/firestore: Firestore (13.1.0): GrpcConnection RPC 'Write' stream 0x295d8e38 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'update' @ L51, false for 'update' @ L581, false for 'update' @ L646
+    # Subtest: the operations log cannot be written by a Leader or changed by anyone
+    ok 6 - the operations log cannot be written by a Leader or changed by anyone
+      ---
+      duration_ms: 130.516429
+      type: 'test'
+      ...
+    1..6
+ok 4 - Operations tab
+  ---
+  duration_ms: 9368.870521
+  type: 'suite'
+  ...
+# Subtest: privacy policy in the pages (sign-in on)
+    # Subtest: Excel import with an "Emp. Ld" column: the public record has no employee code; the private doc has it
+    ok 1 - Excel import with an "Emp. Ld" column: the public record has no employee code; the private doc has it
+      ---
+      duration_ms: 1797.617744
+      type: 'test'
+      ...
+    # Subtest: Scrap Detail: signed-in user sees "Recorded By"; the public sees "–" and never reads the private doc
+    ok 2 - Scrap Detail: signed-in user sees "Recorded By"; the public sees "–" and never reads the private doc
+      ---
+      duration_ms: 7033.013826
+      type: 'test'
+      ...
+    # Subtest: Scrap Detail: after sign-out the shown "Recorded By" is gone (the page reloads; nothing private kept on screen)
+    ok 3 - Scrap Detail: after sign-out the shown "Recorded By" is gone (the page reloads; nothing private kept on screen)
+      ---
+      duration_ms: 3747.737345
+      type: 'test'
+      ...
+    # Subtest: Improvement with an action owner: the public document has no name; signed-in edit shows it again
+    ok 4 - Improvement with an action owner: the public document has no name; signed-in edit shows it again
+      ---
+      duration_ms: 2058.956575
+      type: 'test'
+      ...
+    # Subtest: free-text fields carry the hint while sign-in is on, and not with sign-in off
+    ok 5 - free-text fields carry the hint while sign-in is on, and not with sign-in off
+      ---
+      duration_ms: 649.046795
+      type: 'test'
+      ...
+    # Subtest: anonymous query of every public collection: no employee code, owner name or e-mail
+    ok 6 - anonymous query of every public collection: no employee code, owner name or e-mail
+      ---
+      duration_ms: 87.483219
+      type: 'test'
+      ...
+    1..6
+ok 5 - privacy policy in the pages (sign-in on)
+  ---
+  duration_ms: 16931.637128
+  type: 'suite'
+  ...
+# Subtest: final rehearsal: the whole rollout in order
+    # Subtest: S0 production rules: today's site saves; an old tab stays open for the whole rehearsal
+    ok 1 - S0 production rules: today's site saves; an old tab stays open for the whole rehearsal
+      ---
+      duration_ms: 1546.513989
+      type: 'test'
+      ...
+    # Subtest: S1 publish BRIDGE: old site keeps saving, PV2 unaffected
+    ok 2 - S1 publish BRIDGE: old site keeps saving, PV2 unaffected
+      ---
+      duration_ms: 605.879689
+      type: 'test'
+      ...
+    # Subtest: S2 create first admin and roles (Console)
+    ok 3 - S2 create first admin and roles (Console)
+      ---
+      duration_ms: 126.545452
+      type: 'test'
+      ...
+    # Subtest: S3 sign-in site live (bridge): saves, closes, imports, concurrency, network failure, old tab interference
+    ok 4 - S3 sign-in site live (bridge): saves, closes, imports, concurrency, network failure, old tab interference
+      ---
+      duration_ms: 7132.819218
+      type: 'test'
+      ...
+    # Subtest: S4 bridge audit lists every problem (measurable exit condition)
+    ok 5 - S4 bridge audit lists every problem (measurable exit condition)
+      ---
+      duration_ms: 125.87928
+      type: 'test'
+      ...
+# [2026-11-11T13:59:35.456Z]  @firebase/firestore: Firestore (13.1.0): GrpcConnection RPC 'Write' stream 0x780b1f5f error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L51, false for 'create' @ L220, false for 'create' @ L646
+    # Subtest: S5 publish CANDIDATE while both pages are open (rules change during use)
+    ok 6 - S5 publish CANDIDATE while both pages are open (rules change during use)
+      ---
+      duration_ms: 1096.864608
+      type: 'test'
+      ...
+    # Subtest: S6 reconcile the bridge problems, clear the failed import, reconfirm
+    ok 7 - S6 reconcile the bridge problems, clear the failed import, reconfirm
+      ---
+      duration_ms: 380.27744
+      type: 'test'
+      ...
+    # Subtest: S7 baseline migration while a Leader is saving; gate then opens
+    ok 8 - S7 baseline migration while a Leader is saving; gate then opens
+      ---
+      duration_ms: 1525.446864
+      type: 'test'
+      ...
+    # Subtest: S8 Shift Close drives the target; public pages and CSV carry no personal data
+    ok 9 - S8 Shift Close drives the target; public pages and CSV carry no personal data
+      ---
+      duration_ms: 2779.296946
+      type: 'test'
+      ...
+    # Subtest: R rollback: bridge, production snapshot, then forward again — no data lost
+    ok 10 - R rollback: bridge, production snapshot, then forward again — no data lost
+      ---
+      duration_ms: 1928.910481
+      type: 'test'
+      ...
+    1..10
+ok 6 - final rehearsal: the whole rollout in order
+  ---
+  duration_ms: 18369.464529
+  type: 'suite'
+  ...
+# Subtest: 1. Dashboard V5 with the Scrap Budget card
+    # Subtest: 1440 px: sections in order, no horizontal scroll, card not dominant
+    ok 1 - 1440 px: sections in order, no horizontal scroll, card not dominant
+      ---
+      duration_ms: 2315.794254
+      type: 'test'
+      ...
+    # Subtest: 1024 px: sections in order, no horizontal scroll, card not dominant
+    ok 2 - 1024 px: sections in order, no horizontal scroll, card not dominant
+      ---
+      duration_ms: 1885.899334
+      type: 'test'
+      ...
+    # Subtest: 820 px: sections in order, no horizontal scroll, card not dominant
+    ok 3 - 820 px: sections in order, no horizontal scroll, card not dominant
+      ---
+      duration_ms: 1893.488682
+      type: 'test'
+      ...
+    # Subtest: 390 px: sections in order, no horizontal scroll, card not dominant
+    ok 4 - 390 px: sections in order, no horizontal scroll, card not dominant
+      ---
+      duration_ms: 1954.616617
+      type: 'test'
+      ...
+    1..4
+ok 7 - 1. Dashboard V5 with the Scrap Budget card
+  ---
+  duration_ms: 14330.400803
+  type: 'suite'
+  ...
+# Subtest: 1b. Dashboard: a period without any data shows no leftover legend
+    # Subtest: month range (legend with Over / Within) → a day with no production and no scrap: empty legend and note
+    ok 1 - month range (legend with Over / Within) → a day with no production and no scrap: empty legend and note
+      ---
+      duration_ms: 2169.052846
+      type: 'test'
+      ...
+    1..1
+ok 8 - 1b. Dashboard: a period without any data shows no leftover legend
+  ---
+  duration_ms: 2169.320543
+  type: 'suite'
+  ...
+# Subtest: 2. weekly-plan.html — every important state
+    # Subtest: month summary + weeks table: Over plan, Within plan (final), Not final; plan sources
+    ok 1 - month summary + weeks table: Over plan, Within plan (final), Not final; plan sources
+      ---
+      duration_ms: 1455.839355
+      type: 'test'
+      ...
+    # Subtest: daily breakdown: Final, Final · no production, Pending close, Conflict, No data (not 0); Line × Shift
+    ok 2 - daily breakdown: Final, Final · no production, Pending close, Conflict, No data (not 0); Line × Shift
+      ---
+      duration_ms: 832.547278
+      type: 'test'
+      ...
+    # Subtest: Improve Top 5: one row per defect, Door A/B/C and sub-causes inside
+    ok 3 - Improve Top 5: one row per defect, Door A/B/C and sub-causes inside
+      ---
+      duration_ms: 883.538578
+      type: 'test'
+      ...
+    # Subtest: Admin edit / override dialog with history; review note (Admin)
+    ok 4 - Admin edit / override dialog with history; review note (Admin)
+      ---
+      duration_ms: 1246.062407
+      type: 'test'
+      ...
+    # Subtest: Leader and Viewer: read-only (no Edit), see the review note
+    ok 5 - Leader and Viewer: read-only (no Edit), see the review note
+      ---
+      duration_ms: 1809.646654
+      type: 'test'
+      ...
+    # Subtest: current month "so far" and the previous-month goal: Provisional (previous month not final)
+    ok 6 - current month "so far" and the previous-month goal: Provisional (previous month not final)
+      ---
+      duration_ms: 999.671205
+      type: 'test'
+      ...
+    # Subtest: No data month (no scrap log at all) and a future month (Not started)
+    ok 7 - No data month (no scrap log at all) and a future month (Not started)
+      ---
+      duration_ms: 1131.370864
+      type: 'test'
+      ...
+    # Subtest: 1024 px (tablet / phone): full page, no horizontal scroll
+    ok 8 - 1024 px (tablet / phone): full page, no horizontal scroll
+      ---
+      duration_ms: 897.13558
+      type: 'test'
+      ...
+    # Subtest: 820 px (tablet / phone): full page, no horizontal scroll
+    ok 9 - 820 px (tablet / phone): full page, no horizontal scroll
+      ---
+      duration_ms: 949.4498
+      type: 'test'
+      ...
+    # Subtest: 390 px (tablet / phone): full page, no horizontal scroll
+    ok 10 - 390 px (tablet / phone): full page, no horizontal scroll
+      ---
+      duration_ms: 847.686715
+      type: 'test'
+      ...
+    1..10
+ok 9 - 2. weekly-plan.html — every important state
+  ---
+  duration_ms: 11054.47603
+  type: 'suite'
+  ...
+# Subtest: 2b. D1: Budget status · Daily compliance · Data completeness (page, card, CSV)
+    # Subtest: a week with a day over 50 inside its budget: "Within plan" + "Daily limit breached"; same wording on the card and in the CSV; not final = "so far"
+    ok 1 - a week with a day over 50 inside its budget: "Within plan" + "Daily limit breached"; same wording on the card and in the CSV; not final = "so far"
+      ---
+      duration_ms: 2575.157167
+      type: 'test'
+      ...
+    1..1
+ok 10 - 2b. D1: Budget status · Daily compliance · Data completeness (page, card, CSV)
+  ---
+  duration_ms: 2575.415494
+  type: 'suite'
+  ...
+# Subtest: 3. Default plan is never shown as a confirmed plan
+    # Subtest: scrap read error: no figures (Read error), never 0
+    ok 1 - scrap read error: no figures (Read error), never 0
+      ---
+      duration_ms: 746.692418
+      type: 'test'
+      ...
+    # Subtest: plans read error (not permission): default, "unconfirmed", banner says read error
+    ok 2 - plans read error (not permission): default, "unconfirmed", banner says read error
+      ---
+      duration_ms: 948.127427
+      type: 'test'
+      ...
+    # Subtest: production rules deny scrapWeeklyPlans: default, "unconfirmed", banner says access denied (page and card)
+    ok 3 - production rules deny scrapWeeklyPlans: default, "unconfirmed", banner says access denied (page and card)
+      ---
+      duration_ms: 2873.579412
+      type: 'test'
+      ...
+    # Subtest: a week without a plan document is "Default · not set" (distinct from a read error)
+    ok 4 - a week without a plan document is "Default · not set" (distinct from a read error)
+      ---
+      duration_ms: 721.20223
+      type: 'test'
+      ...
+    1..4
+ok 11 - 3. Default plan is never shown as a confirmed plan
+  ---
+  duration_ms: 5290.061997
+  type: 'suite'
+  ...
+# Subtest: 4. Firestore read cost
+    # Subtest: Dashboard: open, 1 / 7 / 30 / 31 days, filters, Refresh, back to a range, reopen
+    ok 1 - Dashboard: open, 1 / 7 / 30 / 31 days, filters, Refresh, back to a range, reopen
+      ---
+      duration_ms: 13100.561376
+      type: 'test'
+      ...
+    # Subtest: weekly-plan.html: open, other month, back, Reload, previous-month goal (open twice)
+    ok 2 - weekly-plan.html: open, other month, back, Reload, previous-month goal (open twice)
+      ---
+      duration_ms: 2554.335885
+      type: 'test'
+      ...
+    1..2
+ok 12 - 4. Firestore read cost
+  ---
+  duration_ms: 15655.164571
+  type: 'suite'
+  ...
+# Subtest: 5. Freshness: re-used data never hides a save or an import for long
+    # Subtest: Dashboard: filter keeps the loaded data and its time; Refresh reads the new log; after 5 minutes a filter reads fresh
+    ok 1 - Dashboard: filter keeps the loaded data and its time; Refresh reads the new log; after 5 minutes a filter reads fresh
+      ---
+      duration_ms: 8829.271524
+      type: 'test'
+      ...
+    # Subtest: Weekly Plan: back to a month re-uses data (≤ 5 min); Reload and older data read the new log
+    ok 2 - Weekly Plan: back to a month re-uses data (≤ 5 min); Reload and older data read the new log
+      ---
+      duration_ms: 2717.66919
+      type: 'test'
+      ...
+    1..2
+ok 13 - 5. Freshness: re-used data never hides a save or an import for long
+  ---
+  duration_ms: 11547.471134
+  type: 'suite'
+  ...
+# Subtest: 6. Same tab, other tab, back / forward, stale hint
+    # Subtest: same tab: Dashboard → Scrap Entry (save / import) → Back: the Dashboard shows the new data, never the old page
+    ok 1 - same tab: Dashboard → Scrap Entry (save / import) → Back: the Dashboard shows the new data, never the old page
+      ---
+      duration_ms: 3756.628695
+      type: 'test'
+      ...
+    # Subtest: other tab: data older than 5 minutes is marked with "press Refresh" / "press Reload"; Refresh / Reload clears it
+    ok 2 - other tab: data older than 5 minutes is marked with "press Refresh" / "press Reload"; Refresh / Reload clears it
+      ---
+      duration_ms: 3932.826962
+      type: 'test'
+      ...
+    # Subtest: sign-out clears private data: Weekly Plan history and review note disappear (page reloads); account switch in another tab too
+    ok 3 - sign-out clears private data: Weekly Plan history and review note disappear (page reloads); account switch in another tab too
+      ---
+      duration_ms: 3273.500962
+      type: 'test'
+      ...
+    # Subtest: account switch: Admin → Viewer shows Viewer rights only (no Edit), no Admin-only data kept
+    ok 4 - account switch: Admin → Viewer shows Viewer rights only (no Edit), no Admin-only data kept
+      ---
+      duration_ms: 1649.902224
+      type: 'test'
+      ...
+    1..4
+ok 14 - 6. Same tab, other tab, back / forward, stale hint
+  ---
+  duration_ms: 12613.369843
+  type: 'suite'
+  ...
+#   storage after sign-out: {"local":[],"session":[],"caches":[],"idb":{"firebase-heartbeat-database":"0 entries","firebaseLocalStorageDb":"0 entries"}}
+# Subtest: 7. Final privacy and legend checks
+    # Subtest: browser storage: no private data stored by the app; the auth session is gone after sign-out
+    ok 1 - browser storage: no private data stored by the app; the auth session is gone after sign-out
+      ---
+      duration_ms: 1518.21823
+      type: 'test'
+      ...
+    # Subtest: Back / Forward after signing out on another page shows no private data from the previous session
+    ok 2 - Back / Forward after signing out on another page shows no private data from the previous session
+      ---
+      duration_ms: 2666.80814
+      type: 'test'
+      ...
+    # Subtest: trend legend always matches the data shown: dates, Line and Shift changes, No data
+    ok 3 - trend legend always matches the data shown: dates, Line and Shift changes, No data
+      ---
+      duration_ms: 6214.610864
+      type: 'test'
+      ...
+    1..3
+ok 15 - 7. Final privacy and legend checks
+  ---
+  duration_ms: 10400.055769
+  type: 'suite'
+  ...
+# Subtest: 8. CSV: same D1 wording as the screen, every month state, no private data, formula-safe, no reads
+    # Subtest: weeks + month rows of the CSV = the weeks table for: mixed month, current month (so far), No data month, future month
+    ok 1 - weeks + month rows of the CSV = the weeks table for: mixed month, current month (so far), No data month, future month
+      ---
+      duration_ms: 2084.130695
+      type: 'test'
+      ...
+    # Subtest: Dashboard card, weekly page and CSV: identical D1 wording for the current week and the month
+    ok 2 - Dashboard card, weekly page and CSV: identical D1 wording for the current week and the month
+      ---
+      duration_ms: 2474.232212
+      type: 'test'
+      ...
+    # Subtest: No data month: weekly page tile + total row, Dashboard card and CSV all say "No log" (never 0)
+    ok 3 - No data month: weekly page tile + total row, Dashboard card and CSV all say "No log" (never 0)
+      ---
+      duration_ms: 2570.777162
+      type: 'test'
+      ...
+    # Subtest: CSV export reads nothing from Firestore and has no private data (also when exported by a signed-in Admin)
+    ok 4 - CSV export reads nothing from Firestore and has no private data (also when exported by a signed-in Admin)
+      ---
+      duration_ms: 912.545355
+      type: 'test'
+      ...
+    # Subtest: formula injection: user text starting with = + - @ is neutralised in the Executive Report CSV; the weekly CSV guard keeps numbers
+    ok 5 - formula injection: user text starting with = + - @ is neutralised in the Executive Report CSV; the weekly CSV guard keeps numbers
+      ---
+      duration_ms: 5512.301628
+      type: 'test'
+      ...
+    1..5
+ok 16 - 8. CSV: same D1 wording as the screen, every month state, no private data, formula-safe, no reads
+  ---
+  duration_ms: 13555.373185
+  type: 'suite'
+  ...
+# Subtest: old site (sign-in off) and new site (sign-in on) under each rules version
+    # Subtest: PRODUCTION rules: old site saves everything (public write); new site cannot work (no QD rules yet)
+    ok 1 - PRODUCTION rules: old site saves everything (public write); new site cannot work (no QD rules yet)
+      ---
+      duration_ms: 2390.848915
+      type: 'test'
+      ...
+    # Subtest: BRIDGE rules: old site AND new site both work (no write-failure window)
+    ok 2 - BRIDGE rules: old site AND new site both work (no write-failure window)
+      ---
+      duration_ms: 2868.891827
+      type: 'test'
+      ...
+    # Subtest: BRIDGE risk: an old page saving after a close is caught as CONFLICT (not silently counted)
+    ok 3 - BRIDGE risk: an old page saving after a close is caught as CONFLICT (not silently counted)
+      ---
+      duration_ms: 500.599362
+      type: 'test'
+      ...
+    # Subtest: CANDIDATE rules: new site works; old site can no longer write (public write closed), but still reads
+    ok 4 - CANDIDATE rules: new site works; old site can no longer write (public write closed), but still reads
+      ---
+      duration_ms: 2819.758566
+      type: 'test'
+      ...
+    1..4
+ok 17 - old site (sign-in off) and new site (sign-in on) under each rules version
+  ---
+  duration_ms: 9451.776352
+  type: 'suite'
+  ...
+# Subtest: retired page copies (Phase 7)
+    # Subtest: dashboard.html: never connects to Firebase, shows a notice and opens scrap-entry.html
+    ok 1 - dashboard.html: never connects to Firebase, shows a notice and opens scrap-entry.html
+      ---
+      duration_ms: 2604.568683
+      type: 'test'
+      ...
+    # Subtest: dashboard-classic.html: never connects to Firebase, shows a notice and opens index.html
+    ok 2 - dashboard-classic.html: never connects to Firebase, shows a notice and opens index.html
+      ---
+      duration_ms: 2357.784472
+      type: 'test'
+      ...
+    # Subtest: js/scrap-entry.html: never connects to Firebase, shows a notice and opens scrap-entry.html
+    ok 3 - js/scrap-entry.html: never connects to Firebase, shows a notice and opens scrap-entry.html
+      ---
+      duration_ms: 2510.489844
+      type: 'test'
+      ...
+    1..3
+ok 18 - retired page copies (Phase 7)
+  ---
+  duration_ms: 7475.444194
+  type: 'suite'
+  ...
+# Subtest: retired pages: deep links (Phase 9)
+    # Subtest: a bookmarked old URL keeps its date / line / shift and hash on the current page
+    ok 1 - a bookmarked old URL keeps its date / line / shift and hash on the current page
+      ---
+      duration_ms: 705.179645
+      type: 'test'
+      ...
+    1..1
+ok 19 - retired pages: deep links (Phase 9)
+  ---
+  duration_ms: 705.866458
+  type: 'suite'
+  ...
+# Subtest: plan-tracking.html and weekly-review.html → weekly-plan.html (Weekly Plan V5)
+    # Subtest: under production rules (public): old pages redirect; weekly-plan.html opens with the default plan (plans not readable)
+    ok 1 - under production rules (public): old pages redirect; weekly-plan.html opens with the default plan (plans not readable)
+      ---
+      duration_ms: 741.682407
+      type: 'test'
+      ...
+# RULES TRANSITION REPORT
+#   production :: old site (off) :: form saved, Excel import saved, mapping saved, 3 logs, dashboard ok
+#   production :: new site (enforce, Leader) :: role Could not read your role., form refused, close refused
+#   bridge :: old site (off) :: form saved, Excel import saved, mapping saved, 3 logs, dashboard ok
+#   bridge :: new site (enforce, Leader) :: role leader, form saved, close closed
+#   bridge :: old page writes after a close :: slot status CONFLICT (ledger-count-mismatch,changed-outside-ledger)
+#   candidate :: new site (enforce, Leader) :: role leader, form saved, close closed
+#   candidate :: old site (off) :: form refused, Excel import refused, mapping refused, 0 logs, dashboard ok
+#   bridge :: retired dashboard.html :: no Firebase connection, notice shown, redirected to scrap-entry.html
+#   bridge :: retired dashboard-classic.html :: no Firebase connection, notice shown, redirected to index.html
+#   bridge :: retired js/scrap-entry.html :: no Firebase connection, notice shown, redirected to scrap-entry.html
+#   candidate :: deep link dashboard.html?date&line&shift\#hash :: lands on scrap-entry.html with the same date / line / shift / hash
+#   production :: plan-tracking.html (public) :: retired → weekly-plan.html; plans not readable under production rules: default plan 50 × days shown with a notice
+#   production :: weekly-review.html (public) :: retired → weekly-plan.html; plans not readable under production rules: default plan 50 × days shown with a notice
+#   candidate :: plan-tracking.html (public) :: retired → weekly-plan.html; plans readable
+#   candidate :: weekly-review.html (public) :: retired → weekly-plan.html; plans readable
+    # Subtest: under candidate rules (public): old pages redirect; weekly-plan.html opens
+    ok 2 - under candidate rules (public): old pages redirect; weekly-plan.html opens
+      ---
+      duration_ms: 1003.795352
+      type: 'test'
+      ...
+    1..2
+ok 20 - plan-tracking.html and weekly-review.html → weekly-plan.html (Weekly Plan V5)
+  ---
+  duration_ms: 1745.836878
+  type: 'suite'
+  ...
+# Subtest: Shift Scrap Close in the browser (emulator)
+    # Subtest: Leader: PENDING → Submit → SUBMITTED, shows who and when
+    ok 1 - Leader: PENDING → Submit → SUBMITTED, shows who and when
+      ---
+      duration_ms: 894.266647
+      type: 'test'
+      ...
+    # Subtest: Leader saves more scrap after the close → CHANGED → Reconfirm records revision 2
+    ok 2 - Leader saves more scrap after the close → CHANGED → Reconfirm records revision 2
+      ---
+      duration_ms: 1114.241689
+      type: 'test'
+      ...
+    # Subtest: closing a stale view is refused with a clear message (scrap changed while reviewing)
+    ok 3 - closing a stale view is refused with a clear message (scrap changed while reviewing)
+      ---
+      duration_ms: 755.314711
+      type: 'test'
+      ...
+    # Subtest: Leader on a Line/Shift not assigned, and a viewer: no close buttons
+    ok 4 - Leader on a Line/Shift not assigned, and a viewer: no close buttons
+      ---
+      duration_ms: 1050.116664
+      type: 'test'
+      ...
+    # Subtest: a shift that has not ended yet cannot be closed
+    ok 5 - a shift that has not ended yet cannot be closed
+      ---
+      duration_ms: 458.267828
+      type: 'test'
+      ...
+    # Subtest: a device clock moved forward cannot close a shift early: the server time decides
+    ok 6 - a device clock moved forward cannot close a shift early: the server time decides
+      ---
+      duration_ms: 688.361714
+      type: 'test'
+      ...
+    # Subtest: Daily Confirmation: 3×2 matrix, No Production with a reason, shown with who/when
+    ok 7 - Daily Confirmation: 3×2 matrix, No Production with a reason, shown with who/when
+      ---
+      duration_ms: 963.541783
+      type: 'test'
+      ...
+    # Subtest: import that partly failed: the slot shows Conflict and only Admin can clear the marker
+    ok 8 - import that partly failed: the slot shows Conflict and only Admin can clear the marker
+      ---
+      duration_ms: 1133.108863
+      type: 'test'
+      ...
+    # Subtest: phone width: matrix and panel fit without horizontal page scroll
+    ok 9 - phone width: matrix and panel fit without horizontal page scroll
+      ---
+      duration_ms: 1149.25792
+      type: 'test'
+      ...
+    1..9
+ok 21 - Shift Scrap Close in the browser (emulator)
+  ---
+  duration_ms: 9543.852329
+  type: 'suite'
+  ...
+# Subtest: Shift Close stays hidden with sign-in "off" (live default)
+    # Subtest: Scrap Entry panel hidden; Daily Confirmation says not enabled; nothing read from scrapSlots
+    ok 1 - Scrap Entry panel hidden; Daily Confirmation says not enabled; nothing read from scrapSlots
+      ---
+      duration_ms: 1523.27351
+      type: 'test'
+      ...
+    1..1
+ok 22 - Shift Close stays hidden with sign-in "off" (live default)
+  ---
+  duration_ms: 1523.487998
+  type: 'suite'
+  ...
+#   offline save result: unavailable after 0s
+# Subtest: network failure and retry (emulator)
+    # Subtest: saving or closing while offline fails cleanly (nothing half-written); after reconnecting it works
+    ok 1 - saving or closing while offline fails cleanly (nothing half-written); after reconnecting it works
+      ---
+      duration_ms: 751.675827
+      type: 'test'
+      ...
+    1..1
+ok 23 - network failure and retry (emulator)
+  ---
+  duration_ms: 751.887962
+  type: 'suite'
+  ...
+# Subtest: Dashboard, Executive Report and CSV agree (emulator)
+    # Subtest: Dashboard V5 (public, signed out): one status per day from the 6 closes
+    ok 1 - Dashboard V5 (public, signed out): one status per day from the 6 closes
+      ---
+      duration_ms: 713.425365
+      type: 'test'
+      ...
+    # Subtest: Line / Shift filters change what is shown, never the day status
+    ok 2 - Line / Shift filters change what is shown, never the day status
+      ---
+      duration_ms: 1043.088914
+      type: 'test'
+      ...
+    # Subtest: Executive Report table and CSV export show the same statuses as the Dashboard
+    ok 3 - Executive Report table and CSV export show the same statuses as the Dashboard
+      ---
+      duration_ms: 1480.27738
+      type: 'test'
+      ...
+    # Subtest: a close-status read failure shows READ ERROR (never 0 / WITHIN) on both pages
+    ok 4 - a close-status read failure shows READ ERROR (never 0 / WITHIN) on both pages
+      ---
+      duration_ms: 1024.106343
+      type: 'test'
+      ...
+#   reads, 9-day range, close off: {"prodV2_actualLogs":60,"scrapLogs":8,"improvements":1,"scrapWeeklyPlans":1}  close on: {"prodV2_actualLogs":60,"scrapLogs":8,"scrapCloseSummary":6,"improvements":1,"scrapWeeklyPlans":1}
+    # Subtest: Firestore reads: the close summary adds at most one read per day and no extra scrap-log reads
+    ok 5 - Firestore reads: the close summary adds at most one read per day and no extra scrap-log reads
+      ---
+      duration_ms: 1749.917435
+      type: 'test'
+      ...
+#   reads after sign-in — Daily Confirmation: {"qdUsers":1,"scrapLogs":1,"scrapSlots":6}  Scrap Entry: {"prodV2_dailyPlans":1,"qdUsers":1,"scrapSlots":1,"scrapLogs":1}
+    # Subtest: Firestore reads of Daily Confirmation and the Scrap Entry close panel (signed in)
+    ok 6 - Firestore reads of Daily Confirmation and the Scrap Entry close panel (signed in)
+      ---
+      duration_ms: 4124.955879
+      type: 'test'
+      ...
+    # Subtest: phone width: status, close line and detail fit without horizontal scroll
+    ok 7 - phone width: status, close line and detail fit without horizontal scroll
+      ---
+      duration_ms: 573.602553
+      type: 'test'
+      ...
+    1..7
+ok 24 - Dashboard, Executive Report and CSV agree (emulator)
+  ---
+  duration_ms: 13291.063449
+  type: 'suite'
+  ...
+# Subtest: Excel import with a real file (emulator)
+    # Subtest: all rows saved: slots marked, written through the ledger, markers cleared (audited)
+    ok 1 - all rows saved: slots marked, written through the ledger, markers cleared (audited)
+      ---
+      duration_ms: 1705.116738
+      type: 'test'
+      ...
+    # Subtest: a slot whose rows fail keeps its marker → Conflict, cannot be closed; the other slot is fine
+    ok 2 - a slot whose rows fail keeps its marker → Conflict, cannot be closed; the other slot is fine
+      ---
+      duration_ms: 1770.311652
+      type: 'test'
+      ...
+    # Subtest: a new import into a slot with an unfinished import is refused before anything is written
+    ok 3 - a new import into a slot with an unfinished import is refused before anything is written
+      ---
+      duration_ms: 1190.674785
+      type: 'test'
+      ...
+    1..3
+ok 25 - Excel import with a real file (emulator)
+  ---
+  duration_ms: 4666.701599
+  type: 'suite'
+  ...
+#   reads weekly-plan.html (public): {"scrapLogs":{"gets":1,"docs":11},"scrapWeeklyPlans":{"gets":1,"docs":0},"scrapCloseSummary":{"gets":1,"docs":4}}
+# Subtest: Weekly Plan V5 (emulator)
+    # Subtest: weekly-plan.html (public): budget, actual, remaining, weeks and Line × Shift match an independent count
+    ok 1 - weekly-plan.html (public): budget, actual, remaining, weeks and Line × Shift match an independent count
+      ---
+      duration_ms: 640.111431
+      type: 'test'
+      ...
+    # Subtest: Improve: Top defects across all lines — one row per defect, Door A/B/C and sub-causes inside
+    ok 2 - Improve: Top defects across all lines — one row per defect, Door A/B/C and sub-causes inside
+      ---
+      duration_ms: 403.948064
+      type: 'test'
+      ...
+#   reads Dashboard, one day (month end): {"prodV2_actualLogs":{"gets":6,"docs":6},"scrapLogs":{"gets":2,"docs":11},"scrapCloseSummary":{"gets":2,"docs":4},"improvements":{"gets":1,"docs":0},"scrapWeeklyPlans":{"gets":1,"docs":0}}
+    # Subtest: Dashboard card = weekly-plan.html for the same month (single day = month end: no extra scrap query)
+    ok 3 - Dashboard card = weekly-plan.html for the same month (single day = month end: no extra scrap query)
+      ---
+      duration_ms: 985.104819
+      type: 'test'
+      ...
+#   reads Dashboard, range 15 → end: {"prodV2_actualLogs":{"gets":102,"docs":102},"scrapLogs":{"gets":2,"docs":11},"scrapCloseSummary":{"gets":1,"docs":4},"improvements":{"gets":1,"docs":0},"scrapWeeklyPlans":{"gets":1,"docs":0}}
+    # Subtest: Dashboard range starting mid-month: only the missing days are read (one query), numbers unchanged
+    ok 4 - Dashboard range starting mid-month: only the missing days are read (one query), numbers unchanged
+      ---
+      duration_ms: 1134.70064
+      type: 'test'
+      ...
+    # Subtest: Admin: sets a weekly override with a reason → plan, budget and history; no e-mail on the public document
+    ok 5 - Admin: sets a weekly override with a reason → plan, budget and history; no e-mail on the public document
+      ---
+      duration_ms: 1137.830135
+      type: 'test'
+      ...
+    # Subtest: Leader / Viewer: read plans, history and review notes, cannot edit; the public sees neither
+    ok 6 - Leader / Viewer: read plans, history and review notes, cannot edit; the public sees neither
+      ---
+      duration_ms: 1589.59075
+      type: 'test'
+      ...
+    # Subtest: previous-month reduction goal: loaded only when opened, separate from the daily limit, provisional when not confirmed
+    ok 7 - previous-month reduction goal: loaded only when opened, separate from the daily limit, provisional when not confirmed
+      ---
+      duration_ms: 457.433424
+      type: 'test'
+      ...
+    # Subtest: phone width (390 px): no horizontal page scroll on weekly-plan.html and the Dashboard card
+    ok 8 - phone width (390 px): no horizontal page scroll on weekly-plan.html and the Dashboard card
+      ---
+      duration_ms: 1688.327982
+      type: 'test'
+      ...
+    # Subtest: the old plan pages are retired: they redirect to weekly-plan.html and never connect
+    ok 9 - the old plan pages are retired: they redirect to weekly-plan.html and never connect
+      ---
+      duration_ms: 496.308277
+      type: 'test'
+      ...
+    1..9
+ok 26 - Weekly Plan V5 (emulator)
+  ---
+  duration_ms: 10760.944201
+  type: 'suite'
+  ...
+1..26
+# tests 111
+# suites 26
+# pass 111
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 232797.25419
+✔  Script exited successfully (code 0)
+i  emulators: Shutting down emulators.
+i  firestore: Stopping Firestore Emulator
+i  auth: Stopping Authentication Emulator
+i  hub: Stopping emulator hub
+i  logging: Stopping Logging Emulator

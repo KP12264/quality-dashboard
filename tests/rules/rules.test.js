@@ -10,11 +10,13 @@ const { initializeTestEnvironment, assertSucceeds, assertFails } = require('@fir
 const { doc, getDoc, getDocs, setDoc, addDoc, updateDoc, deleteDoc, collection, serverTimestamp, writeBatch, increment } = require('firebase/firestore');
 const Ledger = require('../../js/scrap-ledger.js');
 const { compatDb } = require('../support/compat-shim.js');
+const { daysAgo } = require('../support/dates.js');
 
 const RULES = path.join(__dirname, '../../emulator/firestore.rules');
 const PV2_SNAPSHOT = path.join(__dirname, '../../emulator/production-v2.firestore.rules.snapshot');
 const E = code => `${code.toLowerCase()}@prodv2.local`;   // same as codeToEmail(): always lowercase
-const DAY = '2026-11-02';
+// Every DAY write here expects to be inside the leader window (window expiry: shift-time.test.js).
+const DAY = daysAgo(1);   // was the fixed date '2026-11-02'
 const SLOT_A = `${DAY}_A_DAY`;
 
 let env;
@@ -63,7 +65,7 @@ async function seed() {
     await setDoc(doc(db, 'scrapLogs', 'sB'), scrap({ line: 'B' }));
     await setDoc(doc(db, 'scrapLogs', 'sLegacy'), scrap({ line: 'A', shift: 'NIGHT' }));
     await setDoc(doc(db, 'improvements', 'i1'), { problem: 'p', defectType: 'Dent', status: 'Monitoring' });
-    await setDoc(doc(db, 'targetMaster', 't1'), { shift: 'DAY', targetQty: 30, effectiveDate: '2026-01-01' });
+    await setDoc(doc(db, 'targetMaster', 't1'), { shift: 'DAY', targetQty: 30, effectiveDate: '2026-01-01' });   // fixed-date-ok: target master effective date (admin), not a scrap date
     await setDoc(doc(db, 'productionLogs', 'p1'), { x: 1 });
   });
 }
@@ -172,7 +174,7 @@ describe('leader (Door A, Day + Night)', () => {
     await assertFails(deleteDoc(doc(db, 'improvements', 'i1')));
     await assertSucceeds(getDocs(collection(db, 'scrapWeeklyPlans')));
     await assertFails(setDoc(doc(db, 'scrapWeeklyPlans', '2026-11_W1'), { ym: '2026-11', week: 1 }, { merge: true }));
-    await assertFails(addDoc(collection(db, 'targetMaster'), { shift: 'DAY', targetQty: 1, effectiveDate: '2026-11-01' }));
+    await assertFails(addDoc(collection(db, 'targetMaster'), { shift: 'DAY', targetQty: 1, effectiveDate: '2026-11-01' }));   // fixed-date-ok: target master
     await assertFails(setDoc(doc(db, 'scrapModelMappings', 'm'), { excelModel: 'x', productionModel: 'y' }));
   });
   it('one row outside the slot fails the whole write', async () => {
@@ -218,7 +220,7 @@ describe('admin', () => {
     await assertSucceeds(ledger('admin').create(scrap({ line: 'C', shift: 'NIGHT' })));
     await assertSucceeds(ledger('admin').update('sA', { line: 'B' }));   // move between slots
     await assertSucceeds(ledger('admin').del('sB'));
-    await assertSucceeds(addDoc(collection(db, 'targetMaster'), { shift: 'DAY', targetQty: 25, effectiveDate: '2026-11-01' }));
+    await assertSucceeds(addDoc(collection(db, 'targetMaster'), { shift: 'DAY', targetQty: 25, effectiveDate: '2026-11-01' }))   /* fixed-date-ok: target master */;
     await assertSucceeds(setDoc(doc(db, 'scrapModelMappings', 'm'), { excelModel: 'x', productionModel: 'y' }));
     await assertSucceeds(addDoc(collection(db, 'improvements'), { problem: 'p', defectType: 'Dent' }));
     await assertSucceeds(updateDoc(doc(db, 'improvements', 'i1'), { status: 'Controlled' }));

@@ -132,23 +132,77 @@
   // "aborted" (and the SDK does not retry it). Retry only when a slot really moved meanwhile;
   // a real permission problem leaves the versions unchanged and is reported at once.
   const MAX_ATTEMPTS = 20;   // each round of a pile-up lets one writer through
+  // KI-1: writers on DIFFERENT slots of the same date share scrapCloseSummary/{date} (written in the
+  // same transaction, required by the rules). When the SDK's own transaction retries run out, the
+  // lost race surfaces as failed-precondition "the stored version … does not match the required base
+  // version" (seen in the emulator, 2026-11-11) or as aborted. Both mean the commit was REFUSED, so
+  // nothing was written. Only these are retried here; any other failed-precondition / already-exists,
+  // and ambiguous errors (unavailable, deadline-exceeded: the commit may have happened) are not.
+  const MAX_CONFLICT_ATTEMPTS = 8;
+  const VERSION_CONFLICT = /does not match the required base version|stored version \S+ does not match/i;
   const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const errText = err => String((err && err.code) || "") + " " + String((err && err.message) || "");
+
+  // "denied": permission-denied (handled as before). "conflict": a refused commit that is safe to retry.
+  function retryKind(err) {
+    const code = String((err && err.code) || "").toLowerCase();
+    if (/permission/i.test(errText(err))) return "denied";
+    if (code === "aborted") return "conflict";
+    if (code === "failed-precondition" && VERSION_CONFLICT.test(String((err && err.message) || ""))) return "conflict";
+    return null;
+  }
+
+  // Safety check before any retry: re-read every slot this attempt saw. If a slot moved, look at the
+  // audit events written since; if one of them already contains this write's record ids, the write
+  // was committed (it must not be repeated). Returns true when it was committed.
+  async function alreadyCommitted(db, ops, seen) {
+    const ids = new Set(ops.map(o => o.ref.id));
+    for (const [id, v] of seen) {
+      const now = await db.collection(SLOT_COLLECTION).doc(id).get();
+      const cur = now.exists ? now.data().logVersion || 0 : 0;
+      for (let k = v + 1; k <= cur; k++) {
+        const ev = await db.collection(SLOT_COLLECTION).doc(id).collection("events").doc("v" + k).get();
+        if (!ev.exists) continue;
+        const e = ev.data();
+        if ([].concat(e.creates || [], e.updates || [], e.deletes || [], e.movesIn || [], e.movesOut || []).some(x => ids.has(x))) return true;
+      }
+    }
+    return false;
+  }
+  // If the safety check itself cannot read, do not retry: report the original error.
+  async function checkCommitted(db, ops, seen, err) {
+    try { return await alreadyCommitted(db, ops, seen); } catch (e) { throw err; }
+  }
+  function busyError(cause) {
+    const e = new Error("Many saves for this date at the same moment — nothing was saved. Please try again.");
+    e.code = "qd/busy"; e.cause = cause;
+    return e;
+  }
 
   async function applyOps(db, ops, opts) {
     if (!ops || ops.length === 0) return { slots: [] };
+    let conflicts = 0;
     for (let attempt = 1; ; attempt++) {
       const seen = new Map();   // slotId -> logVersion read by this attempt (0 = slot did not exist)
       try {
         return await applyOnce(db, ops, opts, seen);
       } catch (err) {
-        const denied = /permission/i.test((err && (err.code || err.message)) || "");
-        if (!denied || attempt >= MAX_ATTEMPTS || seen.size === 0) throw err;
+        const kind = retryKind(err);
+        if (kind === "conflict") {
+          conflicts++;
+          if (seen.size && await checkCommitted(db, ops, seen, err)) return { slots: [], committedEarlier: true };
+          if (conflicts >= MAX_CONFLICT_ATTEMPTS) throw busyError(err);
+          await sleep(Math.min(2000, 50 * 2 ** Math.min(conflicts, 6)) * (0.5 + Math.random()));   // backoff with jitter
+          continue;
+        }
+        if (kind !== "denied" || attempt >= MAX_ATTEMPTS || seen.size === 0) throw err;
         let moved = false;
         for (const [id, v] of seen) {
           const now = await db.collection(SLOT_COLLECTION).doc(id).get();
           if ((now.exists ? now.data().logVersion : 0) !== v) { moved = true; break; }
         }
         if (!moved) throw err;
+        if (await checkCommitted(db, ops, seen, err)) return { slots: [], committedEarlier: true };
         await sleep(Math.min(1000, 25 * 2 ** Math.min(attempt, 6)) * (0.5 + Math.random()));   // backoff with jitter
       }
     }
@@ -316,7 +370,7 @@
   }
 
   const api = { applyOps, chunkBySlot, slotIdOf, planSlots, auditView, markImport, finishImport, clearImportMarker,
-    publicView, readSummaries, writeSummaries, MAX_LOGS_PER_TRANSACTION, MAX_SLOTS_PER_TRANSACTION, SLOT_COLLECTION, SUMMARY_COLLECTION };
+    publicView, readSummaries, writeSummaries, retryKind, MAX_LOGS_PER_TRANSACTION, MAX_SLOTS_PER_TRANSACTION, MAX_CONFLICT_ATTEMPTS, SLOT_COLLECTION, SUMMARY_COLLECTION };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   if (typeof window !== "undefined") window.ScrapLedger = api;
 })(this);

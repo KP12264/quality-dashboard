@@ -110,6 +110,7 @@ describe('public close summary (mirror)', () => {
     await assertFails(updateDoc(doc(fsOf('leaderA'), 'scrapCloseSummary', D2), { 'slots.A_DAY.closeState': 'CONFIRMED_ZERO', updatedAt: serverTimestamp() }));
     await assertFails(updateDoc(doc(fsOf('leaderA'), 'scrapCloseSummary', D2), { 'slots.B_DAY': Object.assign({}, cur.B_DAY, { closeState: 'CONFIRMED_ZERO' }), updatedAt: serverTimestamp() }));
     await assertFails(setDoc(doc(anon(), 'scrapCloseSummary', D2), { date: D2, slots: {}, updatedAt: serverTimestamp() }));
+    // fixed-date-ok (next line): a mismatched summary document is refused on any date
     await assertFails(setDoc(doc(fsOf('admin'), 'scrapCloseSummary', '2026-01-01'), { date: '2026-01-02', slots: {}, updatedAt: serverTimestamp() }));
     // rewriting an entry to exactly the slot's current view is harmless and allowed
     await assertSucceeds(updateDoc(doc(fsOf('leaderA'), 'scrapCloseSummary', D2), { 'slots.A_DAY': cur.A_DAY, updatedAt: serverTimestamp() }));

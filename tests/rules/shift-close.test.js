@@ -28,8 +28,9 @@ const users = {
 };
 const scrap = (o = {}) => Object.assign({ date: D1, shift: 'DAY', line: 'A', model: 'M1', defectType: 'Dent', scrapQty: 3, remark: '', createdAt: 1 }, o);
 const fsOf = code => env.authenticatedContext('uid-' + code, { email: E(code) }).firestore();
-function actor(code) {
-  const db = compatDb(fsOf(code)), email = E(code), opts = { email, serverTimestamp };
+function actor(code, withRole) {
+  // withRole: pass the role / assigned slots like the page does (js/shift-close-ui.js, KI-2)
+  const db = compatDb(fsOf(code)), email = E(code), opts = Object.assign({ email, serverTimestamp }, withRole ? { role: users[code].role, slots: users[code].slots } : {});
   return {
     db, email, opts,
     create: async data => { const ref = db.collection('scrapLogs').doc(); await Ledger.applyOps(db, [{ op: 'create', ref, data: Object.assign({}, data) }], opts); return ref.id; },
@@ -219,9 +220,57 @@ describe('scrap edited while closing', () => {
     // Every close may lose its race (PENDING); a saved one is SUBMITTED, or CHANGED after a later edit.
     assert.ok([S.SUBMITTED, S.CHANGED, S.PENDING].includes(st.status), st.status);
     console.log(`  edit-vs-close: ${closedOk} closes saved, ${refused} refused; final status ${st.status}`);
-    // with nobody editing, closing works at once
-    await L.close({ state: S.SUBMITTED, reconfirm: true });
+    // with nobody editing, closing works at once. KI-2: which branch applies depends on who won the
+    // last round, so both are checked deterministically:
+    //   CHANGED / PENDING → the Leader confirms at once;
+    //   SUBMITTED at the current version → confirming again is Admin-only (rules): the Leader is told
+    //   "already confirmed" (nothing written) and an Admin confirms at once.
+    if (st.status === S.SUBMITTED) {
+      const before = await slotOf(`${D1}_A_DAY`);
+      await assert.rejects(actor('leaderA', true).close({ state: S.SUBMITTED, reconfirm: true }), e => code(e) === 'qd/already-closed');
+      assert.equal((await slotOf(`${D1}_A_DAY`)).closeRevision, before.closeRevision, 'nothing written');
+      await actor('admin').close({ state: S.SUBMITTED, reconfirm: true });
+    } else {
+      await L.close({ state: S.SUBMITTED, reconfirm: true });
+    }
     assert.equal((await L.load()).info.status, S.SUBMITTED);
+  });
+});
+
+describe('KI-2: confirming again at an unchanged version', () => {
+  async function closedSlot() {
+    const L = actor('leaderA');
+    await L.create(scrap());
+    await L.close({ state: S.SUBMITTED });
+    return slotOf(`${D1}_A_DAY`);
+  }
+  it('Leader (role and slot stated, as the page does): clear "already confirmed", nothing written', async () => {
+    const s = await closedSlot();
+    await assert.rejects(actor('leaderA', true).close({ state: S.SUBMITTED, reconfirm: true }),
+      e => code(e) === 'qd/already-closed' && /Only an Admin can confirm it again/.test(e.message));
+    const after = await slotOf(`${D1}_A_DAY`);
+    assert.equal(after.closeRevision, s.closeRevision);
+    assert.deepEqual(Object.keys(await eventsOf(`${D1}_A_DAY`)).filter(k => k.startsWith('c')), ['c1']);
+  });
+  it('without a stated role the rules decide: the denial is passed on unchanged (permission-denied)', async () => {
+    await closedSlot();
+    await assert.rejects(actor('leaderA').close({ state: S.SUBMITTED, reconfirm: true }), e => /permission/i.test(code(e)) && code(e) !== 'qd/already-closed');
+  });
+  it('a real permission denial is never turned into "already confirmed" (Leader of another Line)', async () => {
+    await closedSlot();
+    await assert.rejects(actor('leaderB', true).close({ state: S.SUBMITTED, reconfirm: true }), e => /permission/i.test(code(e)) && code(e) !== 'qd/already-closed');
+    // and on a slot that is not closed: also the plain denial
+    await actor('leaderA').create(scrap({ line: 'A', shift: 'NIGHT' }));
+    await assert.rejects(actor('leaderB', true).close({ shift: 'NIGHT', state: S.SUBMITTED }), e => /permission/i.test(code(e)));
+  });
+  it('rights unchanged: an Admin may confirm again at once; a Leader may after a change (CHANGED)', async () => {
+    const s = await closedSlot();
+    const r = await actor('admin').close({ state: S.SUBMITTED, reconfirm: true });
+    assert.equal(r.revision, s.closeRevision + 1);
+    await actor('leaderA').create(scrap({ scrapQty: 5 }));
+    assert.equal((await actor('leaderA').load()).info.status, S.CHANGED);
+    const r2 = await actor('leaderA', true).close({ state: S.SUBMITTED, reconfirm: true });
+    assert.equal(r2.revision, s.closeRevision + 2);
   });
 });
 

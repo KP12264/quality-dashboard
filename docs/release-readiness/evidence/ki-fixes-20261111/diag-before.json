@@ -1,0 +1,122 @@
+{
+ "rounds": [
+  {
+   "r": 0,
+   "date": "2026-11-10",
+   "d2": "2026-11-07",
+   "ms": 26460,
+   "diffSlots": {
+    "ok": 6,
+    "rejected": []
+   },
+   "sameSlot": {
+    "ok": 15,
+    "rejected": []
+   }
+  },
+  {
+   "r": 1,
+   "date": "2026-11-09",
+   "d2": "2026-11-06",
+   "ms": 22847,
+   "diffSlots": {
+    "ok": 6,
+    "rejected": []
+   },
+   "sameSlot": {
+    "ok": 15,
+    "rejected": []
+   }
+  },
+  {
+   "r": 2,
+   "date": "2026-11-08",
+   "d2": "2026-11-05",
+   "ms": 25022,
+   "diffSlots": {
+    "ok": 5,
+    "rejected": [
+     {
+      "code": "failed-precondition",
+      "name": "FirebaseError",
+      "message": "9 FAILED_PRECONDITION: the stored version (1794403807556855) does not match the required base version (1794403804759426)"
+     }
+    ]
+   },
+   "sameSlot": {
+    "ok": 15,
+    "rejected": []
+   }
+  },
+  {
+   "r": 3,
+   "date": "2026-11-07",
+   "d2": "2026-11-10",
+   "ms": 19669,
+   "diffSlots": {
+    "ok": 6,
+    "rejected": []
+   },
+   "sameSlot": {
+    "ok": 15,
+    "rejected": []
+   }
+  },
+  {
+   "r": 4,
+   "date": "2026-11-06",
+   "d2": "2026-11-09",
+   "ms": 26840,
+   "diffSlots": {
+    "ok": 6,
+    "rejected": []
+   },
+   "sameSlot": {
+    "ok": 15,
+    "rejected": []
+   }
+  },
+  {
+   "r": 5,
+   "date": "2026-11-05",
+   "d2": "2026-11-08",
+   "ms": 27160,
+   "diffSlots": {
+    "ok": 6,
+    "rejected": []
+   },
+   "sameSlot": {
+    "ok": 15,
+    "rejected": []
+   }
+  },
+  {
+   "r": 6,
+   "date": "2026-11-10",
+   "d2": "2026-11-07",
+   "ms": 24405,
+   "diffSlots": {
+    "ok": 6,
+    "rejected": []
+   },
+   "sameSlot": {
+    "ok": 15,
+    "rejected": []
+   }
+  },
+  {
+   "r": 7,
+   "date": "2026-11-09",
+   "d2": "2026-11-06",
+   "ms": 22912,
+   "diffSlots": {
+    "ok": 6,
+    "rejected": []
+   },
+   "sameSlot": {
+    "ok": 15,
+    "rejected": []
+   }
+  }
+ ]
+}

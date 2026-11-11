@@ -456,7 +456,7 @@ describe('4. Firestore read cost', () => {
     }
     await page.click('#shiftFilter [data-shift="all"]'); await page.click('#lineFilter [data-line="all"]'); await dashSettled(page, M.ym);
     // before the daily rule (per-shift target) the Shift filter changes what is read: read again
-    const pre = ['2026-09-20', '2026-09-28'];
+    const pre = ['2026-09-20', '2026-09-28'];   // fixed-date-ok: read-only range before the seeded month and the close date
     await dashRange(page, pre[0], pre[1]);
     await resetReads(page);
     await page.evaluate(() => { window.__qdPlanCard = null; });
@@ -907,6 +907,7 @@ describe('8. CSV: same D1 wording as the screen, every month state, no private d
     const w = await newPage();
     await planOpen(w.page, M.ym);
     const vectors = ['=1+2', '+A1', '@x', '-x', ' =1+2', '\t=1+2', '\r=1+2', '\n+A1', '\u00a0@x', '\u200b=1+2', '\ufeff-x', '\uff1d1+2', '\uff20SUM(A1)'];
+    // fixed-date-ok (next line): CSV text vectors, not dates written to Firestore
     const keep = ['-28', '12.5', '0', '-1.5%', '2026-10-05', '01 Oct – 04 Oct', 'Within plan · so far', 'Daily limit breached · 1 day >50', 'Not final', 'No log', '7/7'];
     const res = await w.page.evaluate(([a, b]) => ({ bad: a.map(v => window.__qdCsvCell(v)), ok: b.map(v => window.__qdCsvCell(v)) }), [vectors, keep]);
     res.bad.forEach((v, i) => assert.ok(v.replace(/^"/, '').startsWith("'"), `neutralised: ${JSON.stringify(vectors[i])} -> ${JSON.stringify(v)}`));

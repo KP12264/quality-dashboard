@@ -10,6 +10,7 @@ const { spawn } = require('child_process');
 const { chromium } = require('playwright');
 const { initializeTestEnvironment } = require('@firebase/rules-unit-testing');
 const { doc, setDoc, getDocs, collection } = require('firebase/firestore');
+const { daysAgo } = require('../support/dates.js');
 
 const ROOT = path.join(__dirname, '../..');
 const PORT = 5510;
@@ -100,12 +101,13 @@ async function save(page) {
   return (await page.textContent('#entryMessage')).replace(/\s+/g, ' ').trim();
 }
 // Bypass every client-side check and write straight to Firestore from the page.
-const directWrite = async (page, line) => page.evaluate(async ({ line, email }) => {
+// The date is inside the leader window (Thailand yesterday; was the fixed '2026-11-02'), so a refusal is about the Line.
+const directWrite = async (page, line) => page.evaluate(async ({ line, email, date }) => {
   try {
-    await window.qdDb.collection('scrapLogs').add({ date: '2026-11-02', shift: 'DAY', line, model: 'M', defectType: 'Dent', scrapQty: 1, createdAt: Date.now() });
+    await window.qdDb.collection('scrapLogs').add({ date, shift: 'DAY', line, model: 'M', defectType: 'Dent', scrapQty: 1, createdAt: Date.now() });
     return 'written';
   } catch (e) { return e.code || e.message; }
-}, { line, email: await page.evaluate(() => window.QDAuth.getState().email) });
+}, { line, email: await page.evaluate(() => window.QDAuth.getState().email), date: daysAgo(1) });
 
 before(async () => {
   env = await initializeTestEnvironment({ projectId: PROJECT, firestore: { rules: fs.readFileSync(path.join(ROOT, 'emulator/firestore.rules'), 'utf8'), host: '127.0.0.1', port: 8080 } });
@@ -308,11 +310,12 @@ describe('slot ledger through the pages (emulator)', () => {
     const { page, context } = await newPage();
     await open(page, 'scrap-entry.html');
     await signIn(page, 'ADMIN1');
-    const rows = Array.from({ length: 30 }, (_, i) => ({ date: '2026-10-15', shift: 'DAY', line: 'ABC'[i % 3], model: 'M-1', defectType: 'Dent', scrapQty: 1 + (i % 4), remark: '' }));
+    const rows = Array.from({ length: 30 }, (_, i) => ({ date: '2026-10-15',   // fixed-date-ok: admin import (any date); the leader is refused by the client import permission, not by date
+      shift: 'DAY', line: 'ABC'[i % 3], model: 'M-1', defectType: 'Dent', scrapQty: 1 + (i % 4), remark: '' }));
     const res = await page.evaluate(async rows => { const r = await ScrapDataAdapter.addScrapEntryBatch(window.qdDb, rows); return { ok: r.succeeded.length, failed: r.failed.length }; }, rows);
     assert.deepEqual(res, { ok: 30, failed: 0 });
     for (const line of ['A', 'B', 'C']) {
-      const st = await slotState(`2026-10-15_${line}_DAY`);
+      const st = await slotState(`2026-10-15_${line}_DAY`);   // fixed-date-ok: same admin import date as above
       assert.equal(st.logVersion, 1);
       assert.equal(st.liveLogCount, 10);
       assert.equal(st.events[0].creates.length, 10);
