@@ -1,0 +1,11 @@
+8b39b82b6ffaaf52bf6287f514d5e631de3a7ff7a1625a484deea7029201c80a  ./O1-implementation-package.md
+c08b5ce8ce647390f7351be171af3dce180e32d6e954ff105361117dc7c77d9d  ./o1-assembly-js.patch
+69567517682a7d13adb2de2ee515329db84acaeac4bd72734855509031e652ae  ./o1-assembly-html.patch
+3f597f93a9d3a2a9d8c5b8fd898911282711cdabf61d66fa4c12d589a8b5856e  ../evidence/o1-assembly-20261110/o1-assembly.test.js
+0fc65cdca1bf64960912ff021e354b926bdea5e7e555b283ec009c099665add0  ../evidence/o1-assembly-20261110/o1-assembly-test-plan.md
+4a010160f0bf29bc7d9ad39264d2411ad7aec12ef6459562bb3c38dfd3203818  ../evidence/o1-assembly-20261110/out/o1-after.diff
+5078e31ff77fa2b64b11f090ea01333260b610622afc9b2753d3cac2da6449a4  ../evidence/o1-assembly-20261110/out/o1-results.json
+8863aa0a58d10e97121479dc33cf0b5558c937b32083acb152d4210649827aea  ../evidence/o1-assembly-20261110/out/run3.log
+bbbf9b0f831282750bf2b16825965b47bd1a01cd80c1dbf5b73f1a3a4f52502c  ../evidence/o1-assembly-20261110/out/pv2-compat.log
+d4829c2e76ad45f4efaba72c66370966d0e2018ce9b6ac88cf4da7b7e28ec760  ../evidence/o1-assembly-20261110/out/pv2-hashes-before.txt
+3a0ed1035db050e4a22f142f5d9b96b99552f29e4221687e6a92168867e89479  ../evidence/o1-assembly-20261110/MANIFEST.sha256

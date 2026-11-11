@@ -1,0 +1,9 @@
+--- a/production-v2/assembly.html
++++ b/production-v2/assembly.html
+@@ -19,5 +19,5 @@
+ </main>
+ </div>
+ <script src="js/firebase-v2.js?v=20260902-fix2"></script><script src="js/theme.js?v=20260902-fix1"></script><script src="js/nav.js?v=20260902-fix1"></script><script src="js/context-v2.js?v=20260901-step7-1"></script>
+-<script src="js/assembly.js?v=20260902-fix5"></script>
++<script src="js/assembly.js?v=20261110-o1"></script>
+ </body></html>

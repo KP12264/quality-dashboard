@@ -1,0 +1,11 @@
+--- a/production-v2/js/assembly.js
++++ b/production-v2/js/assembly.js
+@@ -97,7 +97,7 @@
+  if(!date)return note("เลือกวันที่ก่อน","plan-warn");
+  stat("Loading…");note("กำลังโหลด…");
+  try{
+-  const logs=await all("prodV2_actualLogs");
++  const logs=(await ProdV2DB.collection("prodV2_actualLogs").where("date","==",date).get()).docs.map(d=>({id:d.id,...d.data()}));
+   const matched=logs.filter(x=>x.date===date&&(!shift||x.shift===shift));
+   const totals={}; // "Model|||Door" -> qty
+   matched.forEach(doc=>{
