@@ -11,8 +11,8 @@
 
 | Item | Value |
 |---|---|
-| Script | `a1-baseline.sh` v1 (+ hourly output), audited read-only: one HTTP GET endpoint (`timeSeries.list`), one gcloud command (`auth print-access-token`), output only under `~/a1-baseline-<time>/`; no POST / PUT / PATCH / DELETE, no Firebase command |
-| Offline test | local mock only (no Google call): 7-day and DST-change windows (25-hour quota day) correct; no token written; manifest verifies |
+| Script | `a1-baseline.sh` at commit `30fe62c` (SHA-256 `83655369942de1bbe8b8c93616ec5baf73e4a4c1c82cc7d91b3ae84e23a029d9`), v1 + hourly output + hour-completeness check, audited read-only: one HTTP GET endpoint (`timeSeries.list`), one gcloud command (`auth print-access-token`), output only under `~/a1-baseline-<time>/`; no POST / PUT / PATCH / DELETE, no Firebase command |
+| Offline test | local mock only (no Google call; mock numbers are **not** used anywhere in this report): 4–10 Nov windows 08:00Z → 08:00Z (00:00 PST = 15:00 ICT), 168 hours, none missing or duplicated; DST days 1 Nov 2026 (25 h) and 14 Mar 2027 (23 h) correct; a missing hour is reported; no token written; manifest verifies |
 | Period | quota days **4–10 Nov 2026 (Pacific, PST)** = 08:00 → 08:00 UTC = **15:00 → 15:00 ICT** |
 | Time zones in the output | daily table: quota day (PT) + window in ICT; `hourly.csv`: hour end in UTC, hour start in PST and in ICT |
 | Separate measures (never substituted) | **document reads** = `document/read_count`; **query requests** = `api/request_count` (RunQuery + RunAggregationQuery + ListDocuments); **billed reads** = Firebase Console Usage (by hand) |

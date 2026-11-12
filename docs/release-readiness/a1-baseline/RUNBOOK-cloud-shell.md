@@ -21,17 +21,17 @@
    gcloud config get-value project
    ```
 
-3. Get the script at the pinned commit and check its hash. `<COMMIT>` and the expected SHA-256 are given in the A1 report once this file is pushed:
+3. Get the script at the pinned commit `30fe62c` and check its hash. Expected SHA-256: `83655369942de1bbe8b8c93616ec5baf73e4a4c1c82cc7d91b3ae84e23a029d9`.
 
    ```bash
-   curl -fsSLO https://raw.githubusercontent.com/KP12264/quality-dashboard/<COMMIT>/docs/release-readiness/a1-baseline/a1-baseline.sh
+   curl -fsSLO https://raw.githubusercontent.com/KP12264/quality-dashboard/30fe62c6b867ab96d58a6363fae9e2b419b08030/docs/release-readiness/a1-baseline/a1-baseline.sh
    ```
 
    ```bash
    sha256sum a1-baseline.sh
    ```
 
-   **Stop** if the hash differs from the one in the report.
+   It must print `83655369942de1bbe8b8c93616ec5baf73e4a4c1c82cc7d91b3ae84e23a029d9  a1-baseline.sh`. **Stop** if the hash differs.
 
 4. Read the script once (it is short; only GET calls). Then run it for the 7 quota days ending 10 Nov:
 
