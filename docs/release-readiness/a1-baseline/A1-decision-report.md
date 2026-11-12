@@ -84,7 +84,7 @@ For comparison:
 |---|---|---|---|---|
 | 4 Nov | 4,311 | — | — | **UNVERIFIED** |
 | 5 Nov | 6,660 | — | — | **UNVERIFIED** |
-| 6 Nov | 33,960 | — | — | **UNVERIFIED** |
+| 6 Nov | 33,960 | not available per Pacific quota day (see below) | — | **UNVERIFIED** |
 | 7 Nov | 6,497 | — | — | **UNVERIFIED** |
 | 8 Nov | 7,741 | — | — | **UNVERIFIED** |
 | 9 Nov | 9,366 | — | — | **UNVERIFIED** |
@@ -98,6 +98,18 @@ For comparison:
 - Usage can be rounded.
 
 **Rule.** If the Console daily totals are within about ±5 % of Monitoring on all 7 days, Monitoring is accepted as the working measure. Otherwise A1 analysis uses the Console figures.
+
+**Update 2026-11-12: Firebase Usage values received** (details: [`A1-usage-vs-monitoring-2026-11-12.md`](A1-usage-vs-monitoring-2026-11-12.md); screenshot not stored).
+
+| Usage (as displayed, rounded; time zone and bucket boundaries not shown) | Monitoring, nearest window | Result |
+|---|---|---|
+| "Last 7 days, Nov 5 – Nov 12": Reads 72K, Writes 3.1K, Deletes 1 | 72,882 (4 Nov 15:00 → 11 Nov 15:00 ICT) | not comparable (different ranges) |
+| Tooltip "Nov 7 – Nov 8": Reads 32K, Writes 609, Deletes 1 | 32,354 (UTC day = Thai day 7 Nov, reported points only); Pacific quota day 6 Nov = 33,960 | not confirmed (window, time zone and rounding unknown) |
+
+- Usage is labelled "Billable Metrics" and states it "may not match billing and quota usage". It is **not** a confirmed billed figure.
+- The ±5 % rule is **not assessed**.
+- The time zone of Usage is **not concluded** from the closeness of 32K to 32,354.
+- **Billed reads remain UNVERIFIED.**
 
 ## 5. Decisions
 
@@ -117,7 +129,7 @@ For comparison:
 
 ### Needed from the owner
 
-1. Firebase Console → Firestore → Usage: reads per day 4–10 Nov (screenshot showing dates and time zone).
+1. Firebase Usage: received 2026-11-12 (7-day totals and one tooltip, rounded). Still needed: per-day values with confirmed time zone / boundaries (custom one-day range or every tooltip), unrounded figures if available, and Billing / Quotas daily read usage (see the comparison document, §7).
 2. Answers to the questions in §2 (7 Nov 09:00–12:00 and 10 Nov 19:00 ICT).
 3. The owner of the 01:00 job (§3).
 4. Usage times of QD / PV2 / legacy pages for the other notable hours: 5 Nov 16:00, 6 Nov 19:00, 9 Nov 09:00, 10 Nov 13:00 ICT.
