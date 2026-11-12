@@ -86,3 +86,18 @@ See `RUNBOOK-cloud-shell.md`:
 2. Send the `.tgz` and its SHA-256.
 3. Send a Console Usage screenshot of the billed reads.
 4. Send the R6 answers.
+
+## 8. Update 2026-11-12: real collection sizes (count only)
+
+Owner's aggregate count queries in production (no document content read, nothing written). Details and evaluation: [`A1-collection-counts-2026-11-12.md`](A1-collection-counts-2026-11-12.md).
+
+| Collection | Documents | readTime (UTC) |
+|---|---|---|
+| `prodV2_actualLogs` | 331 | 2026-11-12T11:50:22.754667Z |
+| `scrapLogs` | 93 | 2026-11-12T11:50:39.314835Z |
+
+- **Sizes on 12 Nov, not 7 Nov.** The 7 Nov sizes are unknown, at most these if only additions happened.
+- **PV2 Assembly.** It reads the whole `prodV2_actualLogs` collection on every open, date change, shift change and Load. That is about 331 reads per load (an estimate, not billed).
+- **Scenario only (not a root cause).** About 64 Assembly loads in one hour would give 20,978 reads.
+- **QD.** QD queries `scrapLogs` by date range, so no query can exceed 93 documents today. QD risk: low to medium.
+- **Status unchanged.** Billed reads remain UNVERIFIED, and O1 remains NOT APPROVED.
