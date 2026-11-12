@@ -51,4 +51,4 @@ Data in hand today (not the baseline):
 bash a1-baseline.sh 7
 ```
 
-Output: `~/a1-baseline-<time>/baseline.md`, `baseline.csv`, `raw/`, `MANIFEST.sha256`. There is no token in the files; the script stops with code 9 if one is ever found.
+Output: `~/a1-baseline-<time>/baseline.md` (daily table + top 10 hours), `baseline.csv`, `hourly.csv` (hour in UTC, PST and ICT), `raw/`, `MANIFEST.sha256`. Owner steps: [`RUNBOOK-cloud-shell.md`](RUNBOOK-cloud-shell.md); report: [`A1-investigation-report.md`](A1-investigation-report.md). There is no token in the files; the script stops with code 9 if one is ever found.

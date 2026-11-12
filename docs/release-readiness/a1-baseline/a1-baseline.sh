@@ -155,9 +155,39 @@ for d in days:
     csv.append(",".join(map(str, [q, d["startUtc"], d["endUtc"], r["reads"], f"{r['reads']/500:.1f}", r["maxHour"][0], f'"{r["maxHour"][1]}"', len(r["hours"]), d["hours"], qr, other, f'"{bt}"', f'"{bm}"', ""])))
 open(os.path.join(out, "baseline.md"), "w").write("\n".join(lines) + "\n")
 open(os.path.join(out, "baseline.csv"), "w").write("\n".join(csv) + "\n")
+# Hourly table: one row per hour (the point's end time closes the hour), in UTC, Pacific and Thailand time.
+pt = ZoneInfo("America/Los_Angeles")
+hourly = {}
+for k, t, n in points("reads_total"):
+    if day_of(t): hourly.setdefault(t, {"reads": 0, "types": {}, "methods": {}})["reads"] += n
+for k, t, n in points("reads_by_type", "type"):
+    if day_of(t): h = hourly.setdefault(t, {"reads": 0, "types": {}, "methods": {}}); h["types"][k] = h["types"].get(k, 0) + n
+for k, t, n in points("requests_by_method", "api_method"):
+    if day_of(t): h = hourly.setdefault(t, {"reads": 0, "types": {}, "methods": {}}); h["methods"][k] = h["methods"].get(k, 0) + n
+hl = ["quota_day,hour_end_utc,hour_start_pacific,hour_start_thailand,document_reads,query_requests,other_requests,reads_by_type,requests_by_method"]
+for t in sorted(hourly, key=utc):
+    h = hourly[t]; e = utc(t); s = e - dt.timedelta(hours=1)
+    qr = sum(v for k, v in h["methods"].items() if k in QUERY); other = sum(v for k, v in h["methods"].items() if k not in QUERY)
+    hl.append(",".join(map(str, [day_of(t), e.strftime("%Y-%m-%dT%H:%MZ"), s.astimezone(pt).strftime("%Y-%m-%d %H:%M %Z"), s.astimezone(th).strftime("%Y-%m-%d %H:%M ICT"),
+        h["reads"], qr, other, '"' + "; ".join(f"{k} {v}" for k, v in sorted(h["types"].items())) + '"', '"' + "; ".join(f"{k} {v}" for k, v in sorted(h["methods"].items())) + '"'])))
+open(os.path.join(out, "hourly.csv"), "w").write("\n".join(hl) + "\n")
+# Completeness: every hour of every quota day exactly once (23 / 25 hours on DST days).
+expected = set()
+for d in days:
+    t = utc(d["startUtc"]) + dt.timedelta(hours=1)
+    while t <= utc(d["endUtc"]): expected.add(t); t += dt.timedelta(hours=1)
+have = [utc(t) for t in hourly]
+missing = sorted(expected - set(have)); extra = sorted(set(have) - expected); dup = len(have) - len(set(have))
+lines.append("")
+lines.append(f"Hours: expected {len(expected)}, with data {len(set(have) & expected)}, missing {len(missing)}, outside the window {len(extra)}, duplicated {dup}.")
+if missing: lines.append("Missing hours (hour end, UTC): " + ", ".join(f"{m:%Y-%m-%dT%H:%MZ}" for m in missing[:48]) + (" …" if len(missing) > 48 else ""))
+top = sorted(hourly.items(), key=lambda x: -x[1]["reads"])[:10]
+lines.append(""); lines.append("Top 10 hours by document reads (hour start, Thailand time / Pacific time):")
+for t, h in top: lines.append(f"- {(utc(t) - dt.timedelta(hours=1)).astimezone(th):%a %d %b %H:%M} ICT / {(utc(t) - dt.timedelta(hours=1)).astimezone(pt):%d %b %H:%M %Z}: {h['reads']:,} reads")
+open(os.path.join(out, "baseline.md"), "w").write("\n".join(lines) + "\n")
 print("\n".join(lines))
 PY
 say ""
-say "Written: $OUT/baseline.md, baseline.csv (raw API responses in raw/). Limits: reads are for the whole project"
+say "Written: $OUT/baseline.md, baseline.csv, hourly.csv (raw API responses in raw/). Limits: reads are for the whole project"
 say "(QD, Production V2, the legacy app and any script share one key and one quota): they cannot be split by app."
 ( cd "$OUT" && find . -type f ! -name MANIFEST.sha256 -print0 | sort -z | xargs -0 sha256sum > MANIFEST.sha256 )
