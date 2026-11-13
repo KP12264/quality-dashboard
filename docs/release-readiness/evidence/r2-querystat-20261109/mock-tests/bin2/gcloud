@@ -1,2 +1,0 @@
-#!/bin/bash
-case "$*" in *print-access-token*) printf '%s\n' "${FAKE_TOKEN}";; *account*) echo tester@example.com;; esac

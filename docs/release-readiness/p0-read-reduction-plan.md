@@ -10,7 +10,7 @@
 
 **Status: PLAN ONLY. No code has been changed.** Each item needs its own approval before any code change, and none of it is a Production change. A1 = HIGH, G2 = NOT APPROVED.
 
-Context: [A1/A2 report](a1-a2-firestore-quota.md), Updates 2-3. All read figures below are **estimates** from code reading. Production document counts are not known yet (U3); the U3 count script is prepared but **not run** (§4).
+Context: A1/A2 report (production monitoring evidence moved to private storage), Updates 2-3. All read figures below are **estimates** from code reading. Production document counts are not known yet (U3); the U3 count script is prepared but **not run** (§4).
 
 Symbols: N_L = all `scrapLogs`; P = slots planned by the baseline; K = slots that already had a ledger when the plan was made ("skipped"); S = all `scrapSlots`; E = logs the plan excluded (not Door A/B/C × DAY/NIGHT with a valid date); I = `improvements` documents.
 

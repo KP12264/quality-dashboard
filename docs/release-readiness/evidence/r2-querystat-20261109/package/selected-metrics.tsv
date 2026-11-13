@@ -1,5 +1,0 @@
-anchor	firestore.googleapis.com/document/read_count
-target	firestore.googleapis.com/document/read_ops_count
-target	firestore.googleapis.com/query_stat/per_query/result_counts
-target	firestore.googleapis.com/query_stat/per_query/scanned_documents_counts
-target	firestore.googleapis.com/query_stat/per_query/scanned_index_entries_counts

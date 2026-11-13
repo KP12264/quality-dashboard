@@ -1,7 +1,0 @@
-core	firestore.googleapis.com/document/read_count
-core	firestore.googleapis.com/document/write_count
-core	firestore.googleapis.com/document/delete_count
-opt	firestore.googleapis.com/network/active_connections
-opt	firestore.googleapis.com/network/active_ignite_connections
-opt	firestore.googleapis.com/network/snapshot_listeners
-opt	firestore.googleapis.com/rules/evaluation_count

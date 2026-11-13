@@ -3,7 +3,7 @@
 **What this is.** Test evidence only. It contains no change to QD or PV2 code, Firebase Rules, indexes, API keys, Billing or any deploy. The O1 change is **not** applied to PV2. **A1 = HIGH. G2 = NOT APPROVED.**
 
 - Plan: [`o1-assembly-test-plan.md`](o1-assembly-test-plan.md).
-- Context: [P0 plan, Revision 3, O1](../../p0-read-reduction-plan.md); [A1/A2 report, Update 12](../../a1-a2-firestore-quota.md).
+- Context: [P0 plan, Revision 3, O1](../../p0-read-reduction-plan.md); A1/A2 report, Update 12 (production monitoring evidence moved to private storage).
 
 ## Set-up
 
