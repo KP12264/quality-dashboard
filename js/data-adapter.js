@@ -217,9 +217,19 @@
    *   { status: 'not-found', record: null, parsed: null }   // valid empty shift — NOT an error
    *   { status: 'error',     record: null, parsed: null, error }
    */
+  // Security plan A: Production V2 data is read only after sign-in with a Production V2 role
+  // (js/pv2-access.js). Fails closed when that module is not on the page.
+  async function pv2ReadAccess() {
+    if (typeof window.qdPv2Access !== "function") {
+      const e = new Error("Production V2 sign-in module (js/pv2-access.js) is not loaded on this page."); e.code = "permission-denied"; throw e;
+    }
+    await window.qdPv2Access();
+  }
+
   async function fetchOne(db, dateStr, lineCode, shiftCode) {
     const docId = buildActualDocId(dateStr, lineCode, shiftCode);
     try {
+      await pv2ReadAccess();
       const snap = await db.collection(PROD_V2_ACTUAL_COLLECTION).doc(docId).get();
       if (!snap.exists) {
         return { status: "not-found", record: null, parsed: null };
@@ -241,6 +251,7 @@
   async function fetchPlanDoc(db, dateStr, lineCode, shiftCode) {
     const docId = buildPlanDocId(dateStr, lineCode, shiftCode);
     try {
+      await pv2ReadAccess();
       const snap = await db.collection(PROD_V2_PLAN_COLLECTION).doc(docId).get();
       if (!snap.exists) {
         return { status: "not-found", parsed: null };

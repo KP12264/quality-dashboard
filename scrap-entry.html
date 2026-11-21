@@ -16,6 +16,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body class="qd-v5 se-v5">
@@ -61,10 +62,6 @@
       </a>
     </nav>
   </aside>
-  <button type="button" class="qd-dashboard-mobile-toggle" id="dashboardMobileToggle" aria-label="Toggle menu">☰</button>
-  <div class="qd-dashboard-sidebar-overlay" id="dashboardSidebarOverlay"></div>
-
-
   <button type="button" class="qd-dashboard-mobile-toggle" id="dashboardMobileToggle" aria-label="Toggle menu" aria-controls="dashboardSidebar" aria-expanded="false">☰</button>
   <div class="qd-dashboard-sidebar-overlay" id="dashboardSidebarOverlay"></div>
 
@@ -245,6 +242,7 @@
 
 <script src="js/config.js"></script>
 <script src="js/firebase-init.js"></script>
+<script src="js/pv2-access.js?v=20261122-b1"></script>
 <script src="js/data-adapter.js"></script>
 <script src="js/scrap-adapter.js"></script>
 <script src="js/scrap-model-mapping-adapter.js"></script>
