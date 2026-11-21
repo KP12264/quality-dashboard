@@ -8,7 +8,7 @@
  *   - someone is signed in with the SAME Firebase Auth account as Production
  *     V2 ("<code>@prodv2.local"), and
  *   - their OWN prodV2_authorizedUsers/{email} document grants a Production
- *     V2 role: "viewer", "editor", or no role field (= editor).
+ *     V2 role: an explicit "viewer" or "editor" (no role / any other value = no access).
  * A missing document or active:false means no access; the read is then
  * refused with a permission error, which the pages already show as a read
  * error. Production V2's own Firestore Rules enforce the same.
@@ -27,13 +27,27 @@
 (function () {
   const ALLOWLIST = "prodV2_authorizedUsers";
   const DOMAIN = typeof QD_EMPLOYEE_EMAIL_DOMAIN === "string" ? QD_EMPLOYEE_EMAIL_DOMAIN : "@prodv2.local";
-  const state = { started: false, role: null, denied: null, user: null };
+  const state = { started: false, role: null, denied: null, user: null, reason: "read" };
   let waiters = [], auth = null;
+  const watchers = [];
+  function notify() { const r = state.role; watchers.slice().forEach(cb => { try { cb(r); } catch (e) { console.error(e); } }); applyNeeds(document); }
+  // Controls that need a role carry data-qd-need="viewer" | "editor": disabled (same look, with a tooltip) until the signed-in
+  // account has that role. The Firestore Rules enforce the same; this only keeps people from pressing what would be refused.
+  function can(need) { const r = state.role; return need === "editor" ? r === "editor" : (r === "viewer" || r === "editor"); }
+  function applyNeeds(root) {
+    (root || document).querySelectorAll("[data-qd-need]").forEach(el => {
+      const ok = can(el.getAttribute("data-qd-need"));
+      if (el.dataset.qdTitle === undefined) el.dataset.qdTitle = el.getAttribute("title") || "";
+      el.disabled = !ok; el.setAttribute("aria-disabled", ok ? "false" : "true");
+      if (ok) { if (el.dataset.qdTitle) el.setAttribute("title", el.dataset.qdTitle); else el.removeAttribute("title"); }
+      else el.setAttribute("title", state.user ? "Needs a Production V2 " + el.getAttribute("data-qd-need") + " account" : "Sign in with a Production V2 account first");
+    });
+  }
 
-  // Same rule as production-v2/js/auth-v2.js roleOf() and the Firestore Rules.
+  // Same rule as production-v2/js/auth-v2.js roleOf() and the Firestore Rules: only an explicit viewer / editor counts.
   function roleOf(d) {
     if (!d || d.active === false) return "none";
-    const r = d.role == null ? "editor" : String(d.role);
+    const r = d.role == null ? "none" : String(d.role);
     return r === "viewer" || r === "editor" ? r : "none";
   }
   function deny(message) { const e = new Error(message); e.code = "permission-denied"; return e; }
@@ -59,9 +73,10 @@
       b.style.cssText = "display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:8px;padding:10px 14px;border:1px solid #fed7aa;border-radius:10px;background:#fff7ed;color:#9a3412;font:600 13px/1.4 system-ui,sans-serif";
       const inp = "height:32px;border:1px solid #d1d5db;border-radius:8px;padding:0 10px;font:13px system-ui,sans-serif;width:130px";
       const btn = "height:32px;border:0;border-radius:8px;background:#2563eb;color:#fff;font:700 13px system-ui,sans-serif;padding:0 14px;cursor:pointer";
+      const write = state.reason === "write";
       b.innerHTML = kind === "signin"
-        ? `<span>🔒 ข้อมูลยอดผลิต (Production V2) ต้อง Login ก่อน</span><input id="qdPv2Code" placeholder="รหัสพนักงาน" autocomplete="username" style="${inp}"><input id="qdPv2Pass" type="password" placeholder="Password" autocomplete="current-password" style="${inp}"><button id="qdPv2SignIn" style="${btn}">เข้าสู่ระบบ</button><span id="qdPv2Err" style="color:#dc2626;font-weight:500;flex-basis:100%;display:none"></span>`
-        : `<span>🔒 บัญชีนี้ไม่มีสิทธิ์ดูข้อมูลยอดผลิต (Production V2) — ติดต่อผู้ดูแลระบบ</span><button id="qdPv2SignOut" style="${btn}">ออกจากระบบ</button>`;
+        ? `<span>🔒 ${write ? "การบันทึก / แก้ไขข้อมูลต้อง Login ด้วยบัญชี Production V2 ก่อน" : "ข้อมูลยอดผลิต (Production V2) ต้อง Login ก่อน"}</span><input id="qdPv2Code" placeholder="รหัสพนักงาน" autocomplete="username" style="${inp}"><input id="qdPv2Pass" type="password" placeholder="Password" autocomplete="current-password" style="${inp}"><button id="qdPv2SignIn" style="${btn}">เข้าสู่ระบบ</button><span id="qdPv2Err" style="color:#dc2626;font-weight:500;flex-basis:100%;display:none"></span>`
+        : `<span>🔒 บัญชีนี้ไม่มี role viewer / editor ใน Production V2 ${write ? "จึงบันทึก / แก้ไขไม่ได้" : "จึงดูข้อมูลยอดผลิตไม่ได้"} — ติดต่อผู้ดูแลระบบ</span><button id="qdPv2SignOut" style="${btn}">ออกจากระบบ</button>`;
       if (kind === "signin") {
         const go = async () => {
           const code = document.getElementById("qdPv2Code").value, pw = document.getElementById("qdPv2Pass").value, err = document.getElementById("qdPv2Err");
@@ -84,14 +99,14 @@
     a.onAuthStateChanged(async user => {
       if (state.user && (!user || user.uid !== state.user.uid) && window.qdAuthMode !== "enforce") { location.reload(); return; }   // account changed: clear what is on screen
       state.user = user || null; state.role = null; state.denied = null;
-      if (!user) { showBar("signin", a); return; }             // reads stay pending until someone signs in
+      if (!user) { showBar("signin", a); notify(); return; }   // reads stay pending until someone signs in
       try {
         const snap = await window.qdDb.collection(ALLOWLIST).doc(String(user.email || "").toLowerCase()).get();   // own document only
         const role = roleOf(snap.exists ? snap.data() : null);
-        if (role === "viewer" || role === "editor") { state.role = role; removeBar(); settle(w => w.resolve(role)); return; }
+        if (role === "viewer" || role === "editor") { state.role = role; removeBar(); notify(); settle(w => w.resolve(role)); return; }
         state.denied = deny("This account has no Production V2 role (prodV2_authorizedUsers).");
       } catch (e) { state.denied = e && e.code ? e : deny(String(e && e.message || e)); }
-      showBar("none", a); settle(w => w.reject(state.denied));
+      showBar("none", a); notify(); settle(w => w.reject(state.denied));
     });
   }
 
@@ -182,5 +197,9 @@
     return new Promise((resolve, reject) => { waiters.push({ resolve, reject }); start(); });
   };
   window.qdPv2Role = () => state.role;
+  // For pages that WRITE: starts the sign-in (bar when signed out) and calls cb(role | null) now and whenever it changes.
+  window.qdPv2Watch = function (cb, opts) { if (opts && opts.reason) state.reason = opts.reason; if (typeof cb === "function") watchers.push(cb); start(); if (typeof cb === "function") cb(state.role); applyNeeds(document); };
+  window.qdPv2Can = can;
+  window.qdPv2Apply = applyNeeds;
   window.qdPv2RoleOf = roleOf;
 })();

@@ -151,6 +151,7 @@
     if (saving) return;
     hideMessage();
     if (window.qdFirebaseError) { showMessage('error', '⚠ Cannot connect to the database: ' + window.qdFirebaseError); return; }
+    if (typeof window.qdPv2Can !== 'function' || !window.qdPv2Can('viewer')) { showMessage('error', 'Sign in with a Production V2 account (viewer or editor) to save scrap records.'); return; }
     const entry = readEntry();
     if (!entry) { showMessage('error', 'Please complete all required fields (*) before saving.'); return; }
 

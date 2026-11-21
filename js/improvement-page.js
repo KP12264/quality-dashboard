@@ -210,6 +210,7 @@
       showMessage('error', 'Problem/Symptom and Defect Type are required.');
       return;
     }
+    if (typeof window.qdPv2Can !== 'function' || !window.qdPv2Can('editor')) { showMessage('error', 'Saving an improvement needs a Production V2 editor account. Sign in first.'); return; }
 
     saveBtn.disabled = true;
     saveBtn.textContent = 'Saving…';
@@ -243,6 +244,7 @@
     });
     prefillFromQuery();
     loadList();
+    if (typeof window.qdPv2Watch === 'function') window.qdPv2Watch(null, { reason: 'write' });   // sign-in bar while signed out; Save needs an editor
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

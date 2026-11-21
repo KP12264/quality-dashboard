@@ -11,6 +11,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
 </head>
 <body>
 <div class="wrap">
@@ -96,7 +97,7 @@
         </div>
       </div>
 
-      <button type="submit" class="qd-submit-btn" id="saveImprovementBtn">Save Improvement</button>
+      <button type="submit" class="qd-submit-btn" id="saveImprovementBtn" data-qd-need="editor">Save Improvement</button>
       <div id="improvementMessage" class="qd-form-message" style="display:none;"></div>
     </form>
   </section>
@@ -105,6 +106,7 @@
 
 <script src="js/config.js"></script>
 <script src="js/firebase-init.js"></script>
+<script src="js/pv2-access.js?v=20261123-c1"></script>
 <script src="js/improvement-adapter.js"></script>
 <script src="js/improvement-page.js"></script>
 <script src="js/nav.js"></script>

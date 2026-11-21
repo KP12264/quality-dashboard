@@ -11,6 +11,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
 </head>
 <body>
 <div class="wrap">
@@ -57,7 +58,7 @@
         <label for="tNote">Note</label>
         <input type="text" id="tNote" placeholder="Optional">
       </div>
-      <button type="submit" class="mini-add-btn" style="align-self:end;">+ Add Target</button>
+      <button type="submit" class="mini-add-btn" style="align-self:end;" data-qd-need="editor">+ Add Target</button>
     </form>
     <div id="targetMessage" class="qd-form-message" style="display:none;"></div>
     <table class="qd-datatable" id="targetTable">
@@ -108,6 +109,7 @@
 
 <script src="js/config.js"></script>
 <script src="js/firebase-init.js"></script>
+<script src="js/pv2-access.js?v=20261123-c1"></script>
 <script src="js/target-adapter.js"></script>
 <script src="js/admin-page.js"></script>
 <script src="js/nav.js"></script>

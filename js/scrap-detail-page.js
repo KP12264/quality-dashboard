@@ -18,6 +18,7 @@
 
 (function () {
   const $ = id => document.getElementById(id);
+  const can = need => typeof window.qdPv2Can === 'function' && window.qdPv2Can(need);   // the Firestore Rules enforce the same; this only avoids pressing what would be refused
   const fmt = n => Number.isFinite(n) ? Math.round(n).toLocaleString('en-US') : '–';
   // Money is NEVER rounded to an integer (unlike Qty above) — always
   // exactly 2 decimals, with thousands separators: 597.48 -> ฿597.48,
@@ -219,8 +220,8 @@
           <td>${fourM}</td>
           <td>${improvementCell}</td>
           <td>
-            <button type="button" class="qd-action-btn edit" data-action="edit" data-id="${r.id}">Edit</button>
-            <button type="button" class="qd-action-btn delete" data-action="delete" data-id="${r.id}">Delete</button>
+            <button type="button" class="qd-action-btn edit" data-action="edit" data-id="${r.id}" data-qd-need="editor">Edit</button>
+            <button type="button" class="qd-action-btn delete" data-action="delete" data-id="${r.id}" data-qd-need="editor">Delete</button>
           </td>
         </tr>
         <tr class="qd-detail-drilldown" data-drilldown-for="${r.id}" style="display:none;">
@@ -246,6 +247,7 @@
     tbody.querySelectorAll('[data-action="delete"]').forEach(btn => {
       btn.addEventListener('click', () => openDeleteModal(btn.dataset.id));
     });
+    if (typeof window.qdPv2Apply === 'function') window.qdPv2Apply(tbody);   // Edit / Delete need a Production V2 editor
   }
 
   // ---- Edit flow (Step 1: editable form -> Step 2: confirm -> write) ----
@@ -276,6 +278,7 @@
   }
 
   function openEditModal(id) {
+    if (!can('editor')) return;
     const rec = allRecords.find(r => r.id === id);
     if (!rec) return;
     editingRecord = rec;
@@ -329,6 +332,7 @@
   $('editConfirmCancel').addEventListener('click', () => { $('editConfirmOverlay').classList.remove('show'); });
 
   $('editConfirmSave').addEventListener('click', async () => {
+    if (!can('editor')) return;
     const overlay = $('editConfirmOverlay');
     const id = overlay.dataset.pendingId;
     const patch = JSON.parse(overlay.dataset.pendingPatch);
@@ -355,6 +359,7 @@
   // ---- Delete flow (always confirm first) ----
 
   function openDeleteModal(id) {
+    if (!can('editor')) return;
     const rec = allRecords.find(r => r.id === id);
     if (!rec) return;
     const kv = (k, v) => `<div class="kv-row"><span class="k">${k}</span><span class="v">${escapeHtml(v)}</span></div>`;
@@ -371,6 +376,7 @@
   $('deleteCancel').addEventListener('click', () => { $('deleteOverlay').classList.remove('show'); });
 
   $('deleteConfirm').addEventListener('click', async () => {
+    if (!can('editor')) return;
     const overlay = $('deleteOverlay');
     const id = overlay.dataset.pendingId;
     const btn = $('deleteConfirm');
@@ -404,6 +410,7 @@
     ['fShift', 'fLine', 'fModel', 'fDefect'].forEach(id => $(id).addEventListener('change', renderAll));
 
     load();
+    if (typeof window.qdPv2Watch === 'function') window.qdPv2Watch(null, { reason: 'write' });   // sign-in bar while signed out; Edit / Delete need an editor
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

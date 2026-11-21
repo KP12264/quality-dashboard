@@ -67,6 +67,10 @@
   let modelsByCombo = {};        // "date|line|shift" -> Set(production model strings) — read-only Production V2 data, fetched once per Continue-to-Validation
   let savedModelMappings = {};   // excelModel -> productionModel, loaded from scrapModelMappings (read-only during Preview/Validation)
   let sessionModelChoices = {};  // excelModel -> productionModel, chosen by the user THIS session (not yet saved unless "Remember" is checked)
+  // Production V2 role of the signed-in account (js/pv2-access.js). The Firestore Rules enforce the same limits:
+  // a viewer or editor may add scrap records; remembering a Model Mapping (scrapModelMappings) is editor-only.
+  const canAdd = () => typeof window.qdPv2Can === 'function' && window.qdPv2Can('viewer');
+  const canMap = () => typeof window.qdPv2Can === 'function' && window.qdPv2Can('editor');
   let rememberFlags = {};        // excelModel -> boolean, whether to persist that choice to scrapModelMappings on final Confirm Import
   let identitiesNeedingAttention = []; // excelModels that needed a decision at the START of this validation pass — snapshotted once so a resolved group doesn't vanish from "Resolve Mappings" mid-decision (e.g. before the user gets to check "Remember")
   let resolveMappingsFilter = 'all'; // 'all' | 'suggested' | 'unresolved' — no 'resolved' filter: Resolve Mappings only ever holds identities that still need a decision (a successfully saved/auto-mapped identity never enters it at all), so a "Resolved" bucket here would misleadingly always read near-zero
@@ -725,7 +729,7 @@
       sessionModelChoices[excelModel] = productionModel;
       // A manual selection defaults "Remember Mapping" to checked — the
       // user can still uncheck it afterward if they don't want it saved.
-      rememberFlags[excelModel] = true;
+      rememberFlags[excelModel] = canMap();   // a viewer cannot save mappings: the choice stays for this import only
     }
     resolveAllModelMappings(parsedRows);
     renderPreview();
@@ -747,7 +751,7 @@
   // scrapLogs, never touches Production V2 — this function has no access
   // to anything but ScrapModelMappingAdapter.saveMappings().
   async function maybePersistMapping(excelModel) {
-    if (!rememberFlags[excelModel]) return; // not asked to remember — session choice stays active, nothing persisted
+    if (!canMap() || !rememberFlags[excelModel]) return; // not asked to remember — session choice stays active, nothing persisted
     const productionModel = sessionModelChoices[excelModel];
     if (!productionModel) return; // nothing selected yet
     if (savedModelMappings[excelModel] === productionModel) return; // requirement 9: already persisted exactly this value — skip the redundant write
@@ -1210,7 +1214,7 @@
               ${restOptions}
             </select>
             <label class="qd-model-map-remember">
-              <input type="checkbox" class="qd-model-map-remember-cb" data-excel-model="${escapeHtml(g.excelModel)}" ${rememberChecked}> Remember Mapping
+              <input type="checkbox" class="qd-model-map-remember-cb" data-qd-need="editor" data-excel-model="${escapeHtml(g.excelModel)}" ${rememberChecked}> Remember Mapping
             </label>
           </div>
         </td>
@@ -1236,6 +1240,7 @@
         </table>
       </div>
     `;
+    if (typeof window.qdPv2Apply === 'function') window.qdPv2Apply(el);   // Remember Mapping is editor-only
     if (searchHadFocus) {
       const newInput = $('resolveMappingsSearchInput');
       if (newInput) { newInput.focus(); newInput.setSelectionRange(priorSelectionStart, priorSelectionStart); }
@@ -1325,6 +1330,7 @@
   }
 
   async function doImport() {
+    if (!canAdd()) { const m = $('importMessage'); m.className = 'qd-form-message error'; m.textContent = 'Sign in with a Production V2 account (viewer or editor) to import scrap records.'; m.style.display = 'block'; return; }
     const importableRows = parsedRows.filter(r => r.formatValid && !r.unmapped && !r.duplicateStatus);
     if (importableRows.length === 0) return;
 
@@ -1389,6 +1395,7 @@
     // would be unsafe (saveMappings upserts by identity, so it would be
     // harmless either way), just because it's unnecessary.
     const rememberedPairs = Object.keys(rememberFlags)
+      .filter(() => canMap())
       .filter(excelModel => rememberFlags[excelModel] && sessionModelChoices[excelModel])
       .filter(excelModel => savedModelMappings[excelModel] !== sessionModelChoices[excelModel])
       .map(excelModel => ({ excelModel, productionModel: sessionModelChoices[excelModel] }));

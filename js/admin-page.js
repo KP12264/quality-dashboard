@@ -76,6 +76,7 @@
   $('targetForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     $('targetMessage').style.display = 'none';
+    if (typeof window.qdPv2Can !== 'function' || !window.qdPv2Can('editor')) { showTargetMessage('error', 'Adding a target needs a Production V2 editor account. Sign in first.'); return; }
     const payload = {
       shift: $('tShift').value,
       targetQty: $('tQty').value,
@@ -119,6 +120,7 @@
 
     renderStaticLists();
     loadTargets();
+    if (typeof window.qdPv2Watch === 'function') window.qdPv2Watch(null, { reason: 'write' });   // sign-in bar while signed out; Add Target needs an editor
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
