@@ -134,6 +134,17 @@
     }
     return !!h;
   }
+  // Top bar only: if the full label would push the last link onto a second row (the bar is tight at about
+  // 800–890 px), show just the lock (the label stays in the tooltip and aria-label). Re-checked on resize.
+  function fitTopBar(btn) {
+    const host = btn.parentElement, nav = host && host.closest(".qd-nav");
+    if (!nav || !btn.classList.contains("qd-nav-link") || host.offsetParent === null) return;
+    btn.textContent = "🔒 ออกจากระบบ"; btn.style.paddingLeft = btn.style.paddingRight = "";
+    const shown = btn.style.display; btn.style.display = "none"; const base = nav.offsetHeight; btn.style.display = shown;
+    if (nav.offsetHeight > base) { btn.textContent = "🔒"; btn.style.paddingLeft = btn.style.paddingRight = "10px"; }
+  }
+  let fitTimer = null;
+  window.addEventListener("resize", () => { clearTimeout(fitTimer); fitTimer = setTimeout(() => { const b = document.getElementById(BTN_ID); if (b) fitTopBar(b); }, 150); });
   function watchSession() {
     if (window.qdAuthMode === "enforce" || window.QD_RETIRED_PAGE) return;
     const a = getAuth();
@@ -155,9 +166,10 @@
       // the navigation can be built a moment later (nav.js): keep looking until it is there, then stop
       const placed = placeSignOut(b);
       b.textContent = (signOutHost() && signOutHost().kind === "sidebar") ? "🔒 " + code + " · ออกจากระบบ" : "🔒 ออกจากระบบ";   // sidebar has room for the account; the top bar stays short
+      fitTopBar(b);
       if (!placed && document.body) {
         if (obs) obs.disconnect();
-        obs = new MutationObserver(() => { const h = signOutHost(); if (h) { obs.disconnect(); placeSignOut(b); b.textContent = h.kind === "sidebar" ? "🔒 " + code + " · ออกจากระบบ" : "🔒 ออกจากระบบ"; } });
+        obs = new MutationObserver(() => { const h = signOutHost(); if (h) { obs.disconnect(); placeSignOut(b); b.textContent = h.kind === "sidebar" ? "🔒 " + code + " · ออกจากระบบ" : "🔒 ออกจากระบบ"; fitTopBar(b); } });
         obs.observe(document.body, { childList: true, subtree: true });
       }
     });
